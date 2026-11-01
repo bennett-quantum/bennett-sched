@@ -1,5 +1,6 @@
 use bennett_sched::{Outcome, Request, canonical, decimal as d};
 use serde_json::json;
+mod common;
 
 fn request() -> Request {
     let mut r = Request::default();
@@ -173,4 +174,30 @@ fn context_varying_frame_classes_are_explicitly_deferred_instead_of_misreported(
     let response = r.schedule().unwrap();
     assert_eq!(response.outcome, Outcome::Unsupported);
     assert!(response.reason.to_str().unwrap().contains("frame"));
+}
+
+#[test]
+fn instantaneous_native_gates_still_report_live_interface_peak() {
+    let mut r=request();let mut target=r.target.as_ref().unwrap().value.clone();target["gates"][0]["cost"]["time"]=json!(0);r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+    let response=r.schedule().unwrap();assert_eq!(response.outcome,Outcome::Ok);let c=canonical::parse(&response.certificate).unwrap();
+    for region in c["regions"].as_object().unwrap().values(){assert_eq!(region["resources"]["peak_qubits[fast]"],"2");assert_eq!(region["resources"]["time"],"0");assert_eq!(region["resources"]["qubit_second[fast]"],"0");}
+}
+
+#[test]
+fn nested_region_resources_include_its_native_scheme_ancillae() {
+    let mut r=request();let mut target=r.target.as_ref().unwrap().value.clone();target["classes"]["fast"]["capacity"]=json!(3);
+    let mut cx=target["gates"][0].clone();cx["op"]=json!("cx");let mut ccx=cx.clone();ccx["op"]=json!("ccx");ccx["controls"]=json!({"min":2,"max":2});target["gates"]=json!([cx,ccx]);
+    target["schemes"]=json!([{"name":"scratch-cx","realises":{"op":"x","controls":{"min":1,"max":1}},"ancillae":{"count":1,"state":"clean","class":"fast"},"template":[{"gate":"cx","wires":["c[0]","a[0]"]},{"gate":"ccx","wires":["c[0]","a[0]","t"]},{"gate":"cx","wires":["c[0]","a[0]"]}]}]);r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+    let response=r.schedule().unwrap();assert_eq!(response.outcome,Outcome::Ok,"{:?}",response.reason);let c=canonical::parse(&response.certificate).unwrap();
+    for region in c["regions"].as_object().unwrap().values(){assert_eq!(region["resources"]["peak_qubits[fast]"],"3");assert_eq!(region["resources"]["qubit_second[fast]"],"9");assert_eq!(region["resources"]["time"],"3");}
+}
+
+#[test]
+fn approximate_scheme_charges_each_native_leaf_and_composes_its_error() {
+    let signature=json!({"abi":"0.9","tier":"q","kind":"action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});let source=common::action("action","a",signature,"action @a (t:wire mut) () () () ()","x t");
+    let mut r=request();r.set_object(&source).unwrap();let hash=r.object.as_ref().unwrap().closure_hash("a").unwrap().to_owned();r.set_region(&hash,"forward",0).unwrap();r.set_accuracy("0.01").unwrap();
+    let mut target=r.target.as_ref().unwrap().value.clone();target["resources"]["gates"]=json!({"kind":"count","unit":"gate"});let gate=json!({"op":"h","classes":["fast"],"controls":{"min":0,"max":0},"epsilon":0.001,"cost":{"time":1,"gates":1}});let mut s=gate.clone();s["op"]=json!("s");target["gates"]=json!([gate,s]);
+    target["schemes"]=json!([{"name":"hssh","realises":{"op":"x","controls":{"min":0,"max":0}},"ancillae":{"count":0,"state":"clean","class":"fast"},"template":[{"gate":"h","wires":["t"]},{"gate":"s","wires":["t"]},{"gate":"s","wires":["t"]},{"gate":"h","wires":["t"]}]}]);r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+    let response=r.schedule().unwrap();assert_eq!(response.outcome,Outcome::Ok,"{:?}",response.reason);let c=canonical::parse(&response.certificate).unwrap();let region=&c["regions"][&hash];assert_eq!(region["resources"]["gates"],"4");assert_eq!(region["resources"]["time"],"4");assert_eq!(region["error"]["forward:0"]["inclusive"]["operator_norm"],"0.004");assert_eq!(c["composition"]["epsilon_total"]["diamond"],"0.008");
+    r.set_accuracy("0.0001").unwrap();assert_eq!(r.schedule().unwrap().outcome,Outcome::Infeasible);
 }

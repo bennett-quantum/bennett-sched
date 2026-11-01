@@ -25,6 +25,8 @@ struct Allocation {
     end: Option<Rational>,
     owner: Option<usize>,
     scheme: Option<String>,
+    acquire_order:u64,
+    release_order:Option<u64>,
 }
 struct Allocator<'a> {
     target: &'a Target,
@@ -33,6 +35,7 @@ struct Allocator<'a> {
     allocations: Vec<Allocation>,
     active: BTreeMap<String, usize>,
     counts: BTreeMap<String, u64>,
+    order:u64,
 }
 impl Allocator<'_> {
     fn capacity(&self, class: &str) -> Option<u64> {
@@ -127,7 +130,10 @@ impl Allocator<'_> {
             end: None,
             owner,
             scheme,
+            acquire_order:self.order,
+            release_order:None,
         });
+        self.order+=1;
         Ok(class)
     }
     fn release(&mut self, identity: &str, now: &Rational) -> Result<()> {
@@ -137,6 +143,7 @@ impl Allocator<'_> {
             .ok_or_else(|| Error::infeasible("release of non-live frame"))?;
         let a = &mut self.allocations[i];
         a.end = Some(now.clone());
+        a.release_order=Some(self.order);self.order+=1;
         for w in &a.wires {
             self.live.remove(w);
         }
@@ -238,6 +245,7 @@ pub fn run(request: &Request) -> Result<Response> {
         allocations: vec![],
         active: BTreeMap::new(),
         counts: BTreeMap::new(),
+        order:0,
     };
     let mut now = Rational::zero();
     for (i, w) in trace.inherited.iter().enumerate() {
@@ -292,8 +300,10 @@ pub fn run(request: &Request) -> Result<Response> {
     let mut leaf_owners = Vec::new();
     let mut errors = Vec::new();
     let mut event_sources = Vec::new();
+    let mut event_orders=Vec::new();
     for (source_index, event) in trace.events.iter().enumerate() {
         event_times.push(now.clone());
+        event_orders.push(allocator.order);
         match &event.leaf.op {
             Operation::Alloc {
                 identity,
@@ -364,12 +374,6 @@ pub fn run(request: &Request) -> Result<Response> {
                     for leaf in plan.leaves {
                         let classes = allocator.classes(&leaf.all_wires())?;
                         let cost=target.native(&leaf,&classes,&share)?.ok_or_else(||Error::infeasible("§8.3: scheme leaf does not match a native gates entry; schemes do not nest"))?;
-                        if !cost.epsilon.is_zero() {
-                            return Err(Error::new(
-                                crate::Status::GateUnsupported,
-                                "§8.1/§11: approximate scheme epsilon allocation and numerical claims are postponed (bennett-sched-ark); exact schemes are implemented",
-                            ));
-                        }
                         realized.push((leaf, cost));
                     }
                     realisation = plan.name;
@@ -400,6 +404,7 @@ pub fn run(request: &Request) -> Result<Response> {
                         costs: cost.costs,
                     });
                     now += cost.duration;
+                    allocator.order+=1;
                 }
                 if let Some(identity) = ancilla_identity {
                     allocator.release(&identity, &now)?;
@@ -417,10 +422,12 @@ pub fn run(request: &Request) -> Result<Response> {
                 event_sources.push(source_index);
                 errors.push(Rational::zero());
                 now += duration;
+                allocator.order+=1;
             }
         }
     }
     event_times.push(now.clone());
+    event_orders.push(allocator.order);
     let error: Rational = errors.iter().cloned().sum();
     if error > epsilon {
         return Err(Error::infeasible(
@@ -433,6 +440,7 @@ pub fn run(request: &Request) -> Result<Response> {
                 return Err(Error::infeasible("workspace remains live at region exit"));
             }
             allocation.end = Some(now.clone());
+            allocation.release_order=Some(allocator.order+1);
         }
     }
     let live = allocator
@@ -446,7 +454,8 @@ pub fn run(request: &Request) -> Result<Response> {
             end: a.end.clone().unwrap(),
         })
         .collect::<Vec<_>>();
-    let rows = resources::aggregate(target, &events, &live)?;
+    let orders=allocator.allocations.iter().map(|a|(a.acquire_order,a.release_order.unwrap())).collect::<Vec<_>>();
+    let rows = resources::aggregate_ordered(target, &events, &live,&orders)?;
     let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|integer_json(*n)).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":entries});
     if let Some(placements) = root_placements {
         schedule["interface_vertices"] = json!(placements);
@@ -464,6 +473,7 @@ pub fn run(request: &Request) -> Result<Response> {
         &errors,
         &leaf_owners,
         &event_sources,
+        &event_orders,
         &schedule_hash,
     )?;
     Ok(Response {
@@ -500,6 +510,7 @@ fn certificate(
     errors: &[Rational],
     leaf_owners: &[usize],
     event_sources: &[usize],
+    source_orders:&[u64],
     schedule_hash: &str,
 ) -> Result<Value> {
     let object = request.object.as_ref().unwrap();
@@ -580,7 +591,7 @@ fn certificate(
     regions[&root.hash]["estimate"] =
         json!({"precision_digits":34,"exact_resources":root_rows.exact_json()});
     // Each subregion report charges its interface and controls for its invocation duration.
-    for inv in trace.invocations.iter().skip(1) {
+    for (inv_index,inv) in trace.invocations.iter().enumerate().skip(1) {
         let start = &times[inv.start];
         let end = &times[inv.end];
         let mut wires: BTreeSet<String> = inv.controls.iter().cloned().collect();
@@ -588,6 +599,7 @@ fn certificate(
             wires.extend(s.wires.clone());
         }
         let mut live = Vec::new();
+        let mut orders=Vec::new();
         for a in &allocator.allocations {
             let count = a.wires.iter().filter(|w| wires.contains(*w)).count();
             if count > 0 {
@@ -598,6 +610,9 @@ fn certificate(
                     start: start.clone(),
                     end: end.clone(),
                 });
+                orders.push((source_orders[inv.start],source_orders[inv.end].max(source_orders[inv.start]+1)));
+            }else if a.owner.is_some_and(|owner|owner>=inv_index&&trace.invocations[owner].start>=inv.start&&trace.invocations[owner].end<=inv.end){
+                live.push(LiveInterval{class:a.class.clone(),width:a.wires.len() as u64,borrowed:a.state=="borrowed"||a.state=="dirty",start:a.start.clone(),end:a.end.clone().unwrap()});orders.push((a.acquire_order,a.release_order.unwrap()));
             }
         }
         for l in &mut live {
@@ -614,7 +629,7 @@ fn certificate(
                 e
             })
             .collect::<Vec<_>>();
-        let rows = resources::aggregate(target, &subset, &live)?;
+        let rows = resources::aggregate_ordered(target, &subset, &live,&orders)?;
         regions[&inv.hash]["resources"] = rows.display_json();
     }
     let total: Rational = errors.iter().cloned().sum();

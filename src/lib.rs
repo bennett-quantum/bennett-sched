@@ -6,6 +6,7 @@ pub mod expansion;
 pub mod ffi;
 pub mod object;
 pub mod request;
+pub mod ref_contract;
 pub mod resources;
 pub mod schedule;
 pub mod source;

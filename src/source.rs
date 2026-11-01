@@ -30,6 +30,8 @@ pub struct Invocation {
     pub budget: [u64; 4],
     pub start: usize,
     pub end: usize,
+    pub parent:Option<usize>,
+    pub adjoint:bool,
 }
 #[derive(Clone, Debug)]
 pub struct Trace {
@@ -53,6 +55,7 @@ fn union(a: &mut Vec<String>, b: &[String]) {
         }
     }
 }
+fn live_types(env:&Env)->BTreeMap<String,Value>{env.iter().map(|(name,b)|{let ty=match b{Binding::Wires(w)=>json!(["wire",w.len()]),Binding::Allocation{wires,class,state,..}=>json!(["allocation",wires.len(),class,state]),Binding::Region{address,cell,role,origin,..}=>json!(["region",address,cell,role,origin]),Binding::Value{isa_type,..}=>json!(["value",isa_type]),_=>json!("internal")};(name.clone(),ty)}).collect()}
 fn wires(operand: &str, env: &Env) -> Result<Vec<String>> {
     if let Some((name, subscript)) = operand.split_once('[') {
         let i = subscript
@@ -176,12 +179,12 @@ impl Trace {
             trace: &mut trace,
             active: BTreeSet::new(),
         };
-        builder.invoke(f, env, inherited, slots, params.clone(), budget, &[], false)?;
+        builder.invoke(f, env, inherited, slots, params.clone(), budget, &[], false,None)?;
         if f.kind=="perm_action"&&trace.events.iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !["x","cx","ccx","mcx","swap"].contains(&g.op.as_str()))){return Err(Error::arg("§5.3: permutation actions require permutation gates transitively"));}
         let workspace = trace
             .events
             .iter()
-            .any(|e| matches!(e.leaf.op, Operation::Alloc { .. }));
+            .any(|e| matches!(&e.leaf.op, Operation::Alloc {identity,..}if !identity.starts_with("source-flags/")));
         if workspace&&trace.events.iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !["x","cx","ccx","mcx","swap"].contains(&g.op.as_str()))){return Err(deferred("general non-permutation workspace factorisation and cleanup-window proof"));}
         if workspace && trace.invocations.len() > 1 {
             return Err(deferred(
@@ -211,7 +214,10 @@ impl Builder<'_> {
         budget: [u64; 4],
         chain: &[Occurrence],
         adjoint: bool,
+        parent:Option<usize>,
     ) -> Result<()> {
+        let bounds=object::flattened(&f.body).into_iter().filter(|n|n.op=="qloop").map(|n|crate::schedule::uint(&json!(n.operands.first().ok_or_else(||Error::arg("missing qloop bound"))?))).collect::<Result<Vec<_>>>()?;
+        if f.signature["bounds"]!=json!(bounds){return Err(Error::arg("§5.3: action bounds must equal source loop trip counts"));}
         if !self.active.insert(f.name.clone()) {
             return Err(Error::arg("§3.1: cyclic action call graph"));
         }
@@ -226,9 +232,12 @@ impl Builder<'_> {
             budget,
             start,
             end: start,
+            parent,
+            adjoint:false,
         });
         self.nodes(f, &f.body, &mut env, &controls, chain, &[], owner)?;
         if adjoint {
+            for inv in self.trace.invocations.iter_mut().skip(owner){inv.adjoint=!inv.adjoint;}
             let end = self.trace.events.len();
             for inv in self.trace.invocations.iter_mut().skip(owner + 1) {
                 let (old_start, old_end) = (inv.start, inv.end);
@@ -237,11 +246,11 @@ impl Builder<'_> {
             }
             let mut events = self.trace.events.split_off(start);
             events.reverse();
+            for e in &mut events{e.leaf=expansion::inverse(std::slice::from_ref(&e.leaf)).pop().unwrap();}
+            remap_adjoint_iterations(&mut events,self.object)?;
+            form_while_adjoint(&mut events,&self.trace.invocations)?;
             let mut ordinals = BTreeMap::new();
             for e in &mut events {
-                e.leaf = expansion::inverse(std::slice::from_ref(&e.leaf))
-                    .pop()
-                    .unwrap();
                 let key = canonical::to_vec(&json!(
                     e.location
                         .path
@@ -255,6 +264,7 @@ impl Builder<'_> {
                 *n += 1;
             }
             self.trace.events.extend(events);
+            for index in owner+1..self.trace.invocations.len(){let indices=self.trace.events[start..].iter().enumerate().filter_map(|(i,e)|is_descendant(e.owner,index,&self.trace.invocations).then_some(start+i)).collect::<Vec<_>>();if let (Some(first),Some(last))=(indices.first(),indices.last()){self.trace.invocations[index].start=*first;self.trace.invocations[index].end=last+1;}}
         }
         self.trace.invocations[owner].end = self.trace.events.len();
         self.active.remove(&f.name);
@@ -401,19 +411,33 @@ impl Builder<'_> {
                     continue;
                 }
                 "qloop" => {
-                    if operands.len() != 1 {
-                        return Err(deferred("qloop while flag construction"));
-                    }
-                    let n = operands[0]
-                        .parse::<u64>()
-                        .map_err(|_| Error::arg("qloop requires nonnegative static bound"))?;
+                    if operands.len()!=1 && !(operands.len()==3 && operands[1]=="while"){return Err(Error::arg("qloop requires a bound and optional while condition"));}
+                    let n=crate::schedule::uint(&json!(operands[0]))?;
                     if node.bodies.len() != 1 {
                         return Err(Error::arg("qloop requires one body"));
+                    }
+                    let condition=if operands.len()==3{let w=wires(&operands[2],env)?;if w.len() as u64!=n{return Err(Error::arg("§4.6: while condition width must equal trip count"));}Some(w)}else{None};
+                    let identity=format!("source-flags/{}/{}/{:?}",canonical::hash(&canonical::to_vec(&json!(chain.iter().map(Occurrence::json).collect::<Vec<_>>()))?),node.point,iteration);
+                    let flags=(0..n).map(|i|format!("{identity}[{i}]")).collect::<Vec<_>>();let mut ordinal=0;
+                    if let Some(condition)=&condition {
+                        self.emit(f,node,iteration,chain,owner,vec![Leaf{ordinal,calls:vec![],op:Operation::Alloc{identity:identity.clone(),wires:flags.clone(),class:"any".into(),state:"clean".into()}}])?;ordinal+=1;
+                        if n>0{self.emit(f,node,iteration,chain,owner,vec![Leaf{ordinal,calls:vec![],op:Operation::Gate(Gate{op:"cx".into(),wires:vec![condition[0].clone(),flags[0].clone()],controls:effective.clone(),theta:None})}])?;ordinal+=1;}
                     }
                     for i in 0..n {
                         let mut counts = iteration.to_vec();
                         counts.push(i);
-                        self.nodes(f, &node.bodies[0], env, &effective, chain, &counts, owner)?;
+                        let before=live_types(env);let mut controls=effective.clone();if condition.is_some(){union(&mut controls,&[flags[i as usize].clone()]);}
+                        let start=self.trace.events.len();self.nodes(f, &node.bodies[0], env, &controls, chain, &counts, owner)?;
+                        if before!=live_types(env){return Err(Error::arg("§4.6: loop body entry and exit live names/types must agree"));}
+                        if let Some(condition)=&condition {
+                            if self.trace.events[start..].iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if g.wires[g.own_controls()..].iter().any(|w|condition.contains(w)))){return Err(Error::arg("§3.3: while condition modified inside loop body"));}
+                            if i+1<n{self.emit(f,node,iteration,chain,owner,vec![Leaf{ordinal,calls:vec![],op:Operation::Gate(Gate{op:"ccx".into(),wires:vec![flags[i as usize].clone(),condition[i as usize+1].clone(),flags[i as usize+1].clone()],controls:effective.clone(),theta:None})}])?;ordinal+=1;}
+                        }
+                    }
+                    if let Some(condition)=&condition{
+                        for i in (1..n).rev(){self.emit(f,node,iteration,chain,owner,vec![Leaf{ordinal,calls:vec![],op:Operation::Gate(Gate{op:"ccx".into(),wires:vec![flags[i as usize-1].clone(),condition[i as usize].clone(),flags[i as usize].clone()],controls:effective.clone(),theta:None})}])?;ordinal+=1;}
+                        if n>0{self.emit(f,node,iteration,chain,owner,vec![Leaf{ordinal,calls:vec![],op:Operation::Gate(Gate{op:"cx".into(),wires:vec![condition[0].clone(),flags[0].clone()],controls:effective.clone(),theta:None})}])?;ordinal+=1;}
+                        self.emit(f,node,iteration,chain,owner,vec![Leaf{ordinal,calls:vec![],op:Operation::Release{identity,wires:flags,class:"any".into(),state:"clean".into()}}])?;
                     }
                     continue;
                 }
@@ -702,6 +726,7 @@ impl Builder<'_> {
                         self.trace.invocations[owner].budget,
                         &path,
                         adjoint,
+                        Some(owner),
                     )?;
                     continue;
                 }
@@ -785,6 +810,36 @@ impl Builder<'_> {
         Ok(())
     }
 }
+fn is_descendant(mut owner:usize,ancestor:usize,invocations:&[Invocation])->bool{loop{if owner==ancestor{return true;}match invocations[owner].parent{Some(parent)=>owner=parent,None=>return false}}}
+
+fn remap_adjoint_iterations(events:&mut [Event],object:&Object)->Result<()>{
+    fn collect(nodes:&[Node],stack:&[u64],out:&mut BTreeMap<String,Vec<u64>>)->Result<()>{for node in nodes{out.insert(node.point.clone(),stack.to_vec());let mut nested=stack.to_vec();if node.op=="qloop"{nested.push(crate::schedule::uint(&json!(node.operands[0]))?);}for body in &node.bodies{collect(body,&nested,out)?;}}Ok(())}
+    let mut maps=BTreeMap::new();for f in object.functions.values(){let mut points=BTreeMap::new();collect(&f.body,&[],&mut points)?;maps.insert(object.symbols[&f.name].interface_hash.clone(),points);}
+    for event in events{for occurrence in &mut event.location.path{let bounds=maps.get(&occurrence.symbol).and_then(|m|m.get(&occurrence.point)).ok_or_else(||Error::arg("adjoint source point is not in linked object"))?;if bounds.len()!=occurrence.iteration.len(){return Err(Error::arg("adjoint source loop coordinate depth mismatch"));}for (i,bound) in occurrence.iteration.iter_mut().zip(bounds){*i=bound.checked_sub(1).and_then(|last|last.checked_sub(*i)).ok_or_else(||Error::arg("adjoint source iteration outside loop"))?;}}}Ok(())
+}
+
+/// K62 forms the while action adjoint before recipe instantiation: all flags
+/// are computed before the descending controlled bodies. Reversing an expanded
+/// stream alone would interleave flag destruction with those bodies.
+fn form_while_adjoint(events:&mut Vec<Event>,invocations:&[Invocation])->Result<()>{
+    let ids=events.iter().filter_map(|e|match &e.leaf.op{Operation::Alloc{identity,..}if identity.starts_with("source-flags/")=>Some(identity.clone()),_=>None}).collect::<Vec<_>>();
+    for identity in ids{
+        let start=events.iter().position(|e|matches!(&e.leaf.op,Operation::Alloc{identity:id,..}if id==&identity)).ok_or_else(||Error::arg("missing while allocation"))?;
+        let end=events.iter().enumerate().skip(start+1).find_map(|(i,e)|matches!(&e.leaf.op,Operation::Release{identity:id,..}if id==&identity).then_some(i)).ok_or_else(||Error::arg("missing while release"))?;
+        let allocation=events[start].clone();let release=events[end].clone();let Operation::Alloc{wires,..}=&allocation.leaf.op else{unreachable!()};let n=wires.len();
+        let mut support=Vec::new();let mut body=Vec::new();for e in events[start+1..end].iter().cloned(){if e.owner==allocation.owner&&e.location.path==allocation.location.path{support.push(e);}else{body.push(e);}}
+        if support.len()!=2*n||support.iter().any(|e|!matches!(e.leaf.op,Operation::Gate(_))){return Err(Error::arg("while adjoint support does not match flag recipe"));}
+        let mut replacement=vec![allocation.clone()];
+        if invocations[allocation.owner].adjoint{replacement.extend(support[..n].iter().cloned());replacement.extend(body);}
+        else{
+            if n>0{replacement.push(support[0].clone());}
+            let nesting=allocation.location.path.last().unwrap().iteration.len();let symbol=&allocation.location.path.last().unwrap().symbol;
+            for i in 0..n{for e in &body{let occurrence=e.location.path.iter().find(|p|&p.symbol==symbol&&p.iteration.len()>nesting).ok_or_else(||Error::arg("while body lacks its source iteration"))?;if occurrence.iteration[nesting]==i as u64{replacement.push(e.clone());}}if i+1<n{replacement.push(support[i+1].clone());}}
+        }
+        replacement.extend(support[n..].iter().cloned());replacement.push(release);events.splice(start..=end,replacement);
+    }Ok(())
+}
+
 /// A version-restored input is insufficient to prove every §6.2 window rule.
 /// Keep the remaining mutable-input proof explicit instead of accepting it by
 /// primitive cancellation. The unrestricted algorithm is tracked by ark.

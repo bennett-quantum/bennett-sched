@@ -264,7 +264,8 @@ impl Library {
             depth: 0,
         };
         let mut frame = Frame::default();
-        let mut env = c.bind(array(&r["parameters"])?, array(args)?, caller, &[], true)?;
+        let bound = c.bind(array(&r["parameters"])?, array(args)?, caller, &[], true)?;
+        let mut env=crate::ref_contract::named_scope(r,bound)?;
         let controls = environment_controls(&env, &[]);
         let mut leaves = c.compile(array(&r["body"])?, &mut env, &controls, &mut frame, false)?;
         number(&mut leaves);
@@ -956,13 +957,14 @@ impl Compiler<'_> {
                     .recipes
                     .get(text(name)?)
                     .ok_or_else(|| Error::arg("unbound invoked recipe"))?;
-                let mut local = self.bind(
+                let bound = self.bind(
                     array(&r["parameters"])?,
                     array(&c["args"])?,
                     env,
                     controls,
                     false,
                 )?;
+                let mut local=crate::ref_contract::named_scope(r,bound)?;
                 let effective = environment_controls(&local, controls);
                 out.extend(self.compile(
                     array(&r["body"])?,

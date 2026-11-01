@@ -143,3 +143,19 @@ pub fn aggregate(target: &Target, events: &[TimedEvent], live: &[LiveInterval]) 
         .collect::<Result<_>>()?;
     Ok(Rows { exact, display })
 }
+
+/// Aggregate a realised stream with allocation/release occurrence order. This
+/// preserves live demand when several lifetime boundaries share one timestamp,
+/// including gates with zero duration. Reuse is permitted after its release.
+pub fn aggregate_ordered(target:&Target,events:&[TimedEvent],live:&[LiveInterval],orders:&[(u64,u64)])->Result<Rows>{
+    if live.len()!=orders.len(){return Err(Error::infeasible("live interval/order count mismatch"));}
+    let mut rows=aggregate(target,events,live)?;
+    for (l,(start,end)) in live.iter().zip(orders){if (l.start.clone(),*start)>=(l.end.clone(),*end){return Err(Error::infeasible("allocation must precede release in scheduled event order"));}}
+    for (name,r) in target.value["resources"].as_object().unwrap(){if r["kind"]!="peak"{continue;}
+        for class in target.classes.keys(){let mut changes=Vec::new();
+            for (l,(start,end)) in live.iter().zip(orders).filter(|(l,_)|&l.class==class){changes.push((l.start.clone(),*start,1,l.width));changes.push((l.end.clone(),*end,0,l.width));}
+            changes.sort();let mut current=0u64;let mut peak=0u64;for (_,_,kind,width) in changes{if kind==0{current=current.checked_sub(width).ok_or_else(||Error::infeasible("invalid ordered lifetime sweep"))?;}else{current=current.checked_add(width).ok_or_else(||Error::infeasible("ordered peak exceeds host u64"))?;peak=peak.max(current);}}
+            let key=format!("{}[{}]",escape(name),escape(class));rows.exact.insert(key.clone(),d::integer(peak));rows.display.insert(key,peak.to_string());
+        }
+    }Ok(rows)
+}

@@ -102,6 +102,9 @@ fn undeclared_helper_operands_are_reported_with_the_contract_gap() {
         )
         .unwrap_err();
     assert!(err.reason.contains("unbound"), "{err}");
+    assert!(err.reason.contains("bennett-sched-enz"),"{err}");
+    assert_eq!(bennett_sched::ref_contract::unbound_wires(&lib.recipes["qxor"]),std::collections::BTreeSet::from(["s".to_owned(),"t".to_owned()]));
+    assert!(bennett_sched::ref_contract::unbound_wires(&lib.recipes["bind.qxor"]).is_empty());
 }
 
 #[test]
