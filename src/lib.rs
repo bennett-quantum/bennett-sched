@@ -1,5 +1,6 @@
 //! Scheduler and cost model for Bennett ISA 0.9, §11.
 pub mod canonical;
+pub mod borrow;
 pub mod admission;
 pub mod decimal;
 pub mod engine;

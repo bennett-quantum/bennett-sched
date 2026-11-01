@@ -548,9 +548,10 @@ fn certificate(
                 .iter()
                 .map(|s| slot_record(s, allocator))
                 .collect::<Result<Vec<_>>>()?;
-            let scratch=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_none()).map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
+            let scratch=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_none()&&a.state!="borrowed").map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
             let ancillae=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_some()).map(|a|json!({"id":a.identity,"scheme":a.scheme,"class":a.class,"state":a.state,"width":a.wires.len()})).collect::<Vec<_>>();
-            regions[&inv.hash] = json!({"kind":f.kind,"signature":f.signature,"bounds":f.signature["bounds"],"frame":{"slots":slots,"scratch":scratch,"history":[],"borrow":[],"ancillae":ancillae},"resources":{},"gates_used":{},"claims":[],"verification":{"oracle":null,"borrow_frames":[],"inverse_pairs":[],"unitary":[],"channel":[],"fault_rate":{"domain":{"bundles":[],"borrowed":[],"regions":[]},"faults_by_code":{},"undefined_excluded":0,"layout_dependent_excluded":0}},"cleanup":{},"error":{},"definedness_assumptions":[]});
+            let borrowed=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.state=="borrowed"&&a.scheme.is_none()).map(|a|json!({"id":a.identity,"class":a.class,"width":a.wires.len()})).collect::<Vec<_>>();
+            regions[&inv.hash] = json!({"kind":f.kind,"signature":f.signature,"bounds":f.signature["bounds"],"frame":{"slots":slots,"scratch":scratch,"history":[],"borrow":borrowed,"ancillae":ancillae},"resources":{},"gates_used":{},"claims":[],"verification":{"oracle":null,"borrow_frames":[],"inverse_pairs":[],"unitary":[],"channel":[],"fault_rate":{"domain":{"bundles":[],"borrowed":[],"regions":[]},"faults_by_code":{},"undefined_excluded":0,"layout_dependent_excluded":0}},"cleanup":{},"error":{},"definedness_assumptions":[]});
         }
         let local: Rational = errors
             .iter()
@@ -568,6 +569,7 @@ fn certificate(
         record["cleanup"][&key] = json!([]);
         record["error"][&key] = json!({"local":{"operator_norm":d::upper(&local)?},"inclusive":{"operator_norm":d::upper(&inclusive)?}});
         let claim = json!({"kind":"numerical","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"metric":"operator_norm","precision_bits":128,"bound":d::upper(&inclusive)?});
+        for proof in trace.borrow_proofs.iter().filter(|p|p.owner==i){let index=record["claims"].as_array().unwrap().len();record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"translation_lemma","invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"subclaims":[],"witness":proof.witness}));record["verification"]["borrow_frames"].as_array_mut().unwrap().push(json!(index));}
         let index = record["claims"].as_array().unwrap().len();
         record["claims"].as_array_mut().unwrap().push(claim);
         record["verification"]["unitary"]

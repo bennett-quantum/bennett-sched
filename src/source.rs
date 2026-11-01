@@ -39,6 +39,7 @@ pub struct Trace {
     pub invocations: Vec<Invocation>,
     pub slots: Vec<Slot>,
     pub inherited: Vec<String>,
+    pub borrow_proofs: Vec<crate::borrow::Proof>,
 }
 fn deferred(feature: &str) -> Error {
     Error::new(
@@ -168,6 +169,7 @@ impl Trace {
             invocations: vec![],
             slots: slots.clone(),
             inherited: inherited.clone(),
+            borrow_proofs:vec![],
         };
         let lib = Library::published()?;
         let mut builder = Builder {
@@ -182,13 +184,12 @@ impl Trace {
             .events
             .iter()
             .any(|e| matches!(&e.leaf.op, Operation::Alloc {identity,..}if !identity.starts_with("source-flags/")&&!identity.starts_with("source-region/")));
-        if workspace&&trace.events.iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !["x","cx","ccx","mcx","swap"].contains(&g.op.as_str()))){return Err(deferred("general non-permutation workspace factorisation and cleanup-window proof"));}
         if workspace && trace.invocations.len() > 1 {
             return Err(deferred(
                 "source semantic-call cleanup-pair partition and version proof",
             ));
         }
-        require_stable_workspace_inputs(&trace.events)?;
+        trace.borrow_proofs=crate::borrow::prove(object,&trace)?;
         verify_clean_lifetimes(&trace.events)?;
         Ok(trace)
     }
@@ -200,6 +201,34 @@ struct Builder<'a> {
     active: BTreeSet<String>,
 }
 struct LocalRegion{node:Node,identity:String,wires:Vec<String>,image:Vec<Gate>}
+struct MemoryBinding{kind:String,args:Value,consumed:Option<String>}
+fn bind_memory(node:&Node,env:&mut Env,readonly:&BTreeSet<String>,identity:&str)->Result<MemoryBinding>{
+    let op=node.op.as_str();let operands=&node.operands;let expected=if op=="qload"{2}else{3};if operands.len()!=expected{return Err(Error::arg("§4.6: coherent memory operand count mismatch"));}
+    let Some(Binding::Region{address,cell,role,origin,wires:cells})=env.get(&operands[0]).cloned()else{return Err(Error::arg("coherent memory requires a region operand"));};
+    let address_wires=if address==0{if operands[1]!="()"{return Err(Error::arg("§4.6/K79: zero-address region requires ()"));}vec![]}else{if operands[1]=="()"{return Err(Error::arg("§4.6/K79: nonzero address width requires a wire bundle"));}let wires=wires(&operands[1],env)?;if wires.len() as u64!=address{return Err(Error::arg("§4.6: address bundle width mismatch"));}wires};
+    let cells_count=cells.len() as u64/cell;let a=if address==0{json!([])}else{json!(operands[1])};let source_key=canonical::hash(&canonical::to_vec(&json!([origin,cells,address_wires]))?);
+    let mut consumed=None;let (kind,value)=if op=="qload"{
+        let name=node.lhs.as_ref().filter(|n|object::name(n)).ok_or_else(||Error::arg("qload requires one result name"))?;if env.contains_key(name){return Err(Error::arg("qload result shadows a live name"));}let id=format!("source-load/{identity}/{source_key}");let w=region_wires(&id,usize::try_from(cell).map_err(|_|Error::new(Status::NoMem,"qload result exceeds host size"))?)?;env.insert(name.clone(),Binding::Allocation{identity:id,wires:w,class:"any".into(),state:"clean".into()});(format!("qload.{role}"),name.clone())
+    }else{if node.lhs.is_some(){return Err(Error::arg("memory update/release has no result"));}let value=&operands[2];let w=wires(value,env)?;if w.len() as u64!=cell{return Err(Error::arg("§4.6: coherent memory value width mismatch"));}
+        if op=="qunload"{let Some(Binding::Allocation{identity,..})=env.get(value)else{return Err(Error::arg("qunload consumes a qload result"));};if !identity.starts_with("source-load/")||!identity.ends_with(&source_key){return Err(Error::arg("§11 K81: qunload must pair with its own region/address qload"));}consumed=Some(value.clone());(format!("qunload.{role}"),value.clone())}
+        else{if role!="mut"{return Err(Error::arg("§5.1: memory write requires a mutable region"));}if op=="qexchm"&&w.iter().any(|wire|readonly.contains(wire)){return Err(Error::arg("qexchm cannot write an in wire"));}(op.into(),value.clone())}
+    };
+    let args=json!([address,cells_count,cell,a,operands[0],value]);Ok(MemoryBinding{kind,args,consumed})
+}
+
+/// Bind the whole source before expanding any possibly enz-dependent helper,
+/// so a later malformed address is not hidden by an earlier blocked qload.
+fn preflight_memory(nodes:&[Node],env:&mut Env,readonly:&BTreeSet<String>)->Result<()>{
+    for node in nodes{match node.op.as_str(){
+        "qload"|"qunload"|"qstore"|"qexchm"=>{let plan=bind_memory(node,env,readonly,&format!("preflight/{}",node.point))?;if let Some(name)=plan.consumed{env.remove(&name);}},
+        "qcopy"=>{let src=node.operands.first().ok_or_else(||Error::arg("qcopy source missing"))?;let w=wires(src,env)?;let name=node.lhs.as_ref().ok_or_else(||Error::arg("qcopy result missing"))?;if env.contains_key(name){return Err(Error::arg("qcopy result shadows a live name"));}let hash=canonical::hash(&canonical::to_vec(&json!(w))?);let identity=format!("source-copy/preflight/{hash}");env.insert(name.clone(),Binding::Allocation{wires:region_wires(&identity,w.len())?,identity,class:"any".into(),state:"clean".into()});},
+        "quncopy"=>{if node.operands.len()!=2{return Err(Error::arg("quncopy operand count"));}let w=wires(&node.operands[0],env)?;let hash=canonical::hash(&canonical::to_vec(&json!(w))?);let Some(Binding::Allocation{identity,..})=env.remove(&node.operands[1])else{return Err(Error::arg("quncopy consumes a qcopy result"));};if !identity.starts_with("source-copy/")||!identity.ends_with(&hash){return Err(Error::arg("§11 K81: quncopy must pair with its own qcopy"));}},
+        "qalloc"|"qborrow"=>{if node.operands.len()!=2{return Err(Error::arg("allocation operand count"));}let n=crate::schedule::uint(&json!(node.operands[1]))?;if n==0{return Err(Error::arg("allocation width must be positive"));}let name=node.lhs.as_ref().ok_or_else(||Error::arg("allocation result missing"))?;if env.contains_key(name){return Err(Error::arg("allocation shadows a live name"));}let identity=format!("preflight/{}",node.point);env.insert(name.clone(),Binding::Allocation{wires:region_wires(&identity,usize::try_from(n).map_err(|_|Error::new(Status::NoMem,"allocation exceeds host size"))?)?,identity,class:node.operands[0].clone(),state:if node.op=="qborrow"{"borrowed"}else{"clean"}.into()});},
+        "qfree"|"qreturn"=>{if node.operands.len()!=1{return Err(Error::arg("release requires one allocation"));}let Some(Binding::Allocation{state,..})=env.remove(&node.operands[0])else{return Err(Error::arg("release of a non-live source allocation"));};if (node.op=="qreturn")!=(state=="borrowed"){return Err(Error::arg("§5.1: qfree matches qalloc and qreturn matches qborrow"));}},
+        "qloop"=>{if node.bodies.len()!=1{return Err(Error::arg("qloop requires exactly one body"));}let mut inner=env.clone();preflight_memory(&node.bodies[0],&mut inner,readonly)?;if live_types(&inner)!=live_types(env){return Err(Error::arg("§4.6: loop body entry/exit live names differ"));}},
+        _=>{for body in &node.bodies{preflight_memory(body,env,readonly)?;}}
+    }}Ok(())
+}
 impl Builder<'_> {
     #[allow(clippy::too_many_arguments)]
     fn invoke(
@@ -234,6 +263,7 @@ impl Builder<'_> {
             adjoint:false,
         });
         let locals=self.prepare_regions(f,&mut env,chain,owner)?;
+        let readonly=self.trace.invocations[owner].slots.iter().filter(|s|s.role=="in"||s.role=="mem_in").flat_map(|s|s.wires.iter().cloned()).collect::<BTreeSet<_>>();preflight_memory(&f.body,&mut env.clone(),&readonly)?;
         self.nodes(f, &f.body, &mut env, &controls, chain, &[], owner)?;
         for region in locals.into_iter().rev(){let mut ordinal=1+region.image.len() as u64;let mut leaves=Vec::new();for gate in region.image.into_iter().rev(){leaves.push(Leaf{ordinal,calls:vec![],op:Operation::Gate(gate)});ordinal+=1;}leaves.push(Leaf{ordinal,calls:vec![],op:Operation::Release{identity:region.identity,wires:region.wires,class:"any".into(),state:"clean".into()}});self.emit(f,&region.node,&[],chain,owner,leaves)?;}
         if adjoint {
@@ -500,11 +530,6 @@ impl Builder<'_> {
                     continue;
                 }
                 "qalloc" | "qborrow" => {
-                    if op == "qborrow" {
-                        return Err(deferred(
-                            "borrow-frame source proof and caller idle-set binding",
-                        ));
-                    }
                     if operands.len() != 2 {
                         return Err(Error::arg("qalloc requires class and width"));
                     }
@@ -538,7 +563,7 @@ impl Builder<'_> {
                             identity: identity.clone(),
                             wires: w.clone(),
                             class: operands[0].clone(),
-                            state: "clean".into(),
+                            state: if op=="qborrow"{"borrowed"}else{"clean"}.into(),
                         },
                     );
                     leaves.push(Leaf {
@@ -548,7 +573,7 @@ impl Builder<'_> {
                             identity,
                             wires: w,
                             class: operands[0].clone(),
-                            state: "clean".into(),
+                            state: if op=="qborrow"{"borrowed"}else{"clean"}.into(),
                         },
                     });
                 }
@@ -565,6 +590,9 @@ impl Builder<'_> {
                     else {
                         return Err(Error::arg("release requires live source allocation"));
                     };
+                    if (op == "qreturn") != (state == "borrowed") {
+                        return Err(Error::arg("§5.1: qfree matches qalloc and qreturn matches qborrow"));
+                    }
                     leaves.push(Leaf {
                         ordinal: 0,
                         calls: vec![],
@@ -753,9 +781,7 @@ impl Builder<'_> {
                 }
                 "qregion"=>continue,
                 "qload" | "qunload" | "qstore" | "qexchm" => {
-                    return Err(deferred(
-                        "local region image lifetimes and coherent-memory source adapters",
-                    ));
+                    let identity=format!("{}/{}/{:?}",canonical::hash(&canonical::to_vec(&json!(chain.iter().map(Occurrence::json).collect::<Vec<_>>()))?),node.point,iteration);let plan=bind_memory(node,env,&readonly,&identity)?;leaves=self.recipe(&plan.kind,plan.args,env,&effective)?;if let Some(name)=plan.consumed{env.remove(&name);}
                 }
                 gate if GATES.contains(&gate) => {
                     let mut params = operands;
@@ -857,53 +883,22 @@ fn form_while_adjoint(events:&mut Vec<Event>,invocations:&[Invocation])->Result<
     }Ok(())
 }
 
-/// A version-restored input is insufficient to prove every §6.2 window rule.
-/// Keep the remaining mutable-input proof explicit instead of accepting it by
-/// primitive cancellation. The unrestricted algorithm is tracked by ark.
-fn require_stable_workspace_inputs(events: &[Event]) -> Result<()> {
-    for (start, event) in events.iter().enumerate() {
-        let Operation::Alloc {
-            identity, wires, ..
-        } = &event.leaf.op
-        else {
-            continue;
-        };
-        let Some(end) = events
-            .iter()
-            .enumerate()
-            .skip(start + 1)
-            .find_map(|(i, e)| {
-                matches!(&e.leaf.op,Operation::Release{identity:id,..}if id==identity).then_some(i)
-            })
-        else {
-            continue;
-        };
-        let owned = wires.iter().cloned().collect::<BTreeSet<_>>();
-        let mut dependencies = BTreeSet::new();
-        for e in &events[start + 1..end] {
-            if let Operation::Gate(g) = &e.leaf.op {
-                if g.wires[g.own_controls()..]
-                    .iter()
-                    .any(|w| owned.contains(w))
-                {
-                    dependencies.extend(g.all_wires().into_iter().filter(|w| !owned.contains(w)));
-                }
-            }
-        }
-        for e in &events[start + 1..end] {
-            if let Operation::Gate(g) = &e.leaf.op {
-                if g.wires[g.own_controls()..]
-                    .iter()
-                    .any(|w| dependencies.contains(w))
-                {
-                    return Err(deferred(
-                        "cleanup-window proof with changing workspace input versions",
-                    ));
-                }
-            }
-        }
-    }
-    Ok(())
+fn diagonal(g:&Gate)->bool{["s","sdg","t","tdg","rz","cz"].contains(&g.op.as_str())}
+fn permutation(g:&Gate)->bool{["x","cx","ccx","mcx","swap"].contains(&g.op.as_str())}
+fn normalized(g:&Gate)->Gate{let mut n=g.clone();if ["x","cx","ccx","mcx"].contains(&g.op.as_str()){n.op="mcx".into();n.wires=vec![g.wires.last().unwrap().clone()];n.controls=g.control_wires();}n.controls.sort();n.controls.dedup();n}
+/// Sufficient exact factorisation test. Reduce only literal adjoints whose event
+/// is on top of every operand's causal stack, including readers. A failed test
+/// is not a semantic counterexample and keeps the general proof explicitly open.
+fn independent(events:&[Event],protected:&[String])->bool{
+    let mut active:Vec<(Gate,bool)>=Vec::new();let mut stacks:BTreeMap<String,Vec<usize>>=BTreeMap::new();
+    for e in events{match &e.leaf.op{
+        Operation::Gate(g)=>{let n=normalized(g);let wires=n.all_wires();let top=wires.first().and_then(|w|stacks.get(w)?.last()).copied();let matched=top.filter(|i|wires.iter().all(|w|stacks.get(w).and_then(|s|s.last())==Some(i))&&active[*i].0.adjoint()==n);
+            if let Some(i)=matched{for w in wires{stacks.get_mut(&w).unwrap().pop();}active[i].1=false;}else{let i=active.len();for w in wires{stacks.entry(w).or_default().push(i);}active.push((n,true));}
+        },
+        Operation::Alloc{wires,..}|Operation::Release{wires,..}=>{let mut connected=wires.iter().cloned().collect::<BTreeSet<_>>();loop{let old=connected.len();for (g,live) in &active{if *live&&g.all_wires().iter().any(|w|connected.contains(w)){connected.extend(g.all_wires());}}if old==connected.len(){break;}}for w in connected{stacks.remove(&w);}},
+        Operation::Classical{..}=>{}
+    }}
+    !active.iter().any(|(g,live)|*live&&g.all_wires().iter().any(|w|protected.contains(w)))
 }
 /// Source occurrence/version restoration, independent of basis values.
 fn verify_clean_lifetimes(events: &[Event]) -> Result<()> {
@@ -913,13 +908,20 @@ fn verify_clean_lifetimes(events: &[Event]) -> Result<()> {
         inputs: BTreeMap<String, u64>,
         targets: Vec<String>,
         prior: Vec<Option<usize>>,
+        prior_perm:Vec<bool>,
+        post_perm:bool,
+        workspace:bool,
+        at:usize,
     }
+    let mut provenance:BTreeMap<String,bool>=BTreeMap::new();
+    let mut matches:BTreeMap<usize,usize>=BTreeMap::new();
+    let mut windows=Vec::new();
     let mut versions: BTreeMap<String, u64> = BTreeMap::new();
     let mut latest: BTreeMap<String, usize> = BTreeMap::new();
     let mut changes: Vec<Change> = Vec::new();
     let mut next = 1u64;
     let mut live = BTreeMap::new();
-    for event in events {
+    for (at,event) in events.iter().enumerate() {
         match &event.leaf.op {
             Operation::Alloc {
                 identity, wires, ..
@@ -928,6 +930,7 @@ fn verify_clean_lifetimes(events: &[Event]) -> Result<()> {
                     return Err(Error::arg("duplicate source allocation"));
                 }
                 for w in wires {
+                    provenance.insert(w.clone(),true);
                     versions.insert(w.clone(), 0);
                     latest.remove(w);
                 }
@@ -956,14 +959,8 @@ fn verify_clean_lifetimes(events: &[Event]) -> Result<()> {
                 }
             }
             Operation::Gate(g) => {
-                let mut normalized = g.clone();
-                if ["x", "cx", "ccx", "mcx"].contains(&g.op.as_str()) {
-                    normalized.op = "mcx".into();
-                    normalized.wires = vec![g.wires.last().unwrap().clone()];
-                    normalized.controls = g.control_wires();
-                }
-                normalized.controls.sort();
-                normalized.controls.dedup();
+                if diagonal(g){continue;}
+                let normalized=normalized(g);
                 let targets = g.wires[g.own_controls()..].to_vec();
                 let prev = targets.first().and_then(|w| latest.get(w)).copied();
                 let matched = prev
@@ -978,7 +975,11 @@ fn verify_clean_lifetimes(events: &[Event]) -> Result<()> {
                     });
                 if let Some(i) = matched {
                     let c = &changes[i];
+                    matches.insert(c.at,at);matches.insert(at,c.at);
+                    if c.workspace&&c.post_perm{windows.push((c.at,at,c.inputs.keys().filter(|w|!targets.contains(w)).cloned().collect::<Vec<_>>(),targets.clone()));}
+                    else if c.workspace&&!independent(&events[c.at+1..at],&targets){return Err(deferred("joint other-workspace factorisation after composed intervening uses"));}
                     for (w, prior) in targets.iter().zip(&c.prior) {
+                        provenance.insert(w.clone(),c.prior_perm[c.targets.iter().position(|t|t==w).unwrap()]);
                         versions.insert(w.clone(), c.inputs[w]);
                         if let Some(p) = prior {
                             latest.insert(w.clone(), *p);
@@ -996,14 +997,18 @@ fn verify_clean_lifetimes(events: &[Event]) -> Result<()> {
                         })
                         .collect();
                     let prior = targets.iter().map(|w| latest.get(w).copied()).collect();
+                    let prior_perm=targets.iter().map(|w|provenance.get(w).copied().unwrap_or(true)).collect::<Vec<_>>();
+                    let post_perm=permutation(g)&&g.all_wires().iter().all(|w|provenance.get(w).copied().unwrap_or(true));
                     let i = changes.len();
                     changes.push(Change {
                         gate: normalized,
                         inputs,
                         targets: targets.clone(),
                         prior,
+                        prior_perm,post_perm,at,workspace:targets.iter().any(|w|live.values().any(|wires|wires.contains(w))),
                     });
                     for w in targets {
+                        provenance.insert(w.clone(),post_perm);
                         versions.insert(w.clone(), next);
                         latest.insert(w, i);
                     }
@@ -1011,6 +1016,15 @@ fn verify_clean_lifetimes(events: &[Event]) -> Result<()> {
                 }
             }
             Operation::Classical { .. } => {}
+        }
+    }
+    for (compute,cleanup,dependencies,value) in windows{
+        for i in compute+1..cleanup{let Operation::Gate(g)=&events[i].leaf.op else{continue;};if diagonal(g){continue;}let writes=&g.wires[g.own_controls()..];
+            if !permutation(g)&&writes.iter().any(|w|dependencies.contains(w)||value.contains(w)){return Err(Error::arg("§6.2: non-diagonal operation closes cleanup window"));}
+            if writes.iter().any(|w|dependencies.contains(w)){
+                let Some(partner)=matches.get(&i).copied()else{return Err(Error::arg("§6.2: dependency changed without a matched undo in cleanup window"));};if partner<=compute||partner>=cleanup{return Err(Error::arg("§6.2: dependency undo is outside cleanup window"));}
+                if i<partner&&events[i+1..partner].iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !diagonal(g)&&g.wires[g.own_controls()..].iter().any(|w|dependencies.contains(w)||value.contains(w)))){return Err(Error::arg("§6.2: dependency undo crossed a value change and closed cleanup window"));}
+            }
         }
     }
     if !live.is_empty() {

@@ -29,3 +29,14 @@ fn interface_region_shape_role_and_cell_identity_are_preserved_across_calls(){
     let wrong=layout(common::action("perm_action","a",signature,"perm_action @a (t:wire mut) () (r:region[0,6] in) () ()","x t"));assert!(Object::parse(&wrong).and_then(|o|Trace::build(&o,"a",0,&json!([]),[0;4])).is_err());
     let signature=json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[{"A":0,"W":1,"role":"mut"}],"args":[],"bounds":[]});let wrong=layout(common::action("perm_action","a",signature,"perm_action @a (t:wire mut) () (r:region[0,1] mut) () ()","x r"));assert!(Trace::build(&Object::parse(&wrong).unwrap(),"a",0,&json!([]),[0;4]).is_err());
 }
+
+#[test]
+fn every_k79_source_address_vector_is_admitted_or_rejected_before_ref_helper_expansion(){
+    let manifest:serde_json::Value=canonical::parse(&std::fs::read("../bennett-isa-spec/conformance/fixtures/accepted-k78-k80-09/k79.json").unwrap()).unwrap();let mut admitted=0;let mut rejected=0;
+    for vector in manifest["vectors"].as_array().unwrap(){let source=vector["source"].as_str().unwrap();let symbols:serde_json::Value=canonical::parse(source.split("section symbols\n").nth(1).unwrap().split("\n\n").next().unwrap().as_bytes()).unwrap();let mut signature=symbols["0"]["signature"].clone();signature["abi"]=json!("0.9");let function=source.split("section functions\n").nth(1).unwrap().split("\n\nsection").next().unwrap();let (header,rest)=function.split_once('\n').unwrap();let body=rest.strip_prefix("^entry():\n").unwrap().trim_end_matches('\n');
+        let object=Object::parse(&layout(common::action("perm_action","m",signature,header,body))).unwrap();let result=Trace::build(&object,"m",1,&json!([]),[0;4]);
+        if vector["source_admission"]==true{let trace=result.unwrap_or_else(|e|panic!("{}: {e}",vector["operation"]));let leaves=trace.events.iter().map(|e|e.leaf.clone()).collect::<Vec<_>>();let names=["mut:0[0]","in:0[0]","in:0[1]","control:0","mem:0[0]"];
+            for tuple in vector["tuples"].as_array().unwrap(){let before=tuple["before"].as_u64().unwrap();let mut bits=names.iter().enumerate().map(|(i,n)|(n.to_string(),before&(1<<i)!=0)).collect::<BTreeMap<_,_>>();simulate_basis(&leaves,&mut bits).unwrap();let packed=names.iter().enumerate().map(|(i,n)|u64::from(bits[*n])<<i).sum::<u64>();assert_eq!(packed,tuple["after"].as_u64().unwrap(),"{} {before}",vector["operation"]);assert_eq!(bits.len() as u64,tuple["live_wires"].as_u64().unwrap());simulate_basis(&bennett_sched::expansion::inverse(&leaves),&mut bits).unwrap();let packed=names.iter().enumerate().map(|(i,n)|u64::from(bits[*n])<<i).sum::<u64>();assert_eq!(packed,tuple["inverse_after"].as_u64().unwrap());}
+            admitted+=1;}else{assert_eq!(result.unwrap_err().status,bennett_sched::Status::Arg,"{} {}",vector["operation"],vector["address_actual"]);rejected+=1;}
+    }assert_eq!(admitted,4);assert_eq!(rejected,8);
+}

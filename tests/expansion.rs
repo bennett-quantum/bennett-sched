@@ -92,19 +92,16 @@ fn captured_templates_and_fresh_scratch_do_not_capture_callee_locals() {
 }
 
 #[test]
-fn undeclared_helper_operands_are_reported_with_the_contract_gap() {
-    let lib = Library::published().unwrap();
-    let err = lib
-        .expand(
-            "bind.value.add",
-            &json!([1, ["a"], ["b"], ["t"]]),
-            &Env::new(),
-        )
-        .unwrap_err();
-    assert!(err.reason.contains("unbound"), "{err}");
-    assert!(err.reason.contains("bennett-sched-enz"),"{err}");
-    assert_eq!(bennett_sched::ref_contract::unbound_wires(&lib.recipes["qxor"]),std::collections::BTreeSet::from(["s".to_owned(),"t".to_owned()]));
-    assert!(bennett_sched::ref_contract::unbound_wires(&lib.recipes["bind.qxor"]).is_empty());
+fn k82_named_helpers_import_only_their_wire_interfaces_and_arithmetic_is_exact() {
+    let lib=Library::published().unwrap();
+    assert_eq!(bennett_sched::ref_contract::interface(&lib,"qxor").unwrap(),vec!["s","t"]);
+    assert_eq!(bennett_sched::ref_contract::interface(&lib,"qcopy").unwrap(),vec!["s"]);
+    let leaves=lib.expand("bind.value.add",&json!([2,["a0","a1"],["b0","b1"],["t0","t1"]]),&Env::new()).unwrap();
+    for a in 0..4{for b in 0..4{for t in 0..4{let mut bits=BTreeMap::from([("a0".into(),a&1!=0),("a1".into(),a&2!=0),("b0".into(),b&1!=0),("b1".into(),b&2!=0),("t0".into(),t&1!=0),("t1".into(),t&2!=0)]);simulate_basis(&leaves,&mut bits).unwrap();assert_eq!(bits.len(),6);assert_eq!(usize::from(bits["t0"])+2*usize::from(bits["t1"]),t^((a+b)%4));}}}
+    let helper=Env::from([("s".into(),Binding::Wires(vec!["a".into()])),("t".into(),Binding::Wires(vec!["b".into()]))]);
+    lib.expand("qxor",&json!([1]),&helper).unwrap();
+    let mut extra=helper.clone();extra.insert("other".into(),Binding::Wires(vec!["c".into()]));assert!(lib.expand("qxor",&json!([1]),&extra).is_err());
+    assert!(lib.expand("qxor",&json!([1]),&Env::new()).is_err());
 }
 
 #[test]
