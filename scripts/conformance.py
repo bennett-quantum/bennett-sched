@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SPEC = ROOT.parent / "bennett-isa-spec"
 
 DIRECT = {
+    "E-imports": "published_vectors::published_import_quantity_is_mapped_exactly_and_bound_to_model_version",
     "E-aggregation": "published_vectors::published_aggregation_leaf_list_is_counted_once_with_classical_time",
     "E-ast-division-by-zero": "published_vectors::published_cost_ast_vectors_match_their_exact_outcomes",
     "E-ast-eps-out-of-range": "published_vectors::published_cost_ast_vectors_match_their_exact_outcomes",
@@ -30,6 +31,12 @@ EQUIVALENT = {
     "E-ref-09-qxor-witness": "expansion::published_bound_qxor_all_sixteen_tuples_and_inverse_ordinals",
     "E-scheme-expansion": "target::published_scheme_repeat_emits_three_leaves_without_charging_a_parent",
     "E-timing-overlap": "resources::scheduled_overlap_sums_demands_and_half_open_reuse_does_not",
+    "H-path-not-in-object": "admission (linked source point, loops, instances and semantic-call path validation)",
+    "F-borrow-positive-check": "borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record",
+    "F-borrow-neg-swap": "borrow::translation_lemma_never_certifies_any_of_the_four_normative_negative_patterns",
+    "F-borrow-neg-vwv": "borrow::translation_lemma_never_certifies_any_of_the_four_normative_negative_patterns",
+    "F-borrow-neg-control-in-b": "borrow::translation_lemma_never_certifies_any_of_the_four_normative_negative_patterns",
+    "F-borrow-neg-target-outside-b": "borrow::translation_lemma_never_certifies_any_of_the_four_normative_negative_patterns",
     "H-specificity-incomparable": "selectors (maximal ties, independent kinds, nested invocation coordinates)",
     "H-defaults-uncovered": "canonical_cost::decision_decimals_preserve_all_digits_and_shares_round_down; pipeline",
     "H-capacity-peak": "pipeline::infeasible_capacity_has_typed_outcome_reason_and_no_documents",
@@ -67,7 +74,7 @@ def main():
         elif identifier in EQUIVALENT:
             record.update(coverage="equivalent-witness-test", test=EQUIVALENT[identifier])
         elif identifier.startswith("E-ref-09-"):
-            record.update(coverage="partial-or-blocked-reference-expansion", beads=["bennett-sched-enz", "bennett-sched-ark"])
+            record.update(coverage="partial-reference-expansion", beads=["bennett-sched-ark", "bennett-sched-qnl"])
         elif case["suite"] in {"E", "H"} or identifier == "G-estimate-resolved-class-decimal":
             record.update(coverage="not-exercised-scheduler-vector", beads=["bennett-sched-ark"])
         else:
@@ -85,7 +92,12 @@ def main():
     portable = []
     for path in sorted((SPEC / "conformance/fixtures").glob("accepted-*/*.json")):
         v = json.loads(path.read_bytes())
-        portable.append({"path": str(path.relative_to(SPEC)), "sha256": sha(path.read_bytes()), "vectors": len(v.get("vectors", [])), "coverage": "not-exercised", "beads": ["bennett-sched-ark"]})
+        record={"path": str(path.relative_to(SPEC)), "sha256": sha(path.read_bytes()), "vectors": len(v.get("vectors", v.get("cases", []))), "coverage": "not-exercised", "beads": ["bennett-sched-ark"]}
+        if path.name=="k82.json":
+            record.update(coverage="direct-fixture-test",test="named_interface",catalog_interfaces=54,edge_digests=86)
+        elif path.name=="k79.json":
+            record.update(coverage="source-admission-and-complete-basis-tuples",test="regions::every_k79_source_address_vector_is_admitted_or_rejected_before_ref_helper_expansion",admitted=4,rejected=8,basis_tuples=128)
+        portable.append(record)
     report = {
         "schema": "bennett-sched.conformance-inventory.v1",
         "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",

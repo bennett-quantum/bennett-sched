@@ -101,38 +101,123 @@ fn mutable_cleanup_dependencies_reject_an_intervening_workspace_change() {
 
 #[test]
 fn matched_dependency_changes_are_allowed_when_the_window_state_is_preserved() {
-    let sig=json!({"abi":"0.9","tier":"q","kind":"action","mut":[1,1],"in":[],"mem":[],"args":[],"bounds":[]});
-    let bytes=common::action("action","a",sig,"action @a (t:wire mut, c:wire mut) () () () ()","d = qcopy c\nx c\ns t\nx c\nquncopy c d");
-    Trace::build(&Object::parse(&bytes).unwrap(),"a",0,&json!([]),[0;4]).unwrap();
+    let sig = json!({"abi":"0.9","tier":"q","kind":"action","mut":[1,1],"in":[],"mem":[],"args":[],"bounds":[]});
+    let bytes = common::action(
+        "action",
+        "a",
+        sig,
+        "action @a (t:wire mut, c:wire mut) () () () ()",
+        "d = qcopy c\nx c\ns t\nx c\nquncopy c d",
+    );
+    Trace::build(&Object::parse(&bytes).unwrap(), "a", 0, &json!([]), [0; 4]).unwrap();
 }
 
 #[test]
-fn other_workspace_cleans_after_composed_uses_cancel_and_rejects_transferred_dependence(){
-    let sig=json!({"abi":"0.9","tier":"q","kind":"action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});
-    for body in ["d = qalloc any 1\nh d\nh d\nqfree d","d = qalloc any 1\nh d\ncx d t\ncx d t\nh d\nqfree d"]{
-        let bytes=common::action("action","a",sig.clone(),"action @a (t:wire mut) () () () ()",body);Trace::build(&Object::parse(&bytes).unwrap(),"a",0,&json!([]),[0;4]).unwrap();
+fn other_workspace_cleans_after_composed_uses_cancel_and_rejects_transferred_dependence() {
+    let sig = json!({"abi":"0.9","tier":"q","kind":"action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});
+    for body in [
+        "d = qalloc any 1\nh d\nh d\nqfree d",
+        "d = qalloc any 1\nh d\ncx d t\ncx d t\nh d\nqfree d",
+    ] {
+        let bytes = common::action(
+            "action",
+            "a",
+            sig.clone(),
+            "action @a (t:wire mut) () () () ()",
+            body,
+        );
+        Trace::build(&Object::parse(&bytes).unwrap(), "a", 0, &json!([]), [0; 4]).unwrap();
     }
-    let bytes=common::action("action","a",sig,"action @a (t:wire mut) () () () ()","d = qalloc any 1\nh d\ncx d t\nh d\nqfree d");
-    assert!(Trace::build(&Object::parse(&bytes).unwrap(),"a",0,&json!([]),[0;4]).is_err());
+    let bytes = common::action(
+        "action",
+        "a",
+        sig,
+        "action @a (t:wire mut) () () () ()",
+        "d = qalloc any 1\nh d\ncx d t\nh d\nqfree d",
+    );
+    assert!(Trace::build(&Object::parse(&bytes).unwrap(), "a", 0, &json!([]), [0; 4]).is_err());
 }
 
 #[test]
 fn interface_gate_pairs_are_not_mistaken_for_workspace_cleanup_windows() {
-    let sig=json!({"abi":"0.9","tier":"q","kind":"action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});
-    let bytes=common::action("action","a",sig,"action @a (t:wire mut) () () () ()","x t\nh t\nh t\nx t");
-    Trace::build(&Object::parse(&bytes).unwrap(),"a",0,&json!([]),[0;4]).unwrap();
+    let sig = json!({"abi":"0.9","tier":"q","kind":"action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});
+    let bytes = common::action(
+        "action",
+        "a",
+        sig,
+        "action @a (t:wire mut) () () () ()",
+        "x t\nh t\nh t\nx t",
+    );
+    Trace::build(&Object::parse(&bytes).unwrap(), "a", 0, &json!([]), [0; 4]).unwrap();
 }
 
 #[test]
-fn release_opcode_matches_allocation_kind_and_intrinsic_cleanup_keeps_its_pair(){
-    let signature=json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[1],"mem":[],"args":[],"bounds":[]});
-    for body in ["d = qalloc any 1\nqreturn d","d = qalloc any 1\ncx c d\nquncopy c d"]{let bytes=common::action("perm_action","a",signature.clone(),"perm_action @a (t:wire mut) (c:wire in) () () ()",body);assert_eq!(Trace::build(&Object::parse(&bytes).unwrap(),"a",0,&json!([]),[0;4]).unwrap_err().status,bennett_sched::Status::Arg);}
+fn semantic_call_inverse_restores_every_output_before_joint_releases() {
+    let sig = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1,1],"in":[],"mem":[],"args":[],"bounds":[]});
+    let base = common::action(
+        "perm_action",
+        "swap2",
+        sig,
+        "perm_action @swap2 (a:wire mut, b:wire mut) () () () ()",
+        "swap a b",
+    );
+    let sig = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[],"in":[],"mem":[],"args":[],"bounds":[]});
+    let bytes = common::caller(
+        &base,
+        "perm_action",
+        "outer",
+        sig,
+        "perm_action @outer () () () () ()",
+        "a = qalloc any 1\nb = qalloc any 1\naction_call @swap2 (a, b) () () ()\nadj action_call @swap2 (a, b) () () ()\nqfree a\nqfree b",
+    );
+    Trace::build(
+        &Object::parse(&bytes).unwrap(),
+        "outer",
+        0,
+        &json!([]),
+        [0; 4],
+    )
+    .unwrap();
+}
+
+#[test]
+fn release_opcode_matches_allocation_kind_and_intrinsic_cleanup_keeps_its_pair() {
+    let signature = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[1],"mem":[],"args":[],"bounds":[]});
+    for body in [
+        "d = qalloc any 1\nqreturn d",
+        "d = qalloc any 1\ncx c d\nquncopy c d",
+    ] {
+        let bytes = common::action(
+            "perm_action",
+            "a",
+            signature.clone(),
+            "perm_action @a (t:wire mut) (c:wire in) () () ()",
+            body,
+        );
+        assert_eq!(
+            Trace::build(&Object::parse(&bytes).unwrap(), "a", 0, &json!([]), [0; 4])
+                .unwrap_err()
+                .status,
+            bennett_sched::Status::Arg
+        );
+    }
 }
 
 #[test]
 fn malformed_loop_without_body_returns_an_argument_error() {
-    let sig=json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[1]});
-    let bytes=common::action("perm_action","a",sig,"perm_action @a (t:wire mut) () () () ()","qloop 1");
-    let object=Object::parse(&bytes).unwrap();
-    assert_eq!(Trace::build(&object,"a",0,&json!([]),[0;4]).unwrap_err().status,bennett_sched::Status::Arg);
+    let sig = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[1]});
+    let bytes = common::action(
+        "perm_action",
+        "a",
+        sig,
+        "perm_action @a (t:wire mut) () () () ()",
+        "qloop 1",
+    );
+    let object = Object::parse(&bytes).unwrap();
+    assert_eq!(
+        Trace::build(&object, "a", 0, &json!([]), [0; 4])
+            .unwrap_err()
+            .status,
+        bennett_sched::Status::Arg
+    );
 }

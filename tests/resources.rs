@@ -80,8 +80,30 @@ fn scheduled_overlap_sums_demands_and_half_open_reuse_does_not() {
 
 #[test]
 fn zero_time_allocations_use_generated_lifetime_order_for_peak() {
-    let live=vec![LiveInterval{class:"A".into(),width:2,borrowed:false,start:d::integer(0),end:d::integer(0)},LiveInterval{class:"A".into(),width:3,borrowed:false,start:d::integer(0),end:d::integer(0)}];
-    let reused=aggregate_ordered(&target(),&[],&live,&[(0,1),(2,3)]).unwrap();assert_eq!(reused.display["peak_qubits[A]"],"3");assert_eq!(reused.display["qubit_second[A]"],"0");
-    assert_eq!(aggregate_ordered(&target(),&[],&live,&[(0,3),(1,2)]).unwrap().display["peak_qubits[A]"],"5");
-    assert!(aggregate_ordered(&target(),&[],&live,&[(1,0),(2,3)]).is_err());
+    let live = vec![
+        LiveInterval {
+            class: "A".into(),
+            width: 2,
+            borrowed: false,
+            start: d::integer(0),
+            end: d::integer(0),
+        },
+        LiveInterval {
+            class: "A".into(),
+            width: 3,
+            borrowed: false,
+            start: d::integer(0),
+            end: d::integer(0),
+        },
+    ];
+    let reused = aggregate_ordered(&target(), &[], &live, &[(0, 1), (2, 3)]).unwrap();
+    assert_eq!(reused.display["peak_qubits[A]"], "3");
+    assert_eq!(reused.display["qubit_second[A]"], "0");
+    assert_eq!(
+        aggregate_ordered(&target(), &[], &live, &[(0, 3), (1, 2)])
+            .unwrap()
+            .display["peak_qubits[A]"],
+        "5"
+    );
+    assert!(aggregate_ordered(&target(), &[], &live, &[(1, 0), (2, 3)]).is_err());
 }

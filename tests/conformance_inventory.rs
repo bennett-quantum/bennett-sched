@@ -53,6 +53,21 @@ fn conformance_inventory_records_every_case_and_portable_manifest_without_stale_
             manifest["sha256"],
             canonical::hash(&std::fs::read(spec.join(path)).unwrap())
         );
-        assert_eq!(manifest["coverage"], "not-exercised");
+        match path.rsplit('/').next().unwrap() {
+            "k82.json" => {
+                assert_eq!(manifest["coverage"], "direct-fixture-test");
+                assert_eq!(manifest["vectors"], 16);
+                assert_eq!(manifest["edge_digests"], 86);
+            }
+            "k79.json" => {
+                assert_eq!(
+                    manifest["coverage"],
+                    "source-admission-and-complete-basis-tuples"
+                );
+                assert_eq!(manifest["admitted"], 4);
+                assert_eq!(manifest["rejected"], 8);
+            }
+            _ => assert_eq!(manifest["coverage"], "not-exercised"),
+        }
     }
 }

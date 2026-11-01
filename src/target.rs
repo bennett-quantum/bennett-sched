@@ -553,12 +553,29 @@ impl Target {
         if !v["imports"].is_object() {
             return Err(Error::target("imports must be object"));
         }
-        for (model,import) in v["imports"].as_object().unwrap(){
-            if model.is_empty(){return Err(Error::target("empty imported model name"));}
-            fields(import,&["version","map"],&[])?;if text(&import["version"])?.is_empty(){return Err(Error::target("empty imported model version"));}
-            for (quantity,mapping) in import["map"].as_object().ok_or_else(||Error::target("import map must be an object"))?{
-                let mapping=array(mapping)?;if quantity.is_empty()||mapping.len()!=2||!resources.contains_key(text(&mapping[0])?){return Err(Error::target("invalid imported quantity/resource mapping"));}
-                if !mapping[1].is_number(){return Err(Error::target("import factor must be a number"));}d::nonnegative(&mapping[1])?;
+        for (model, import) in v["imports"].as_object().unwrap() {
+            if model.is_empty() {
+                return Err(Error::target("empty imported model name"));
+            }
+            fields(import, &["version", "map"], &[])?;
+            if text(&import["version"])?.is_empty() {
+                return Err(Error::target("empty imported model version"));
+            }
+            for (quantity, mapping) in import["map"]
+                .as_object()
+                .ok_or_else(|| Error::target("import map must be an object"))?
+            {
+                let mapping = array(mapping)?;
+                if quantity.is_empty()
+                    || mapping.len() != 2
+                    || !resources.contains_key(text(&mapping[0])?)
+                {
+                    return Err(Error::target("invalid imported quantity/resource mapping"));
+                }
+                if !mapping[1].is_number() {
+                    return Err(Error::target("import factor must be a number"));
+                }
+                d::nonnegative(&mapping[1])?;
             }
         }
         if !v["qram"].is_null() {
@@ -798,11 +815,28 @@ impl Target {
     }
     /// Resolve one supplied model quantity; importing a model never fabricates
     /// an event or adds a second charge for an already costed native leaf.
-    pub fn import_quantity(&self,model:&str,version:&str,quantity:&str,value:&Rational)->Result<(String,Rational)>{
-        if value.is_negative(){return Err(Error::target("imported model quantity must be nonnegative"));}
-        let import=self.value["imports"].get(model).ok_or_else(||Error::target("imported model not declared"))?;
-        if import["version"]!=version{return Err(Error::target("imported model version mismatch"));}
-        let mapping=import["map"].get(quantity).ok_or_else(||Error::target("imported quantity not mapped"))?;
-        Ok((text(&mapping[0])?.to_owned(),value*d::nonnegative(&mapping[1])?))
+    pub fn import_quantity(
+        &self,
+        model: &str,
+        version: &str,
+        quantity: &str,
+        value: &Rational,
+    ) -> Result<(String, Rational)> {
+        if value.is_negative() {
+            return Err(Error::target("imported model quantity must be nonnegative"));
+        }
+        let import = self.value["imports"]
+            .get(model)
+            .ok_or_else(|| Error::target("imported model not declared"))?;
+        if import["version"] != version {
+            return Err(Error::target("imported model version mismatch"));
+        }
+        let mapping = import["map"]
+            .get(quantity)
+            .ok_or_else(|| Error::target("imported quantity not mapped"))?;
+        Ok((
+            text(&mapping[0])?.to_owned(),
+            value * d::nonnegative(&mapping[1])?,
+        ))
     }
 }

@@ -1,0 +1,260 @@
+//! Source occurrence events used for §5.3 / §6 version matching. Semantic
+//! calls remain atomic; instruction-private constructor scratch is not source
+//! workspace. The emitted schedule still contains every prescribed leaf.
+use crate::{
+    Result, canonical,
+    expansion::{Leaf, Operation},
+    object::{Object, flattened},
+    schedule::Kind,
+    source::{Event, Trace},
+    target::Gate,
+};
+use serde_json::json;
+use std::collections::{BTreeMap, BTreeSet};
+
+fn synthetic(source: &Event, op: Operation) -> Event {
+    let mut e = source.clone();
+    e.leaf = Leaf {
+        ordinal: 0,
+        calls: vec![], origin:vec![],
+        op,
+    };
+    e
+}
+fn fingerprint(events: &[Event], internal: &BTreeSet<String>) -> Result<String> {
+    let mut names = BTreeMap::new();
+    let mut operations = Vec::new();
+    for e in events {
+        if let Operation::Gate(g) = &e.leaf.op {
+            let mut wire = |w: &String| {
+                if internal.contains(w) {
+                    let n = names.len();
+                    names
+                        .entry(w.clone())
+                        .or_insert_with(|| format!("#{n}"))
+                        .clone()
+                } else {
+                    w.clone()
+                }
+            };
+            operations.push(json!([
+                g.op,
+                g.wires.iter().map(&mut wire).collect::<Vec<_>>(),
+                g.controls.iter().map(&mut wire).collect::<Vec<_>>(),
+                g.theta
+            ]));
+        }
+    }
+    Ok(canonical::hash(&canonical::to_vec(&json!(operations))?))
+}
+pub fn events(object: &Object, trace: &Trace, owner: usize) -> Result<Vec<Event>> {
+    let invocation = &trace.invocations[owner];
+    let function = &object.functions[&invocation.name];
+    let points = flattened(&function.body)
+        .into_iter()
+        .map(|n| (n.point.clone(), n))
+        .collect::<BTreeMap<_, _>>();
+    let mut children = trace
+        .invocations
+        .iter()
+        .enumerate()
+        .filter(|(_, i)| i.parent == Some(owner))
+        .collect::<Vec<_>>();
+    children.sort_by_key(|(index, i)| {
+        (
+            i.start,
+            if invocation.adjoint {
+                usize::MAX - *index
+            } else {
+                *index
+            },
+        )
+    });
+    let mut child_index = 0;
+    let mut result = Vec::new();
+    let mut index = invocation.start;
+    while index < invocation.end || child_index < children.len() {
+        if let Some((_, child)) = children.get(child_index).filter(|(_, c)| c.start == index) {
+            let mut location = crate::schedule::Location {
+                root: Default::default(),
+                path: child.path.clone(),
+                generated: 0,
+                kind: Kind::Gate,
+            };
+            location.path.last_mut().unwrap().call_index = None;
+            let targets = child
+                .slots
+                .iter()
+                .filter(|s| s.role == "mut" || s.role == "mem_mut")
+                .flat_map(|s| s.wires.clone())
+                .collect::<Vec<_>>();
+            let mut controls = child.controls.clone();
+            for slot in &child.slots {
+                if slot.role != "mut" && slot.role != "mem_mut" {
+                    controls.extend(slot.wires.clone());
+                }
+            }
+            controls.sort();
+            controls.dedup();
+            let identity = canonical::hash(&canonical::to_vec(&json!([
+                child.hash,
+                child.params,
+                child.budget,
+                child
+                    .slots
+                    .iter()
+                    .map(|s| json!([s.id, s.wires]))
+                    .collect::<Vec<_>>(),
+                controls
+            ]))?);
+            let kind = if object.functions[&child.name].kind == "perm_action" {
+                "perm"
+            } else {
+                "other"
+            };
+            let sign = if child.adjoint { "-" } else { "+" };
+            result.push(Event {
+                location,
+                owner,
+                leaf: Leaf {
+                    ordinal: 0,
+                    calls: vec![], origin:vec![],
+                    op: Operation::Gate(Gate {
+                        op: format!("${kind}/call{sign}/{identity}"),
+                        wires: targets,
+                        controls,
+                        theta: None,
+                    }),
+                },
+            });
+            index = child.end;
+            child_index += 1;
+            continue;
+        }
+        let event = &trace.events[index];
+        assert_eq!(
+            event.owner, owner,
+            "source event outside its direct invocation"
+        );
+        let point = &event.location.path.last().unwrap().point;
+        let node = points[point];
+        let op = node.op.as_str();
+        if [
+            "qcopy", "quncopy", "qload", "qunload", "qxor", "qexch", "qstore", "qexchm",
+        ]
+        .contains(&op)
+        {
+            let mut end = index + 1;
+            while end < invocation.end
+                && trace.events[end].owner == owner
+                && trace.events[end].location.path == event.location.path
+            {
+                end += 1;
+            }
+            let emitted = &trace.events[index..end];
+            let mut internal = BTreeSet::new();
+            let mut output_alloc = None;
+            let mut output_release = None;
+            for e in emitted {
+                match &e.leaf.op {
+                    Operation::Alloc {
+                        identity, wires, ..
+                    }
+                    | Operation::Release {
+                        identity, wires, ..
+                    } => {
+                        if identity.starts_with("source-copy/")
+                            || identity.starts_with("source-load/")
+                        {
+                            if matches!(e.leaf.op, Operation::Alloc { .. }) {
+                                output_alloc = Some(e.clone());
+                            } else {
+                                output_release = Some(e.clone());
+                            }
+                        } else {
+                            internal.extend(wires.clone());
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            if let Some(allocation) = output_alloc.as_ref().or(output_release.as_ref()) {
+                let (identity, wires) = match &allocation.leaf.op {
+                    Operation::Alloc {
+                        identity, wires, ..
+                    }
+                    | Operation::Release {
+                        identity, wires, ..
+                    } => (identity, wires),
+                    _ => unreachable!(),
+                };
+                let inputs = emitted
+                    .iter()
+                    .filter_map(|e| {
+                        if let Operation::Gate(g) = &e.leaf.op {
+                            Some(g.all_wires())
+                        } else {
+                            None
+                        }
+                    })
+                    .flatten()
+                    .filter(|w| !internal.contains(w) && !wires.contains(w))
+                    .collect::<BTreeSet<_>>();
+                if let Some(e) = output_alloc.as_ref() {
+                    result.push(e.clone());
+                }
+                result.push(synthetic(
+                    event,
+                    Operation::Gate(Gate {
+                        op: format!("$perm/intrinsic/{identity}"),
+                        wires: wires.clone(),
+                        controls: inputs.into_iter().collect(),
+                        theta: None,
+                    }),
+                ));
+                if let Some(e) = output_release {
+                    result.push(e);
+                }
+            } else {
+                let targets = emitted
+                    .iter()
+                    .filter_map(|e| {
+                        if let Operation::Gate(g) = &e.leaf.op {
+                            Some(g.wires[g.own_controls()..].to_vec())
+                        } else {
+                            None
+                        }
+                    })
+                    .flatten()
+                    .filter(|w| !internal.contains(w))
+                    .collect::<BTreeSet<_>>();
+                let inputs = emitted
+                    .iter()
+                    .filter_map(|e| {
+                        if let Operation::Gate(g) = &e.leaf.op {
+                            Some(g.all_wires())
+                        } else {
+                            None
+                        }
+                    })
+                    .flatten()
+                    .filter(|w| !internal.contains(w) && !targets.contains(w))
+                    .collect::<BTreeSet<_>>();
+                result.push(synthetic(
+                    event,
+                    Operation::Gate(Gate {
+                        op: format!("$perm/{op}/{}", fingerprint(emitted, &internal)?),
+                        wires: targets.into_iter().collect(),
+                        controls: inputs.into_iter().collect(),
+                        theta: None,
+                    }),
+                ));
+            }
+            index = end;
+        } else {
+            result.push(event.clone());
+            index += 1;
+        }
+    }
+    Ok(result)
+}

@@ -895,7 +895,21 @@ pub fn wire_width(ty: &str) -> Result<u64> {
     }
     Ok(w)
 }
-pub fn region_shape(ty:&str)->Result<(u64,u64)>{let inner=ty.strip_prefix("region[").and_then(|s|s.strip_suffix(']')).ok_or_else(||Error::arg("expected region[A,W] type"))?;let (a,w)=inner.split_once(',').ok_or_else(||Error::arg("region type requires address and cell widths"))?;let a=uint(&json!(a))?;let w=uint(&json!(w))?;if w==0{return Err(Error::arg("region cell width must be positive"));}Ok((a,w))}
+pub fn region_shape(ty: &str) -> Result<(u64, u64)> {
+    let inner = ty
+        .strip_prefix("region[")
+        .and_then(|s| s.strip_suffix(']'))
+        .ok_or_else(|| Error::arg("expected region[A,W] type"))?;
+    let (a, w) = inner
+        .split_once(',')
+        .ok_or_else(|| Error::arg("region type requires address and cell widths"))?;
+    let a = uint(&json!(a))?;
+    let w = uint(&json!(w))?;
+    if w == 0 {
+        return Err(Error::arg("region cell width must be positive"));
+    }
+    Ok((a, w))
+}
 fn validate_interface(f: &Function) -> Result<()> {
     let sig = &f.signature;
     let widths: Vec<Vec<Value>> = match f.kind.as_str() {
@@ -915,11 +929,39 @@ fn validate_interface(f: &Function) -> Result<()> {
             if wire_width(&p.ty)? != uint(w)? {
                 return Err(Error::arg("header/signature width mismatch"));
             }
-            let role=if f.kind=="oracle"{if i==0{Some("in")}else{None}}else if i==0{Some("mut")}else{Some("in")};if p.role.as_deref().is_some_and(|r|Some(r)!=role){return Err(Error::arg("§5.1: interface wire role does not match its header group"));}
+            let role = if f.kind == "oracle" {
+                if i == 0 { Some("in") } else { None }
+            } else if i == 0 {
+                Some("mut")
+            } else {
+                Some("in")
+            };
+            if p.role.as_deref().is_some_and(|r| Some(r) != role) {
+                return Err(Error::arg(
+                    "§5.1: interface wire role does not match its header group",
+                ));
+            }
         }
     }
-    let region_group=if f.kind=="oracle"{3}else{2};let regions=array(&sig["mem"])?;if regions.len()!=f.groups[region_group].len(){return Err(Error::arg("header/signature region count mismatch"));}
-    for (p,r) in f.groups[region_group].iter().zip(regions){fields(r,&["A","W","role"],&[])?;let (a,w)=region_shape(&p.ty)?;let role=text(&r["role"])?;if (a,w)!=(uint(&r["A"])?,uint(&r["W"])?)||p.role.as_deref()!=Some(role)||!["in","mut"].contains(&role)||(f.kind=="oracle"&&role!="in"){return Err(Error::arg("§3.3/§5.1: header/signature region shape or role mismatch"));}}
+    let region_group = if f.kind == "oracle" { 3 } else { 2 };
+    let regions = array(&sig["mem"])?;
+    if regions.len() != f.groups[region_group].len() {
+        return Err(Error::arg("header/signature region count mismatch"));
+    }
+    for (p, r) in f.groups[region_group].iter().zip(regions) {
+        fields(r, &["A", "W", "role"], &[])?;
+        let (a, w) = region_shape(&p.ty)?;
+        let role = text(&r["role"])?;
+        if (a, w) != (uint(&r["A"])?, uint(&r["W"])?)
+            || p.role.as_deref() != Some(role)
+            || !["in", "mut"].contains(&role)
+            || (f.kind == "oracle" && role != "in")
+        {
+            return Err(Error::arg(
+                "§3.3/§5.1: header/signature region shape or role mismatch",
+            ));
+        }
+    }
     let args_index = if f.kind == "oracle" { 4 } else { 3 };
     let types = array(&sig["args"])?;
     if f.groups[args_index]

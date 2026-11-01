@@ -144,10 +144,38 @@ fn published_aggregation_leaf_list_is_counted_once_with_classical_time() {
 
 #[test]
 fn published_import_quantity_is_mapped_exactly_and_bound_to_model_version() {
-    let case=read(cases().join("E/E-imports/case.json"));let s=&case["scenario"];
-    let mut value=Target::parse(&std::fs::read(cases().join("E/E-epsilon-zero-exact/target.json")).unwrap()).unwrap().value;
-    value["resources"]["gates"]=json!({"kind":"count","unit":"gate"});value["imports"]=json!({"model":{"version":s["model_version"],"map":{"quantity":s["mapping"]}}});
-    let target=Target::from_value(value.clone()).unwrap();let (name,amount)=target.import_quantity("model",s["model_version"].as_str().unwrap(),"quantity",&d::value(&s["quantity"]).unwrap()).unwrap();assert_eq!(amount,d::value(&case["expected_outcome"]["resources"][&name]).unwrap());
-    assert!(target.import_quantity("model","other","quantity",&d::integer(3)).is_err());assert!(target.import_quantity("missing","0.8","quantity",&d::integer(3)).is_err());
-    value["imports"]["model"]["map"]["quantity"]=json!(["not-declared",2]);assert!(Target::from_value(value).is_err());
+    let case = read(cases().join("E/E-imports/case.json"));
+    let s = &case["scenario"];
+    let mut value =
+        Target::parse(&std::fs::read(cases().join("E/E-epsilon-zero-exact/target.json")).unwrap())
+            .unwrap()
+            .value;
+    value["resources"]["gates"] = json!({"kind":"count","unit":"gate"});
+    value["imports"] =
+        json!({"model":{"version":s["model_version"],"map":{"quantity":s["mapping"]}}});
+    let target = Target::from_value(value.clone()).unwrap();
+    let (name, amount) = target
+        .import_quantity(
+            "model",
+            s["model_version"].as_str().unwrap(),
+            "quantity",
+            &d::value(&s["quantity"]).unwrap(),
+        )
+        .unwrap();
+    assert_eq!(
+        amount,
+        d::value(&case["expected_outcome"]["resources"][&name]).unwrap()
+    );
+    assert!(
+        target
+            .import_quantity("model", "other", "quantity", &d::integer(3))
+            .is_err()
+    );
+    assert!(
+        target
+            .import_quantity("missing", "0.8", "quantity", &d::integer(3))
+            .is_err()
+    );
+    value["imports"]["model"]["map"]["quantity"] = json!(["not-declared", 2]);
+    assert!(Target::from_value(value).is_err());
 }

@@ -1,34 +1,29 @@
 # Handoff
 
-State: ISA 0.9 partial scheduler implementation. All §11 C symbols, owned
-request/response buffers, typed outcomes, canonical documents, exact costs,
-selectors, closed reference constructors, object identities, primitive action
-schedules and bound resource certificates are implemented. See docs/PLAN.md
-for clause-by-clause coverage. No complete scheduler/conformance claim.
+ISA 0.9 remains partial. See docs/PLAN.md for the requirement inventory and
+remaining algorithms. The runner recorded the previous tree as 0428570; the
+implementation agent ran no git commands and claims no later commit SHA.
 
-Main issue `bennett-sched-akl` remains in progress. P0 `bennett-sched-enz`
-records the published catalog's free-wire binding contradiction and the exact
-proposed normative edit. Required upstream `bd create` was attempted in
-`bennett-isa-spec` and failed with `embeddeddolt ... openat LOCK: read-only file
-system`. No upstream file was changed. An upstream contract decision is needed;
-do not invent dynamic caller scope or change the bound library silently.
+K82 resolves bennett-sched-enz without changing catalog bytes/hash. Named helper
+interfaces pass all 16 published cases, 54 interfaces and 86 edge digests. Source
+while loops/adjoints, local regions/coherent memory, source region forwarding,
+translation borrow frames, atomic semantic-call/intrinsic version checking,
+matched dependency windows, sufficient composed-use factorisation, imports,
+approximate schemes and zero-time/child resource accounting are implemented.
 
-`bennett-sched-ark` records each postponed source/cleanup/frame/accuracy
-algorithm. `bennett-sched-qnl` tracks the remaining conformance work. The
-inventory covers 519 cases, ten normative objects and four portable manifests;
-coverage mappings are not blanket pass verdicts. The installed reference's
-0.9 admission probe exits 1 with `§1: expected isa=0.8`; its 0.8 compatibility
-controlled-action fixture serves the complete four-input differential test.
+akl/ark/qnl remain in progress. Oracle/lproc construction, full cleanup partition
+and recompute, qinplace and general proofs remain required. lzv records a
+context-varying frame schema gap; its exact upstream request is queued in
+.tmp/cross-repo-beads.md. Do not stop independent work for that queue alone.
 
-Verification entry point: `scripts/pre-push --working-tree` (headless,
-offline, four compiler/test threads, Rust tests, a linked C11 consumer, gate
-protocol regression, formatting). `python3 scripts/conformance.py --write
---probe-reference --require-complete` records the inventory and exits 2 for
-remaining vectors. Final command results are recorded in .tmp/PROGRESS.md.
+The inventory records all 519 cases, ten normative objects and five portable
+manifests. K79 covers 12 source cases and 128 forward/inverse tuples; K82 covers
+all binding witnesses. Other partial/unexercised entries are explicit. The
+installed reference binary rejects the 0.9 admission probe with expected isa=0.8;
+its published compatibility object supplies the four-input differential check.
 
-The runner owns commits. No git command was run by the implementation agent,
-and no commit SHA is claimed here. Default `scripts/pre-push` must still be run
-by the runner on the committed pushed SHA: the mocked protocol regression
-checks selection/isolation, not an actual committed snapshot. Changed paths:
-src, tests, data, docs, scripts, Cargo.toml/Cargo.lock, README.md, HANDOFF.md,
-SPEC_VERSIONS.toml and .beads/issues.jsonl. Hooks and worklog were untouched.
+Verification: scripts/pre-push --working-tree (headless, offline, four jobs and
+test threads, Rust tests, linked C11 consumers, gate protocol regression, fmt).
+Latest exact command results are in .tmp/PROGRESS.md. The runner must also run
+the default hook on the committed SHA; working-tree and mocked protocol tests
+do not establish actual committed-snapshot verification. Hooks/worklog untouched.

@@ -25,8 +25,18 @@ struct Allocation {
     end: Option<Rational>,
     owner: Option<usize>,
     scheme: Option<String>,
-    acquire_order:u64,
-    release_order:Option<u64>,
+    acquire_order: u64,
+    release_order: Option<u64>,
+}
+#[derive(Default)]
+struct Search {plan:Vec<usize>,domains:Vec<usize>}
+impl Search {
+    fn choose(&mut self,count:usize)->Result<usize>{
+        if count==0{return Err(Error::infeasible("allocation has no feasible choice"));}
+        let index=self.domains.len();self.domains.push(count);let choice=self.plan.get(index).copied().unwrap_or(0);
+        if choice>=count{return Err(Error::infeasible("allocation choice is outside its current domain"));}Ok(choice)
+    }
+    fn advance(&mut self)->bool{for i in (0..self.domains.len()).rev(){let current=self.plan.get(i).copied().unwrap_or(0);if current+1<self.domains[i]{self.plan.resize(i+1,0);self.plan[i]=current+1;return true;}}false}
 }
 struct Allocator<'a> {
     target: &'a Target,
@@ -35,7 +45,8 @@ struct Allocator<'a> {
     allocations: Vec<Allocation>,
     active: BTreeMap<String, usize>,
     counts: BTreeMap<String, u64>,
-    order:u64,
+    order: u64,
+    search:&'a mut Search,
 }
 impl Allocator<'_> {
     fn capacity(&self, class: &str) -> Option<u64> {
@@ -89,15 +100,10 @@ impl Allocator<'_> {
         let class = if source_class == "any" {
             let mut names: Vec<_> = self.target.classes.keys().collect();
             names.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
-            names
-                .into_iter()
-                .find(|c| self.fits(c, n))
-                .cloned()
-                .ok_or_else(|| {
-                    Error::infeasible(format!(
-                        "§8.4: capacity exhausted for allocation {identity} ({n} wires)"
-                    ))
-                })?
+            let names=names.into_iter().filter(|c|self.fits(c,n)).cloned().collect::<Vec<_>>();
+            if names.is_empty(){return Err(Error::infeasible(format!("§8.4: capacity exhausted for allocation {identity} ({n} wires)")));}
+            let choice=self.search.choose(if n==0{1}else{names.len()})?;
+            names[choice].clone()
         } else {
             if !self.target.classes.contains_key(source_class) {
                 return Err(Error::infeasible(format!(
@@ -114,10 +120,10 @@ impl Allocator<'_> {
         if self.active.contains_key(&identity) || wires.iter().any(|w| self.live.contains_key(w)) {
             return Err(Error::infeasible("allocation aliases live wires"));
         }
-        let vertices = self.free_vertices(&class);
-        for (i, w) in wires.iter().enumerate() {
+        for w in &wires {
+            let vertex=if self.target.value.get("topology").is_some(){let free=self.free_vertices(&class);Some(free[self.search.choose(free.len())?])}else{None};
             self.live
-                .insert(w.clone(), (class.clone(), vertices.get(i).copied()));
+                .insert(w.clone(), (class.clone(), vertex));
         }
         *self.counts.entry(class.clone()).or_default() += n;
         self.active.insert(identity.clone(), self.allocations.len());
@@ -130,10 +136,10 @@ impl Allocator<'_> {
             end: None,
             owner,
             scheme,
-            acquire_order:self.order,
-            release_order:None,
+            acquire_order: self.order,
+            release_order: None,
         });
-        self.order+=1;
+        self.order += 1;
         Ok(class)
     }
     fn release(&mut self, identity: &str, now: &Rational) -> Result<()> {
@@ -143,7 +149,8 @@ impl Allocator<'_> {
             .ok_or_else(|| Error::infeasible("release of non-live frame"))?;
         let a = &mut self.allocations[i];
         a.end = Some(now.clone());
-        a.release_order=Some(self.order);self.order+=1;
+        a.release_order = Some(self.order);
+        self.order += 1;
         for w in &a.wires {
             self.live.remove(w);
         }
@@ -188,6 +195,20 @@ fn selector_entry(event: &Event, kind: &str, decision: Value) -> Value {
     e
 }
 pub fn run(request: &Request) -> Result<Response> {
+    let mut search=Search::default();let mut unsupported=None;
+    loop{
+        search.domains.clear();let result=candidate(request,&mut search);
+        match result{
+            Ok(response)=>return Ok(response),
+            Err(error)if error.status==crate::Status::ScheduleInfeasible||error.status==crate::Status::GateUnsupported=>{
+                if error.status==crate::Status::GateUnsupported&&unsupported.is_none(){unsupported=Some(error.clone());}
+                if !search.advance(){return Err(unsupported.unwrap_or(error));}
+            },
+            Err(error)=>return Err(error)
+        }
+    }
+}
+fn candidate(request:&Request,search:&mut Search)->Result<Response>{
     let object = request
         .object
         .as_ref()
@@ -245,7 +266,8 @@ pub fn run(request: &Request) -> Result<Response> {
         allocations: vec![],
         active: BTreeMap::new(),
         counts: BTreeMap::new(),
-        order:0,
+        order: 0,
+        search,
     };
     let mut now = Rational::zero();
     for (i, w) in trace.inherited.iter().enumerate() {
@@ -300,7 +322,7 @@ pub fn run(request: &Request) -> Result<Response> {
     let mut leaf_owners = Vec::new();
     let mut errors = Vec::new();
     let mut event_sources = Vec::new();
-    let mut event_orders=Vec::new();
+    let mut event_orders = Vec::new();
     for (source_index, event) in trace.events.iter().enumerate() {
         event_times.push(now.clone());
         event_orders.push(allocator.order);
@@ -404,7 +426,7 @@ pub fn run(request: &Request) -> Result<Response> {
                         costs: cost.costs,
                     });
                     now += cost.duration;
-                    allocator.order+=1;
+                    allocator.order += 1;
                 }
                 if let Some(identity) = ancilla_identity {
                     allocator.release(&identity, &now)?;
@@ -422,7 +444,7 @@ pub fn run(request: &Request) -> Result<Response> {
                 event_sources.push(source_index);
                 errors.push(Rational::zero());
                 now += duration;
-                allocator.order+=1;
+                allocator.order += 1;
             }
         }
     }
@@ -440,7 +462,7 @@ pub fn run(request: &Request) -> Result<Response> {
                 return Err(Error::infeasible("workspace remains live at region exit"));
             }
             allocation.end = Some(now.clone());
-            allocation.release_order=Some(allocator.order+1);
+            allocation.release_order = Some(allocator.order + 1);
         }
     }
     let live = allocator
@@ -454,8 +476,12 @@ pub fn run(request: &Request) -> Result<Response> {
             end: a.end.clone().unwrap(),
         })
         .collect::<Vec<_>>();
-    let orders=allocator.allocations.iter().map(|a|(a.acquire_order,a.release_order.unwrap())).collect::<Vec<_>>();
-    let rows = resources::aggregate_ordered(target, &events, &live,&orders)?;
+    let orders = allocator
+        .allocations
+        .iter()
+        .map(|a| (a.acquire_order, a.release_order.unwrap()))
+        .collect::<Vec<_>>();
+    let rows = resources::aggregate_ordered(target, &events, &live, &orders)?;
     let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|integer_json(*n)).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":entries});
     if let Some(placements) = root_placements {
         schedule["interface_vertices"] = json!(placements);
@@ -510,7 +536,7 @@ fn certificate(
     errors: &[Rational],
     leaf_owners: &[usize],
     event_sources: &[usize],
-    source_orders:&[u64],
+    source_orders: &[u64],
     schedule_hash: &str,
 ) -> Result<Value> {
     let object = request.object.as_ref().unwrap();
@@ -550,7 +576,12 @@ fn certificate(
                 .collect::<Result<Vec<_>>>()?;
             let scratch=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_none()&&a.state!="borrowed").map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
             let ancillae=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_some()).map(|a|json!({"id":a.identity,"scheme":a.scheme,"class":a.class,"state":a.state,"width":a.wires.len()})).collect::<Vec<_>>();
-            let borrowed=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.state=="borrowed"&&a.scheme.is_none()).map(|a|json!({"id":a.identity,"class":a.class,"width":a.wires.len()})).collect::<Vec<_>>();
+            let borrowed = allocator
+                .allocations
+                .iter()
+                .filter(|a| a.owner == Some(i) && a.state == "borrowed" && a.scheme.is_none())
+                .map(|a| json!({"id":a.identity,"class":a.class,"width":a.wires.len()}))
+                .collect::<Vec<_>>();
             regions[&inv.hash] = json!({"kind":f.kind,"signature":f.signature,"bounds":f.signature["bounds"],"frame":{"slots":slots,"scratch":scratch,"history":[],"borrow":borrowed,"ancillae":ancillae},"resources":{},"gates_used":{},"claims":[],"verification":{"oracle":null,"borrow_frames":[],"inverse_pairs":[],"unitary":[],"channel":[],"fault_rate":{"domain":{"bundles":[],"borrowed":[],"regions":[]},"faults_by_code":{},"undefined_excluded":0,"layout_dependent_excluded":0}},"cleanup":{},"error":{},"definedness_assumptions":[]});
         }
         let local: Rational = errors
@@ -566,10 +597,18 @@ fn certificate(
             .map(|(_, e)| e.clone())
             .sum();
         let record = &mut regions[&inv.hash];
-        record["cleanup"][&key] = json!([]);
+        if record["cleanup"].get(&key).is_none(){record["cleanup"][&key]=json!([]);}
+        for pair in trace.cleanups.iter().filter(|p|p.owner==i){record["cleanup"][&key].as_array_mut().unwrap().push(json!({"path":pair.carrier.path.iter().map(Occurrence::json).collect::<Vec<_>>(),"realisation":pair.realisation}));}
         record["error"][&key] = json!({"local":{"operator_norm":d::upper(&local)?},"inclusive":{"operator_norm":d::upper(&inclusive)?}});
         let claim = json!({"kind":"numerical","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"metric":"operator_norm","precision_bits":128,"bound":d::upper(&inclusive)?});
-        for proof in trace.borrow_proofs.iter().filter(|p|p.owner==i){let index=record["claims"].as_array().unwrap().len();record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"translation_lemma","invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"subclaims":[],"witness":proof.witness}));record["verification"]["borrow_frames"].as_array_mut().unwrap().push(json!(index));}
+        for proof in trace.borrow_proofs.iter().filter(|p| p.owner == i) {
+            let index = record["claims"].as_array().unwrap().len();
+            record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"translation_lemma","invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"subclaims":[],"witness":proof.witness}));
+            record["verification"]["borrow_frames"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!(index));
+        }
         let index = record["claims"].as_array().unwrap().len();
         record["claims"].as_array_mut().unwrap().push(claim);
         record["verification"]["unitary"]
@@ -593,7 +632,7 @@ fn certificate(
     regions[&root.hash]["estimate"] =
         json!({"precision_digits":34,"exact_resources":root_rows.exact_json()});
     // Each subregion report charges its interface and controls for its invocation duration.
-    for (inv_index,inv) in trace.invocations.iter().enumerate().skip(1) {
+    for (inv_index, inv) in trace.invocations.iter().enumerate().skip(1) {
         let start = &times[inv.start];
         let end = &times[inv.end];
         let mut wires: BTreeSet<String> = inv.controls.iter().cloned().collect();
@@ -601,7 +640,7 @@ fn certificate(
             wires.extend(s.wires.clone());
         }
         let mut live = Vec::new();
-        let mut orders=Vec::new();
+        let mut orders = Vec::new();
         for a in &allocator.allocations {
             let count = a.wires.iter().filter(|w| wires.contains(*w)).count();
             if count > 0 {
@@ -612,9 +651,23 @@ fn certificate(
                     start: start.clone(),
                     end: end.clone(),
                 });
-                orders.push((source_orders[inv.start],source_orders[inv.end].max(source_orders[inv.start]+1)));
-            }else if a.owner.is_some_and(|owner|owner>=inv_index&&trace.invocations[owner].start>=inv.start&&trace.invocations[owner].end<=inv.end){
-                live.push(LiveInterval{class:a.class.clone(),width:a.wires.len() as u64,borrowed:a.state=="borrowed"||a.state=="dirty",start:a.start.clone(),end:a.end.clone().unwrap()});orders.push((a.acquire_order,a.release_order.unwrap()));
+                orders.push((
+                    source_orders[inv.start],
+                    source_orders[inv.end].max(source_orders[inv.start] + 1),
+                ));
+            } else if a.owner.is_some_and(|owner| {
+                owner >= inv_index
+                    && trace.invocations[owner].start >= inv.start
+                    && trace.invocations[owner].end <= inv.end
+            }) {
+                live.push(LiveInterval {
+                    class: a.class.clone(),
+                    width: a.wires.len() as u64,
+                    borrowed: a.state == "borrowed" || a.state == "dirty",
+                    start: a.start.clone(),
+                    end: a.end.clone().unwrap(),
+                });
+                orders.push((a.acquire_order, a.release_order.unwrap()));
             }
         }
         for l in &mut live {
@@ -631,7 +684,7 @@ fn certificate(
                 e
             })
             .collect::<Vec<_>>();
-        let rows = resources::aggregate_ordered(target, &subset, &live,&orders)?;
+        let rows = resources::aggregate_ordered(target, &subset, &live, &orders)?;
         regions[&inv.hash]["resources"] = rows.display_json();
     }
     let total: Rational = errors.iter().cloned().sum();

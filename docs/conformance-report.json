@@ -1,7 +1,7 @@
 {
   "schema": "bennett-sched.conformance-inventory.v1",
   "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
-  "spec_sha256": "94fa3c4f94f12a9f465d913440fa85418b94c0bce1f61c9bb408665f0b46aeec",
+  "spec_sha256": "021d5df978f293c36174b73de9facc0884f7502a4bc5c0ab7a621b0ca7071c25",
   "case_count": 519,
   "suites": {
     "A": 22,
@@ -14,11 +14,11 @@
     "H": 10
   },
   "coverage_counts": {
-    "direct-fixture-test": 11,
-    "equivalent-witness-test": 11,
-    "not-exercised-executor-or-checker-vector": 470,
-    "not-exercised-scheduler-vector": 7,
-    "partial-or-blocked-reference-expansion": 20
+    "direct-fixture-test": 12,
+    "equivalent-witness-test": 17,
+    "not-exercised-executor-or-checker-vector": 465,
+    "not-exercised-scheduler-vector": 5,
+    "partial-reference-expansion": 20
   },
   "cases": [
     {
@@ -4592,10 +4592,8 @@
       "suite": "E",
       "source": "conformance/cases/E/E-imports/case.json",
       "sha256": "d6d939d4065d77c72d8b1952456889839e5f075d6a8e1025bdc10ec175ed498e",
-      "coverage": "not-exercised-scheduler-vector",
-      "beads": [
-        "bennett-sched-ark"
-      ]
+      "coverage": "direct-fixture-test",
+      "test": "published_vectors::published_import_quantity_is_mapped_exactly_and_bound_to_model_version"
     },
     {
       "id": "E-jcs-target-hash",
@@ -4626,10 +4624,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-activation/case.json",
       "sha256": "c73f60d01c900d0459150c855a5b444307dfbff04e31caf0df4d8ec3d1634ba9",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4637,10 +4635,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-address-dispatch/case.json",
       "sha256": "67ff5667ddfe00e1e7b62ef0190ced75f2e25175f2ac2d1b43a35e98d35c0a9a",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4648,10 +4646,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-allocation-results/case.json",
       "sha256": "82cf56f94dab93cec76b4cc74f86792c35b633a1a875ba6e3d4af58c004fdfd0",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4659,10 +4657,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-allocator-control/case.json",
       "sha256": "c1b9cef2fc8b6eabd3a79ca33c1caf82b16a47fe99107b75858ba187ceea23ab",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4670,10 +4668,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-assignment-rows/case.json",
       "sha256": "b01da05e3757c758894fd52b9cb529bcc98f816055dd00fb284bb676974d46bf",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4681,10 +4679,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-call-interfaces/case.json",
       "sha256": "31ee980a596fc0006ff663afcffead4b522304b1cace073719bc285956ca38b6",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4692,10 +4690,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-classical-bound/case.json",
       "sha256": "c31db11e2fe677bd0137219f005dc95976aaafc347da46a8db696988dda61b44",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4703,10 +4701,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-copy-native/case.json",
       "sha256": "c79c05fcbc17b6b9535c41a7972e284ae7b15e8b2530456cc5a70d94af823d1a",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4714,10 +4712,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-generic-memory/case.json",
       "sha256": "79703e1396588c9ac4d3a3feb3fe54521db94da4efa509c5ba1fca83e9af6e48",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4725,10 +4723,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-layout-memory/case.json",
       "sha256": "06f3a7a53a5907b64fa5ea50b07ecbf5b026ee8fb24320386f1dacd89bf537a9",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4736,10 +4734,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-linear-flags/case.json",
       "sha256": "07a78bb8d53a7e08d9aebae47ab752cc948ff0a09138282f32c678b7c514bb93",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4747,10 +4745,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-native-parametric/case.json",
       "sha256": "9ab9a26a92949188751daf4caecfe86121fb9bf84e3213e3c4b6effae6f305a2",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4758,10 +4756,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-oracle-construction/case.json",
       "sha256": "1390fe4593e0ad9e94d6d1a1f481122095cb3071b2307a0882e58314c2a1f50a",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4769,10 +4767,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-other-arithmetic/case.json",
       "sha256": "794dd90180d1dc6f45d624d5d12ab3fcc43d589bd63f5723f65dc987dd219a77",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4780,10 +4778,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-qinplace/case.json",
       "sha256": "ae6a1d5c123730826bafd4f57eb2361c766285c7909c8d866e25505531b24ad5",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4799,10 +4797,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-region-images/case.json",
       "sha256": "3f4690a94eff7d37ff41d736fafdd0777e577b4bb35c557d56ae203f58ac6df6",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4810,10 +4808,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-ripple/case.json",
       "sha256": "36597bc03fc44c1332b0dbf5f3f27502d3c3c0792e221207b0e195215426499c",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4821,10 +4819,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-step-templates/case.json",
       "sha256": "1b66d72b03364135c4fc55ce202bfc60ef4adb90b81a557c13a97c379e4370ba",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4832,10 +4830,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-structure-blocked/case.json",
       "sha256": "b2a37b9b637ef8a86fa7bcabf442750188c8de9c74d9811fb56505b8090c3e8f",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4843,10 +4841,10 @@
       "suite": "E",
       "source": "conformance/cases/E/E-ref-09-structured-bodies/case.json",
       "sha256": "3dfe34d059e83faeab9911f2ba6f3c921048fa615721f55c6b3d90466601dcd4",
-      "coverage": "partial-or-blocked-reference-expansion",
+      "coverage": "partial-reference-expansion",
       "beads": [
-        "bennett-sched-enz",
-        "bennett-sched-ark"
+        "bennett-sched-ark",
+        "bennett-sched-qnl"
       ]
     },
     {
@@ -4928,55 +4926,40 @@
       "suite": "F",
       "source": "conformance/cases/F/F-borrow-neg-control-in-b/case.json",
       "sha256": "344f45bef84e3e20e21cfde934c7d2b456610677f571bbb38e48115c869c11df",
-      "coverage": "not-exercised-executor-or-checker-vector",
-      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
-      "beads": [
-        "bennett-sched-ark"
-      ]
+      "coverage": "equivalent-witness-test",
+      "test": "borrow::translation_lemma_never_certifies_any_of_the_four_normative_negative_patterns"
     },
     {
       "id": "F-borrow-neg-swap",
       "suite": "F",
       "source": "conformance/cases/F/F-borrow-neg-swap/case.json",
       "sha256": "bc16373a1d145eb9f2a6c470e61baaca8005e7f4b9398e1daaef87374e5bc344",
-      "coverage": "not-exercised-executor-or-checker-vector",
-      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
-      "beads": [
-        "bennett-sched-ark"
-      ]
+      "coverage": "equivalent-witness-test",
+      "test": "borrow::translation_lemma_never_certifies_any_of_the_four_normative_negative_patterns"
     },
     {
       "id": "F-borrow-neg-target-outside-b",
       "suite": "F",
       "source": "conformance/cases/F/F-borrow-neg-target-outside-b/case.json",
       "sha256": "cb4bbcf96747544838e1045ef4008664447945b9399339c458f06321cbd1ded6",
-      "coverage": "not-exercised-executor-or-checker-vector",
-      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
-      "beads": [
-        "bennett-sched-ark"
-      ]
+      "coverage": "equivalent-witness-test",
+      "test": "borrow::translation_lemma_never_certifies_any_of_the_four_normative_negative_patterns"
     },
     {
       "id": "F-borrow-neg-vwv",
       "suite": "F",
       "source": "conformance/cases/F/F-borrow-neg-vwv/case.json",
       "sha256": "076fc21a63b373565169dee56e02a29086ec55114b37164e4d0dc80bf6f68aa6",
-      "coverage": "not-exercised-executor-or-checker-vector",
-      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
-      "beads": [
-        "bennett-sched-ark"
-      ]
+      "coverage": "equivalent-witness-test",
+      "test": "borrow::translation_lemma_never_certifies_any_of_the_four_normative_negative_patterns"
     },
     {
       "id": "F-borrow-positive-check",
       "suite": "F",
       "source": "conformance/cases/F/F-borrow-positive-check/case.json",
       "sha256": "cb75e14a2c493b38b973812b18b7768c56c93cd5fb8660f8b4c9f71f80cb4fa0",
-      "coverage": "not-exercised-executor-or-checker-vector",
-      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
-      "beads": [
-        "bennett-sched-ark"
-      ]
+      "coverage": "equivalent-witness-test",
+      "test": "borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record"
     },
     {
       "id": "F-bounds-mismatch",
@@ -5600,10 +5583,8 @@
       "suite": "H",
       "source": "conformance/cases/H/H-path-not-in-object/case.json",
       "sha256": "1c96335900c68aac1de78b61659e1f767bfdde750194a9cb631d388a2f33847b",
-      "coverage": "not-exercised-scheduler-vector",
-      "beads": [
-        "bennett-sched-ark"
-      ]
+      "coverage": "equivalent-witness-test",
+      "test": "admission (linked source point, loops, instances and semantic-call path validation)"
     },
     {
       "id": "H-reproducibility",
@@ -5734,10 +5715,14 @@
       "path": "conformance/fixtures/accepted-k78-k80-09/k79.json",
       "sha256": "3ea46831b53f7519a7e5407604c268de0873b058656c4d1bd91ee36424a211f1",
       "vectors": 12,
-      "coverage": "not-exercised",
+      "coverage": "source-admission-and-complete-basis-tuples",
       "beads": [
         "bennett-sched-ark"
-      ]
+      ],
+      "test": "regions::every_k79_source_address_vector_is_admitted_or_rejected_before_ref_helper_expansion",
+      "admitted": 4,
+      "rejected": 8,
+      "basis_tuples": 128
     },
     {
       "path": "conformance/fixtures/accepted-k78-k80-09/k80.json",
@@ -5756,6 +5741,18 @@
       "beads": [
         "bennett-sched-ark"
       ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k82-09/k82.json",
+      "sha256": "38be6788bc416385a060f3e4dcb7dff9a57f0fec48ad92b74acd7b22ae9f7efe",
+      "vectors": 16,
+      "coverage": "direct-fixture-test",
+      "beads": [
+        "bennett-sched-ark"
+      ],
+      "test": "named_interface",
+      "catalog_interfaces": 54,
+      "edge_digests": 86
     }
   ],
   "reference_schedule_execution": "not claimed; installed reference interpreter documents staged target/schedule execution",
@@ -5769,5 +5766,5 @@
     "stdout": "",
     "stderr": "§1: expected isa=0.8\n"
   },
-  "recorded_at_utc": "2026-11-01T22:05:01Z"
+  "recorded_at_utc": "2026-11-01T23:40:55Z"
 }

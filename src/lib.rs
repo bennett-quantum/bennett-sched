@@ -1,17 +1,19 @@
 //! Scheduler and cost model for Bennett ISA 0.9, §11.
-pub mod canonical;
-pub mod borrow;
 pub mod admission;
+pub mod borrow;
+pub mod canonical;
+pub mod cleanup;
 pub mod decimal;
 pub mod engine;
 pub mod expansion;
 pub mod ffi;
 pub mod object;
-pub mod request;
 pub mod ref_contract;
+pub mod request;
 pub mod resources;
 pub mod schedule;
 pub mod source;
+pub mod source_ir;
 pub mod target;
 pub use request::{Outcome, Request, Response};
 

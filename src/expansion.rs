@@ -89,9 +89,12 @@ pub struct CallEdge {
     pub call_index: u64,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Origin {pub constructor:String,pub name:String,pub index:usize,pub reverse:bool}
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Leaf {
     pub ordinal: u64,
     pub calls: Vec<CallEdge>,
+    pub origin:Vec<Origin>,
     pub op: Operation,
 }
 impl Leaf {
@@ -109,6 +112,7 @@ pub fn inverse(leaves: &[Leaf]) -> Vec<Leaf> {
         .rev()
         .map(|l| {
             let mut l = l.clone();
+            for origin in &mut l.origin{origin.reverse=!origin.reverse;}
             l.op = match l.op {
                 Operation::Gate(g) => Operation::Gate(g.adjoint()),
                 Operation::Alloc {
@@ -262,12 +266,12 @@ impl Library {
             library: self,
             next: 0,
             depth: 0,
-            live:BTreeSet::new(),
-            owned:BTreeMap::new(),
+            live: BTreeSet::new(),
+            owned: BTreeMap::new(),
         };
         let mut frame = Frame::default();
         let bound = c.bind(array(&r["parameters"])?, array(args)?, caller, &[], true)?;
-        let mut env=crate::ref_contract::named_scope(self,r,bound,caller,true)?;
+        let mut env = crate::ref_contract::named_scope(self, r, bound, caller, true)?;
         let controls = environment_controls(&env, &[]);
         let mut leaves = c.compile(array(&r["body"])?, &mut env, &controls, &mut frame, false)?;
         number(&mut leaves);
@@ -281,8 +285,8 @@ impl Library {
             library: self,
             next: 0,
             depth: 0,
-            live:BTreeSet::new(),
-            owned:BTreeMap::new(),
+            live: BTreeSet::new(),
+            owned: BTreeMap::new(),
         };
         let mut frame = Frame::default();
         let mut leaves = c.compile(body, &mut env.clone(), controls, &mut frame, false)?;
@@ -513,13 +517,30 @@ struct Compiler<'a> {
     library: &'a Library,
     next: u64,
     depth: usize,
-    live:BTreeSet<String>,
-    owned:BTreeMap<String,String>,
+    live: BTreeSet<String>,
+    owned: BTreeMap<String, String>,
 }
 impl Compiler<'_> {
-    fn emit(&mut self,out:&mut Vec<Leaf>,op:Operation){
-        match &op{Operation::Alloc{identity,wires,..}=>{self.live.insert(identity.clone());for w in wires{self.owned.insert(w.clone(),identity.clone());}},Operation::Release{identity,..}=>{self.live.remove(identity);},_=>{}}
-        out.push(Leaf{ordinal:0,calls:vec![],op});
+    fn emit(&mut self, out: &mut Vec<Leaf>, op: Operation) {
+        match &op {
+            Operation::Alloc {
+                identity, wires, ..
+            } => {
+                self.live.insert(identity.clone());
+                for w in wires {
+                    self.owned.insert(w.clone(), identity.clone());
+                }
+            }
+            Operation::Release { identity, .. } => {
+                self.live.remove(identity);
+            }
+            _ => {}
+        }
+        out.push(Leaf {
+            ordinal: 0,
+            calls: vec![], origin:vec![],
+            op,
+        });
     }
 
     fn bind(
@@ -859,8 +880,15 @@ impl Compiler<'_> {
                     theta,
                 };
                 g.validate()?;
-                if g.all_wires().iter().any(|w|self.owned.get(w).is_some_and(|id|!self.live.contains(id))){return Err(Error::arg("§11.1 K27: wire use of an inactive allocation declaration"));}
-                self.emit(&mut out,Operation::Gate(g));
+                if g.all_wires()
+                    .iter()
+                    .any(|w| self.owned.get(w).is_some_and(|id| !self.live.contains(id)))
+                {
+                    return Err(Error::arg(
+                        "§11.1 K27: wire use of an inactive allocation declaration",
+                    ));
+                }
+                self.emit(&mut out, Operation::Gate(g));
             } else if let Some(name) = c.get("alloc") {
                 let name = text(name)?;
                 let width = size(&c["width"], env)?;
@@ -898,12 +926,15 @@ impl Compiler<'_> {
                 if wires.len() != width {
                     return Err(Error::arg("inverse scratch width mismatch"));
                 }
-                self.emit(&mut out,Operation::Alloc {
-                    identity: identity.clone(),
-                    wires: wires.clone(),
-                    class,
-                    state,
-                });
+                self.emit(
+                    &mut out,
+                    Operation::Alloc {
+                        identity: identity.clone(),
+                        wires: wires.clone(),
+                        class,
+                        state,
+                    },
+                );
                 env.insert(name.into(), b);
             } else if let Some(name) = c.get("release") {
                 let Some(Binding::Allocation {
@@ -915,17 +946,32 @@ impl Compiler<'_> {
                 else {
                     return Err(Error::arg("§11.1: unbound allocation release"));
                 };
-                self.emit(&mut out,Operation::Release {
-                    identity: identity.clone(),
-                    wires: wires.clone(),
-                    class: class.clone(),
-                    state: state.clone(),
-                });
+                self.emit(
+                    &mut out,
+                    Operation::Release {
+                        identity: identity.clone(),
+                        wires: wires.clone(),
+                        class: class.clone(),
+                        state: state.clone(),
+                    },
+                );
             } else if c.get("inverse").is_some() {
-                let before=self.live.clone();
-                let leaves = self.compile(array(&c["body"])?, &mut env.clone(), controls, frame, true)?;
-                self.live=before;
-                for leaf in inverse(&leaves){match &leaf.op{Operation::Alloc{identity,..}=>{self.live.insert(identity.clone());},Operation::Release{identity,..}=>{self.live.remove(identity);},_=>{}}out.push(leaf);}
+                let before = self.live.clone();
+                let leaves =
+                    self.compile(array(&c["body"])?, &mut env.clone(), controls, frame, true)?;
+                self.live = before;
+                for leaf in inverse(&leaves) {
+                    match &leaf.op {
+                        Operation::Alloc { identity, .. } => {
+                            self.live.insert(identity.clone());
+                        }
+                        Operation::Release { identity, .. } => {
+                            self.live.remove(identity);
+                        }
+                        _ => {}
+                    }
+                    out.push(leaf);
+                }
             } else if let Some(name) = c.get("for") {
                 let from = scalar(&c["from"], env)?;
                 let to = scalar(&c["to"], env)?;
@@ -970,7 +1016,8 @@ impl Compiler<'_> {
                     controls,
                     false,
                 )?;
-                let mut local=crate::ref_contract::named_scope(self.library,r,bound,env,false)?;
+                let mut local =
+                    crate::ref_contract::named_scope(self.library, r, bound, env, false)?;
                 let effective = environment_controls(&local, controls);
                 out.extend(self.compile(
                     array(&r["body"])?,
@@ -1015,12 +1062,15 @@ impl Compiler<'_> {
                         .map_err(|_| Error::arg("image hex"))?;
                     for i in 0..8 {
                         if n & (1 << i) != 0 {
-                            self.emit(&mut out,Operation::Gate(Gate {
-                                op: "x".into(),
-                                wires: vec![w[j * 8 + i].clone()],
-                                controls: vec![],
-                                theta: None,
-                            }));
+                            self.emit(
+                                &mut out,
+                                Operation::Gate(Gate {
+                                    op: "x".into(),
+                                    wires: vec![w[j * 8 + i].clone()],
+                                    controls: vec![],
+                                    theta: None,
+                                }),
+                            );
                         }
                     }
                 }
@@ -1038,27 +1088,15 @@ impl Compiler<'_> {
                 let mut eff = t.capture.controls.clone();
                 union(&mut eff, controls);
                 eff = environment_controls(&local, &eff);
-                out.extend(self.compile(
-                    &t.capture.body,
-                    &mut local,
-                    &eff,
-                    frame,
-                    inverse_scope,
-                )?);
+                let mut leaves=self.compile(&t.capture.body,&mut local,&eff,frame,inverse_scope)?;
+                for leaf in &mut leaves{leaf.origin.push(Origin{constructor:"apply".into(),name:text(name)?.into(),index,reverse:false});}
+                out.extend(leaves);
             } else if let Some(name) = c.get("visit") {
-                let Some(Binding::Records { records, .. }) = env.get(text(name)?).cloned() else {
-                    return Err(Error::arg("unbound descriptor records"));
-                };
-                for record in records {
-                    let mut local = env.clone();
-                    local.extend(record);
-                    out.extend(self.compile(
-                        array(&c["body"])?,
-                        &mut local,
-                        controls,
-                        frame,
-                        inverse_scope,
-                    )?);
+                let Some(Binding::Records { records, .. }) = env.get(text(name)?).cloned() else {return Err(Error::arg("unbound descriptor records"));};
+                for (index,record) in records.into_iter().enumerate(){
+                    let mut local=env.clone();local.extend(record);
+                    let mut leaves=self.compile(array(&c["body"])?,&mut local,controls,frame,inverse_scope)?;
+                    for leaf in &mut leaves{leaf.origin.push(Origin{constructor:"visit".into(),name:text(name)?.into(),index,reverse:false});}out.extend(leaves);
                 }
             } else if let Some(name) = c.get("declare") {
                 let name = text(name)?;
@@ -1084,8 +1122,12 @@ impl Compiler<'_> {
                 }
                 let identity = format!("declaration/{name}/{}", self.next);
                 self.next += 1;
-                let wires = (0..width).map(|i| format!("{identity}[{i}]")).collect::<Vec<_>>();
-                for w in &wires{self.owned.insert(w.clone(),identity.clone());}
+                let wires = (0..width)
+                    .map(|i| format!("{identity}[{i}]"))
+                    .collect::<Vec<_>>();
+                for w in &wires {
+                    self.owned.insert(w.clone(), identity.clone());
+                }
                 let mut local = env.clone();
                 local.insert(
                     name.into(),
@@ -1145,21 +1187,24 @@ impl Compiler<'_> {
                     class.clone(),
                     state.clone(),
                 );
-                self.emit(&mut out,if acquire {
-                    Operation::Alloc {
-                        identity,
-                        wires,
-                        class,
-                        state,
-                    }
-                } else {
-                    Operation::Release {
-                        identity,
-                        wires,
-                        class,
-                        state,
-                    }
-                });
+                self.emit(
+                    &mut out,
+                    if acquire {
+                        Operation::Alloc {
+                            identity,
+                            wires,
+                            class,
+                            state,
+                        }
+                    } else {
+                        Operation::Release {
+                            identity,
+                            wires,
+                            class,
+                            state,
+                        }
+                    },
+                );
             } else if let Some(op) = c.get("classical") {
                 let point = text(&c["point"])?;
                 let event = match env.get(point) {
@@ -1179,10 +1224,13 @@ impl Compiler<'_> {
                     }
                     _ => json!({"point":point}),
                 };
-                self.emit(&mut out,Operation::Classical {
-                    opcode: text(op)?.into(),
-                    event,
-                });
+                self.emit(
+                    &mut out,
+                    Operation::Classical {
+                        opcode: text(op)?.into(),
+                        event,
+                    },
+                );
             } else if let Some(name) = c.get("call") {
                 let Some(Binding::Symbol(symbol)) = env.get(text(name)?).cloned() else {
                     return Err(Error::arg("unbound semantic-call symbol"));
