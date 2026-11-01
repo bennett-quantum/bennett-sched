@@ -1,18 +1,71 @@
-//! bennett-sched: scheduler and cost model (sched 0.3).
-//!
-//! Implements the scheduling interface of Bennett-ISA-Spec.md section 11.
+//! Scheduler and cost model for Bennett ISA 0.9, §11.
+pub mod canonical;
+pub mod decimal;
+pub mod engine;
+pub mod expansion;
+pub mod ffi;
+pub mod object;
+pub mod request;
+pub mod resources;
+pub mod schedule;
+pub mod source;
+pub mod target;
+pub use request::{Outcome, Request, Response};
 
-/// Version of the scheduling interface implemented (sched 0.3, ISA spec section 11).
-/// Returned as the minor version number of the major.minor pair "0.3".
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
+pub enum Status {
+    Ok = 0,
+    Version = 1,
+    PtrWidth = 2,
+    DeviceMissing = 3,
+    GateUnsupported = 4,
+    Target = 5,
+    Budget = 6,
+    QregNotClean = 7,
+    InvalidState = 8,
+    NotReversible = 9,
+    ScheduleInfeasible = 10,
+    Arg = 11,
+    NoMem = 12,
+}
+#[derive(Clone, Debug)]
+pub struct Error {
+    pub status: Status,
+    pub reason: String,
+}
+impl Error {
+    pub fn new(status: Status, reason: impl Into<String>) -> Self {
+        Self {
+            status,
+            reason: reason.into(),
+        }
+    }
+    pub fn arg(reason: impl Into<String>) -> Self {
+        Self::new(Status::Arg, reason)
+    }
+    pub fn infeasible(reason: impl Into<String>) -> Self {
+        Self::new(Status::ScheduleInfeasible, reason)
+    }
+    pub fn target(reason: impl Into<String>) -> Self {
+        Self::new(Status::Target, reason)
+    }
+}
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.reason)
+    }
+}
+impl std::error::Error for Error {}
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Self::arg(format!("JSON: {e}"))
+    }
+}
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Minor component of sched 0.9 (compatibility probe, outside the normative ABI).
 #[unsafe(no_mangle)]
 pub extern "C" fn bennett_sched_version() -> u32 {
-    3
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn version_is_three() {
-        assert_eq!(super::bennett_sched_version(), 3);
-    }
+    9
 }

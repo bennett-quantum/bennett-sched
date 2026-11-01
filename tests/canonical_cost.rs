@@ -1,0 +1,78 @@
+use bennett_sched::{canonical, decimal};
+use num_rational::BigRational;
+use serde_json::json;
+
+#[test]
+fn jcs_uses_ecmascript_numbers_utf16_order_and_rejects_duplicates() {
+    let input = br#"{ "z":1.0,"a":-0,"n":1e-7,"s":"\u000f" }"#;
+    assert_eq!(
+        canonical::canonicalize(input).unwrap(),
+        br#"{"a":0,"n":1e-7,"s":"\u000f","z":1}"#
+    );
+    assert!(canonical::parse(br#"{"x":0,"x":1}"#).is_err());
+    assert!(canonical::require_jcs(input).is_err());
+    assert!(canonical::parse(b"\x0b{}").is_err());
+    let v = json!({"\u{e000}": 1,"\u{10000}": 2});
+    assert_eq!(
+        String::from_utf8(canonical::to_vec(&v).unwrap()).unwrap(),
+        "{\"𐀀\":2,\"\":1}"
+    );
+}
+
+#[test]
+fn decision_decimals_preserve_all_digits_and_shares_round_down() {
+    let q = decimal::parse("0.123456789012345678901234567890123456789").unwrap();
+    assert_eq!(
+        decimal::exact(&q).unwrap(),
+        "0.123456789012345678901234567890123456789"
+    );
+    let tiny = decimal::parse("1e-200").unwrap();
+    let share = decimal::share(&tiny, 3).unwrap();
+    assert!(share > decimal::integer(0));
+    assert!(share * decimal::integer(3) <= tiny);
+}
+
+#[test]
+fn published_k12_upward_34_digit_encodings_are_exact() {
+    for (n, d, want) in [
+        (0, 1, "0"),
+        (2, 1, "2"),
+        (1, 8, "0.125"),
+        (1, 3, "0.3333333333333333333333333333333334"),
+        (2, 3, "0.6666666666666666666666666666666667"),
+        (1, 30, "0.03333333333333333333333333333333334"),
+        (10, 3, "3.333333333333333333333333333333334"),
+    ] {
+        assert_eq!(
+            decimal::upper(&BigRational::new(n.into(), d.into())).unwrap(),
+            want
+        );
+    }
+    assert_eq!(
+        decimal::parse("0.000999").unwrap(),
+        BigRational::new(999.into(), 1000000.into())
+    );
+    assert_eq!(
+        decimal::parse("-0").unwrap(),
+        decimal::parse("0.0").unwrap()
+    );
+    assert!(decimal::parse("NaN").is_err());
+}
+
+#[test]
+fn expansion_envelope_is_the_published_complete_catalog() {
+    let bytes = include_bytes!("../data/ref-0.9.json");
+    let v = canonical::require_jcs(bytes).unwrap();
+    assert_eq!(v["recipes"].as_array().unwrap().len(), 219);
+    assert_eq!(
+        canonical::hash(
+            &[
+                b"isa=0.9\nexpansion=ref\nversion=0.9\n".as_slice(),
+                bytes,
+                b"\n"
+            ]
+            .concat()
+        ),
+        "5de4e4995350313e50217880ba1b95de39cd043283b726337d4894efb005d197"
+    );
+}

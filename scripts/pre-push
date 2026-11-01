@@ -1,4 +1,55 @@
 #!/usr/bin/env bash
+# Default hook mode verifies each pushed commit in its own detached worktree
+# beside the checkout, preserving ../bennett-isa-spec fixture resolution.
+# --working-tree is the explicitly labelled checkpoint mode used by a runner
+# that owns git and has not committed the agent's files yet. It never runs git.
 set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
-cargo test
+unset DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
+script_path="$(readlink -f -- "${BASH_SOURCE[0]}")"
+script_dir="$(dirname -- "$script_path")"
+root="$(dirname -- "$script_dir")"
+check() {
+  local checkout="$1" target="$2"
+  mkdir -p "$checkout/.tmp/sol-sched/tmp" "$target"
+  env TMPDIR="$checkout/.tmp/sol-sched/tmp" CARGO_TARGET_DIR="$target" \
+    timeout 300 cargo test --offline -j4 --manifest-path "$checkout/Cargo.toml" -- --test-threads=4
+  env TMPDIR="$checkout/.tmp/sol-sched/tmp" \
+    cargo fmt --manifest-path "$checkout/Cargo.toml" -- --check
+}
+if [[ "${1:-}" == --working-tree ]]; then
+  echo "pre-push: working-tree checkpoint (no commit/SHA verification)" >&2
+  check "$root" "${CARGO_TARGET_DIR:-$root/.tmp/sol-sched/target}"
+  exit
+fi
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+shas=()
+saw_ref=0
+if [[ ! -t 0 ]]; then
+  while read -r -t 10 local_ref local_sha remote_ref remote_sha; do
+    saw_ref=1
+    [[ "$local_sha" =~ ^[0-9a-f]{40,64}$ ]] || { echo "pre-push: malformed local SHA" >&2; exit 1; }
+    [[ "$local_sha" =~ ^0+$ ]] || shas+=("$local_sha")
+  done
+fi
+if [[ ${#shas[@]} == 0 ]]; then
+  # A deletion-only push has nothing to test. Direct invocation gates HEAD.
+  if [[ "$saw_ref" == 1 ]]; then exit 0; fi
+  shas+=("$(git -C "$root" rev-parse --verify HEAD)")
+fi
+declare -A checked=()
+for sha in "${shas[@]}"; do
+  [[ -z "${checked[$sha]:-}" ]] || continue
+  checked[$sha]=1
+  sha="$(git -C "$root" rev-parse --verify "${sha}^{commit}")"
+  worktree="$(mktemp -d "$(dirname -- "$root")/$(basename -- "$root")-gate.XXXXXX")"
+  cleanup() {
+    git -C "$root" worktree remove --force "$worktree" >/dev/null 2>&1 || true
+    rm -rf -- "$worktree"
+  }
+  trap cleanup EXIT INT TERM
+  git -C "$root" worktree add --detach "$worktree" "$sha" >/dev/null
+  echo "pre-push: verifying pushed SHA $sha in $worktree" >&2
+  check "$worktree" "$root/.tmp/push-target/$sha"
+  cleanup
+  trap - EXIT INT TERM
+done
