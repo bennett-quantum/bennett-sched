@@ -56,6 +56,8 @@ fn union(a: &mut Vec<String>, b: &[String]) {
     }
 }
 fn live_types(env:&Env)->BTreeMap<String,Value>{env.iter().map(|(name,b)|{let ty=match b{Binding::Wires(w)=>json!(["wire",w.len()]),Binding::Allocation{wires,class,state,..}=>json!(["allocation",wires.len(),class,state]),Binding::Region{address,cell,role,origin,..}=>json!(["region",address,cell,role,origin]),Binding::Value{isa_type,..}=>json!(["value",isa_type]),_=>json!("internal")};(name.clone(),ty)}).collect()}
+fn region_width(address:u64,cell:u64)->Result<usize>{1usize.checked_shl(u32::try_from(address).unwrap_or(u32::MAX)).and_then(|c|c.checked_mul(usize::try_from(cell).ok()?)).ok_or_else(||Error::new(Status::NoMem,"region width exceeds host materialisation size"))}
+fn region_wires(identity:&str,width:usize)->Result<Vec<String>>{let mut wires=Vec::new();wires.try_reserve_exact(width).map_err(|_|Error::new(Status::NoMem,"region wire list exceeds host memory"))?;wires.extend((0..width).map(|i|format!("{identity}[{i}]")));Ok(wires)}
 fn wires(operand: &str, env: &Env) -> Result<Vec<String>> {
     if let Some((name, subscript)) = operand.split_once('[') {
         let i = subscript
@@ -73,8 +75,7 @@ fn wires(operand: &str, env: &Env) -> Result<Vec<String>> {
     match env.get(operand) {
         Some(
             Binding::Wires(w)
-            | Binding::Allocation { wires: w, .. }
-            | Binding::Region { wires: w, .. },
+            | Binding::Allocation { wires: w, .. },
         ) => Ok(w.clone()),
         _ => Err(Error::arg(format!("unbound source wire {operand}"))),
     }
@@ -146,11 +147,7 @@ impl Trace {
                 });
             }
         }
-        if !f.groups[2].is_empty() {
-            return Err(deferred(
-                "source interface regions and coherent-memory instructions",
-            ));
-        }
+        for (i,p) in f.groups[2].iter().enumerate(){let (address,cell)=object::region_shape(&p.ty)?;let role=p.role.as_deref().ok_or_else(||Error::arg("region interface requires a role"))?;let width=region_width(address,cell)?;let id=format!("mem:{i}");let w=region_wires(&id,width)?;env.insert(p.name.clone(),Binding::Region{address,cell,role:role.into(),origin:format!("interface:{}",p.name),wires:w.clone()});slots.push(Slot{id,role:format!("mem_{role}"),wires:w});}
         for (p, v) in f.groups[3]
             .iter()
             .zip(params.as_array().expect("validated params"))
@@ -184,7 +181,7 @@ impl Trace {
         let workspace = trace
             .events
             .iter()
-            .any(|e| matches!(&e.leaf.op, Operation::Alloc {identity,..}if !identity.starts_with("source-flags/")));
+            .any(|e| matches!(&e.leaf.op, Operation::Alloc {identity,..}if !identity.starts_with("source-flags/")&&!identity.starts_with("source-region/")));
         if workspace&&trace.events.iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !["x","cx","ccx","mcx","swap"].contains(&g.op.as_str()))){return Err(deferred("general non-permutation workspace factorisation and cleanup-window proof"));}
         if workspace && trace.invocations.len() > 1 {
             return Err(deferred(
@@ -202,6 +199,7 @@ struct Builder<'a> {
     trace: &'a mut Trace,
     active: BTreeSet<String>,
 }
+struct LocalRegion{node:Node,identity:String,wires:Vec<String>,image:Vec<Gate>}
 impl Builder<'_> {
     #[allow(clippy::too_many_arguments)]
     fn invoke(
@@ -235,7 +233,9 @@ impl Builder<'_> {
             parent,
             adjoint:false,
         });
+        let locals=self.prepare_regions(f,&mut env,chain,owner)?;
         self.nodes(f, &f.body, &mut env, &controls, chain, &[], owner)?;
+        for region in locals.into_iter().rev(){let mut ordinal=1+region.image.len() as u64;let mut leaves=Vec::new();for gate in region.image.into_iter().rev(){leaves.push(Leaf{ordinal,calls:vec![],op:Operation::Gate(gate)});ordinal+=1;}leaves.push(Leaf{ordinal,calls:vec![],op:Operation::Release{identity:region.identity,wires:region.wires,class:"any".into(),state:"clean".into()}});self.emit(f,&region.node,&[],chain,owner,leaves)?;}
         if adjoint {
             for inv in self.trace.invocations.iter_mut().skip(owner){inv.adjoint=!inv.adjoint;}
             let end = self.trace.events.len();
@@ -332,6 +332,20 @@ impl Builder<'_> {
         self.library
             .body(&[json!({"invoke":kind,"args":args})], env, controls)
     }
+    fn prepare_regions(&mut self,f:&Function,env:&mut Env,chain:&[Occurrence],owner:usize)->Result<Vec<LocalRegion>>{
+        let declarations=f.body.iter().filter(|n|n.op=="qregion").collect::<Vec<_>>();if object::flattened(&f.body).iter().filter(|n|n.op=="qregion").count()!=declarations.len(){return Err(deferred("source addresses for region declarations nested inside structure"));}
+        let mut regions=Vec::new();for node in declarations{
+            if node.lhs.is_some()||!node.bodies.is_empty()||!(3..=4).contains(&node.operands.len()){return Err(Error::arg("§4.6: qregion requires name, address width, cell width and optional image"));}
+            let name=&node.operands[0];if !object::name(name)||env.contains_key(name){return Err(Error::arg("duplicate or invalid local region name"));}
+            let address=crate::schedule::uint(&json!(node.operands[1]))?;let cell=crate::schedule::uint(&json!(node.operands[2]))?;if cell==0{return Err(Error::arg("region cell width must be positive"));}
+            let width=1usize.checked_shl(u32::try_from(address).unwrap_or(u32::MAX)).and_then(|c|c.checked_mul(usize::try_from(cell).ok()?)).ok_or_else(||Error::new(Status::NoMem,"region width exceeds host materialisation size"))?;
+            let identity=format!("source-region/{}/{name}",canonical::hash(&canonical::to_vec(&json!(chain.iter().map(Occurrence::json).collect::<Vec<_>>()))?));let mut w=Vec::new();w.try_reserve_exact(width).map_err(|_|Error::new(Status::NoMem,"region wire list exceeds host memory"))?;w.extend((0..width).map(|i|format!("{identity}[{i}]")));
+            let image=if let Some(symbol)=node.operands.get(3){let image=symbol.strip_prefix('@').and_then(|n|self.object.data.get(n)).ok_or_else(||Error::arg("qregion image must name a linked data symbol"))?;if width%8!=0||image.len()!=width/4{return Err(Error::arg("§4.6: region image size must equal its complete byte width"));}image.as_str()}else{""};
+            let mut gates=Vec::new();for (byte,hex) in image.as_bytes().chunks(2).enumerate(){let value=u8::from_str_radix(std::str::from_utf8(hex).unwrap(),16).map_err(|_|Error::arg("invalid region image"))?;for bit in 0..8{if value&(1<<bit)!=0{gates.push(Gate{op:"x".into(),wires:vec![w[8*byte+bit].clone()],controls:vec![],theta:None});}}}
+            let mut leaves=vec![Leaf{ordinal:0,calls:vec![],op:Operation::Alloc{identity:identity.clone(),wires:w.clone(),class:"any".into(),state:"clean".into()}}];leaves.extend(gates.iter().enumerate().map(|(i,g)|Leaf{ordinal:i as u64+1,calls:vec![],op:Operation::Gate(g.clone())}));self.emit(f,node,&[],chain,owner,leaves)?;
+            env.insert(name.clone(),Binding::Region{address,cell,role:"mut".into(),origin:format!("local:{name}"),wires:w.clone()});regions.push(LocalRegion{node:node.clone(),identity,wires:w,image:gates});
+        }Ok(regions)
+    }
     fn nodes(
         &mut self,
         f: &Function,
@@ -347,7 +361,7 @@ impl Builder<'_> {
         let readonly = self.trace.invocations[owner]
             .slots
             .iter()
-            .filter(|s| s.role == "in")
+            .filter(|s| s.role == "in"||s.role=="mem_in")
             .flat_map(|s| s.wires.iter().cloned())
             .collect::<BTreeSet<_>>();
         for node in nodes {
@@ -684,8 +698,10 @@ impl Builder<'_> {
                             }
                         }
                     }
-                    if !object::list(&operands[3])?.is_empty() || !callee.groups[2].is_empty() {
-                        return Err(deferred("source action region forwarding"));
+                    let regions=object::list(&operands[3])?;if regions.len()!=callee.groups[2].len(){return Err(Error::arg("call region count mismatch"));}
+                    for (index,(p,actual)) in callee.groups[2].iter().zip(regions).enumerate(){let Some(Binding::Region{address,cell,role,origin,wires})=env.get(&actual)else{return Err(Error::arg("unbound region call operand"));};let (a,w)=object::region_shape(&p.ty)?;let requested=p.role.as_deref().ok_or_else(||Error::arg("callee region role missing"))?;
+                        if (a,w)!=(*address,*cell)||(!origin.starts_with("local:")&&role!=requested)||wires.iter().any(|wire|!used.insert(wire.clone()))||(requested=="mut"&&wires.iter().any(|wire|readonly.contains(wire)||effective.contains(wire))){return Err(Error::arg("§3.3/K26: region call shape, role or disjointness mismatch"));}
+                        child.insert(p.name.clone(),Binding::Region{address:*address,cell:*cell,role:requested.into(),origin:origin.clone(),wires:wires.clone()});child_slots.push(Slot{id:format!("mem:{index}"),role:format!("mem_{requested}"),wires:wires.clone()});
                     }
                     let args = object::list(&operands[4])?;
                     if args.len() != callee.groups[3].len() {
@@ -735,7 +751,8 @@ impl Builder<'_> {
                         "oracle token context, construction and inverse-pair coverage",
                     ));
                 }
-                "qregion" | "qload" | "qunload" | "qstore" | "qexchm" => {
+                "qregion"=>continue,
+                "qload" | "qunload" | "qstore" | "qexchm" => {
                     return Err(deferred(
                         "local region image lifetimes and coherent-memory source adapters",
                     ));

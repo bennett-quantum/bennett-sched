@@ -460,7 +460,7 @@ pub fn run(request: &Request) -> Result<Response> {
     if let Some(placements) = root_placements {
         schedule["interface_vertices"] = json!(placements);
     }
-    schedule::Document::parse(schedule.clone())?;
+    schedule::Document::parse(schedule.clone())?.validate_request(request)?;
     let schedule_bytes = canonical::to_vec(&schedule)?;
     let schedule_hash = canonical::hash(&schedule_bytes);
     let certificate = certificate(
