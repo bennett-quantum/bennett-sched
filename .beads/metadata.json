@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "bennett_sched",
+  "project_id": "a23f8de0-92d7-4c6b-92d3-211a02683266"
+}
