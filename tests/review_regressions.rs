@@ -89,3 +89,78 @@ fn repeated_identical_scratch_calls_have_complete_distinct_dynamic_frames() {
         assert_eq!(resources["qubit_second[fast]"], (4 * repeats).to_string());
     }
 }
+
+#[test]
+fn interface_classes_follow_serializable_defaults_even_when_another_class_has_the_gate() {
+    let bytes = common::action(
+        "perm_action",
+        "flip",
+        signature(&[1], &[], &[]),
+        "perm_action @flip (t:wire mut) () () () ()",
+        "x t",
+    );
+    for a_capacity in [8, 0] {
+        let target = target(
+            json!({"a":{"capacity":a_capacity,"qubit_second":1,"dirty_rate":1},"b":{"capacity":8,"qubit_second":1,"dirty_rate":1}}),
+            json!([{"op":"x","classes":["b"],"controls":{"min":0,"max":"unbounded"},"epsilon":0,"cost":{"time":1}}]),
+        );
+        let r = request(&bytes, "flip", &target);
+        let response = r.schedule().unwrap();
+        if a_capacity == 8 {
+            assert_eq!(
+                response.outcome,
+                Outcome::Infeasible,
+                "an interface on default class a cannot execute an x available only on b"
+            );
+            assert!(response.schedule.is_empty() && response.certificate.is_empty());
+        } else {
+            assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+            let c = canonical::require_jcs(&response.certificate).unwrap();
+            assert_eq!(
+                c["regions"][r.region.as_ref().unwrap()]["frame"]["slots"][0]["class"],
+                "b"
+            );
+        }
+    }
+}
+
+#[test]
+fn topology_vertices_serialize_a_selected_interface_class() {
+    let bytes = common::action(
+        "perm_action",
+        "flip",
+        signature(&[1], &[], &[]),
+        "perm_action @flip (t:wire mut) () () () ()",
+        "x t",
+    );
+    let mut target = target(
+        json!({"a":{"capacity":8,"qubit_second":1,"dirty_rate":1},"b":{"capacity":8,"qubit_second":1,"dirty_rate":1}}),
+        json!([{"op":"x","classes":["b"],"controls":{"min":0,"max":"unbounded"},"epsilon":0,"cost":{"time":1}}]),
+    );
+    target["topology"] = json!({"vertices":[{"class":"a"},{"class":"b"}],"edges":[]});
+    let r = request(&bytes, "flip", &target);
+    let response = r.schedule().unwrap();
+    assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+    let schedule = canonical::require_jcs(&response.schedule).unwrap();
+    assert_eq!(schedule["interface_vertices"], json!([[1]]));
+    let certificate = canonical::require_jcs(&response.certificate).unwrap();
+    assert_eq!(
+        certificate["regions"][r.region.as_ref().unwrap()]["frame"]["slots"][0]["class"],
+        "b"
+    );
+}
+
+#[test]
+fn infeasible_topology_search_skips_unused_interface_vertex_permutations(){
+    use std::{sync::mpsc,time::Duration};
+    for width in [2,8]{
+        let bytes=common::action("perm_action","w",signature(&[width],&[],&[]),&format!("perm_action @w (t:wire[{width}] mut) () () () ()"),"cx t[0] t[1]");
+        let mut target=target(json!({"fast":{"capacity":12,"qubit_second":1,"dirty_rate":1}}),gates());
+        target["topology"]=json!({"vertices":(0..12).map(|_|json!({"class":"fast"})).collect::<Vec<_>>(),"edges":[]});
+        let r=request(&bytes,"w",&target);
+        let (sender,receiver)=mpsc::channel();
+        std::thread::spawn(move||{let _=sender.send(r.schedule().map(|r|r.outcome));});
+        let result=receiver.recv_timeout(Duration::from_secs(30)).expect("placement search explored irrelevant wire permutations for over30s");
+        assert_eq!(result.unwrap(),Outcome::Infeasible,"width{width}");
+    }
+}

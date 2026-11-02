@@ -263,13 +263,13 @@ fn approximate_scheme_charges_each_native_leaf_and_composes_its_error() {
 
 #[test]
 fn allocation_search_finds_a_usable_class_after_the_first_class_has_no_native_gate() {
-    let sig = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});
+    let sig = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[],"in":[],"mem":[],"args":[],"bounds":[]});
     let source = common::action(
         "perm_action",
         "a",
         sig,
-        "perm_action @a (t:wire mut) () () () ()",
-        "x t",
+        "perm_action @a () () () () ()",
+        "d = qalloc any 1\nx d\nx d\nqfree d",
     );
     let mut r = request();
     r.set_object(&source).unwrap();
@@ -289,7 +289,15 @@ fn allocation_search_finds_a_usable_class_after_the_first_class_has_no_native_ga
     let result = r.schedule().unwrap();
     assert_eq!(result.outcome, Outcome::Ok, "{:?}", result.reason);
     let c = canonical::parse(&result.certificate).unwrap();
-    assert_eq!(c["regions"][&hash]["frame"]["slots"][0]["class"], "B");
+    assert_eq!(c["regions"][&hash]["frame"]["scratch"][0]["class"], "B");
+    let schedule = canonical::require_jcs(&result.schedule).unwrap();
+    assert!(
+        schedule["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["kind"] == "alloc" && e["alloc"]["class"] == "B")
+    );
 }
 
 #[test]

@@ -134,7 +134,13 @@ impl Allocator<'_> {
                     "§8.4: capacity exhausted for allocation {identity} ({n} wires)"
                 )));
             }
-            let choice = self.search.choose(if n == 0 { 1 } else { names.len() })?;
+            // Without topology an interface has no serialized class selector.
+            // Its class must therefore be reproducible from the §11 default.
+            let choice = if state == "interface" && self.target.value.get("topology").is_none() {
+                0
+            } else {
+                self.search.choose(if n == 0 { 1 } else { names.len() })?
+            };
             names[choice].clone()
         } else {
             if !self.target.classes.contains_key(source_class) {
