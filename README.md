@@ -20,6 +20,11 @@ exact rational costs, imported quantities, occupancy and ordered lifetime peaks.
 It emits JCS schedules and bound certificates with exact resource fractions and
 34-digit upward displays. Producer claims require independent checking.
 
+Load-time layout checks validate ranges, images, exact interface mappings and
+pre-entry capacity. The state planner derives ordered byte/location descriptors,
+reference counters, activation/frame sizes and sparse initial images; layout/lproc
+gate emission is still pending.
+
 The complete published 219-recipe `ref@0.9` is vendored as specification data.
 Accepted K82 governs named helper wire interfaces; all 16 binding cases, 54
 interfaces and 86 published expansion digests pass without changing its hash.

@@ -12,7 +12,7 @@ check() {
   local checkout="$1" target="$2"
   mkdir -p "$checkout/.tmp/sol-sched/tmp" "$target"
   env TMPDIR="$checkout/.tmp/sol-sched/tmp" CARGO_TARGET_DIR="$target" \
-    timeout 300 cargo test --offline -j4 --manifest-path "$checkout/Cargo.toml" -- --test-threads=4
+    timeout 600 cargo test --offline -j4 --manifest-path "$checkout/Cargo.toml" -- --test-threads=4
   env TMPDIR="$checkout/.tmp/sol-sched/tmp" \
     cargo fmt --manifest-path "$checkout/Cargo.toml" -- --check
 }

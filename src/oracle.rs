@@ -534,27 +534,42 @@ pub fn build(
     // This materialized adapter has a finite host workspace. State shape remains
     // available symbolically through Plan even when this invocation cannot fit.
     const HOST_STATE_BYTES: u64 = 64 * 1024 * 1024;
-    let wires = plan.base.iter().try_fold(0u64, |a,r| a.checked_add(r.width))
+    let wires = plan
+        .base
+        .iter()
+        .try_fold(0u64, |a, r| a.checked_add(r.width))
         .and_then(|a| q.checked_mul(budget[0]).and_then(|b| a.checked_add(b)));
-    let estimate = wires.and_then(|w| w.checked_mul(128))
+    let estimate = wires
+        .and_then(|w| w.checked_mul(128))
         .and_then(|w| budget[0].checked_mul(1024).and_then(|b| w.checked_add(b)));
     if estimate.is_none_or(|n| n > HOST_STATE_BYTES) {
-        return Err(Error::new(Status::NoMem, "oracle construction exceeds 64 MiB host state workspace"));
+        return Err(Error::new(
+            Status::NoMem,
+            "oracle construction exceeds 64 MiB host state workspace",
+        ));
     }
     let mut state = Vec::new();
     let mut frames = Vec::new();
     let frame_count = usize::try_from(budget[0])
         .map_err(|_| Error::new(Status::NoMem, "history count exceeds host size"))?;
-    state.try_reserve_exact(plan.base.len() + frame_count)
+    state
+        .try_reserve_exact(plan.base.len() + frame_count)
         .map_err(|_| Error::new(Status::NoMem, "state descriptors exceed host memory"))?;
-    frames.try_reserve_exact(frame_count)
+    frames
+        .try_reserve_exact(frame_count)
         .map_err(|_| Error::new(Status::NoMem, "history descriptors exceed host memory"))?;
     for record in plan.records() {
         let storage = allocation(&record.name, record.width)?;
         env.insert(record.name.clone(), storage.clone());
         let image = if let Some(image) = record.image {
-            image.materialize(HOST_STATE_BYTES as usize)?.iter().map(|b| format!("{b:02x}")).collect()
-        } else { String::new() };
+            image
+                .materialize(HOST_STATE_BYTES as usize)?
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect()
+        } else {
+            String::new()
+        };
         state.push(Env::from([
             ("width".into(), Binding::Integer(record.width.into())),
             ("initial".into(), Binding::Integer(record.initial.into())),

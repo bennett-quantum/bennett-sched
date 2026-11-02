@@ -145,3 +145,30 @@ fn resolved_instance_values_preserve_the_nested_token_tuple_and_classical_value(
             .is_err()
     );
 }
+
+#[test]
+fn call_targets_resolve_fixed_keys_in_the_callers_instance_and_recursive_calls_keep_their_key() {
+    let object = example(10);
+    let space = IndexSpace::form(&object, "through").unwrap();
+    let target = space
+        .call_target(&object, None, &object.functions["through"].body[0])
+        .unwrap();
+    assert_eq!(
+        (target.name.as_str(), target.key.as_slice()),
+        ("worker", [0, 1, 0].as_slice())
+    );
+    let object = example(2);
+    let space = IndexSpace::form(&object, "sum_db").unwrap();
+    let sum = &space.instances[0];
+    let node = object.functions["sum"]
+        .body
+        .iter()
+        .find(|n| n.op == "lift.call")
+        .unwrap();
+    let target = space.call_target(&object, Some(sum), node).unwrap();
+    assert_eq!(target.first, sum.first);
+    assert!(target.key.is_empty());
+    let mut bad = node.clone();
+    bad.operands[0] = "@missing".into();
+    assert!(space.call_target(&object, Some(sum), &bad).is_err());
+}

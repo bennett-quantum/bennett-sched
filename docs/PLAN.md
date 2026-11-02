@@ -1,7 +1,7 @@
 # ISA 0.9 scheduler implementation and evidence
 
 Contract: `bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md`, §11 and its
-dependencies. Source checkout observed at `4a937982bd3bd2e9f71b0d1c6d90532609e53206`.
+dependencies. Source checkout observed at `ecaaac060c44e317d1181345fa6b8e38c096c099`; specification and catalog bytes are unchanged from the accepted K82 pin.
 The published `ref` JSON is specification data, vendored in `data/`; no sibling
 implementation code is linked or copied. Beads issue `bennett-sched-akl` owns
 implementation tracking. This document maps requirements and records evidence;
@@ -39,9 +39,9 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | K82 | Named-interface recipes import exactly lexical wire bindings, typed recipes/templates stay closed, no non-wire fallback | All 16 published cases, 54 interfaces and 86 edge digests match (`named_interface`); catalog hash unchanged |
 | K21 | Data-image byte order and unconditional X leaves | 8102 unconditional image witness and inverse machinery tested (`expansion`) |
 | K22 | Indexed captured typed templates, apply-site controls, source row ordinals | Constructor support present; complete published template families remain unexercised (qnl) |
-| K24 | Closure-bound argument vectors, exact iN/f64/token encodings, no implicit conversions | Value encodings/hash witness checked; constructor forwarding present; source token semantics deferred (ark) |
+| K24 | Closure-bound argument vectors, exact iN/f64/token encodings, no implicit conversions | Value encodings/hash witness checked; finite lproc keys and resolved token/classical/region forwarding checked independently of runtime values; nested constructor calls remain ark; pseudo-location storage requires r28 |
 | K77 | Explicit per-call oracle token context, captured across adapters, distinct from positional arguments | Deferred source-binding channel (ark); no root budget substituted for nested token parameters |
-| K25 | Ordered source-validated byte/activation/capture/state/frame descriptors | Generic typed records implemented; memoryless oracle state/frame descriptors formed in source declaration order; layout/activation/capture forwarding remains ark |
+| K25 | Ordered source-validated byte/activation/capture/state/frame descriptors | Generic typed records implemented; source-derived State/frame sizing and ordered byte/location maps implemented, including layout counters, sparse images and pinned table initialization; memoryless adapter consumes this plan; activation/capture metadata and concrete call targets implemented; lproc row emission remains ark |
 | K26 | Region shape, role, origin and ordered cells; reject same-width shape substitutions | Generic and source shape/role/origin forwarding implemented; all K79 address cases and 128 complete forward/inverse tuples checked |
 | K27 | Class and allocation declarations, unconditional acquire/relinquish, shared lifetime state, fresh reacquisition | Acquire/relinquish, fresh reacquisition and inactive scope exit tests; translation-lemma source borrow frames and separate certificate records implemented; other T3 frame proofs remain open (ark) |
 | K28 / K62 | qinplace t/f release sequence and source action adjoint before expansion | Primitive action-call adjoint path present; qinplace and complete source replacements deferred (ark) |
@@ -50,7 +50,7 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | §8.1 / K9 | Closed cost AST, exact rationals, epsilon decade/log2, context variable rules | Exact AST/context/decade/log2 evaluation tested against published E vectors; imported model/version/resource quantity mapping checked directly against E-imports |
 | §8.2 / K12 | Count once per native leaf, makespan, per-class occupancy/peak, borrowed rate replacement, exact rows and upward 34-digit displays | `tests/canonical_cost.rs` decimal witnesses |
 | §8.3–8.4 | First matching native entry/scheme, own+effective controls, ancillae, capacity, accuracy and topology | Native matching, exact/approximate scheme error composition, capacity, adjacency and sequential timing tested; finite class/per-bit vertex search implemented; cost optimisation remains open (ark) |
-| §9.1–9.2 | Canonical object parsing, signatures, semantic envelopes/SCC hashes and object/params/schedule identities | All ten normative object interface hashes, SCC envelopes and controlled fixture object hash checked; complete source semantic admission remains partial |
+| §9.1–9.2 | Canonical object parsing, signatures, semantic envelopes/SCC hashes and object/params/schedule identities | All ten normative object interface hashes, SCC envelopes and controlled fixture object hash checked; strict layout schema/ranges/images/mappings checked at load; complete source semantic admission remains partial |
 | §9.4 | Complete typed frame descriptor: slots/scratch/history/borrow/ancillae and live ranges | Supported action slot/scratch/borrow/ancilla records emitted; memoryless oracle history records emitted separately; varying context frames require lzv contract decision |
 | §12.1–12.3 | Bound certificate, realised multiplicities, claims with honest evidence, local/inclusive errors and diamond composition | Binding/resources/numerical claim emission tested for supported traces; rigorous checker replay and general composition proof remain open (ark/qnl) |
 | §17 items 7–9, 15, 18 | Published default ref library, cleanup defaults, accuracy defaults, placement, full history | Ref identity, exact finite shares and placement checked; memoryless oracle full-history expansion checked; layout/lproc full history remains ark |
@@ -185,3 +185,42 @@ specifies separate records for distinct lproc keys and the frame records and
 vectors. The proposal is in the local P0 bead and upstream queue; no unratified
 wire adapter is guessed. Metadata forwarding and every independent algorithm
 continue. The existing catalog bytes/hash can remain unchanged under this edit.
+
+## Layout and construction planning evidence
+
+The load-time validator checks exact layout/global/mapping fields, pointer and
+lifted address bounds without machine wrap, disjoint nonempty ranges, global
+data-image identity and size, allocation-table pre-entry limits, exact oracle
+mapping owners/parameter names, byte cell widths, symbol/import name collisions,
+and complete block-image sectors. Zero-size globals and separate oracles mapping
+the same address remain valid. All ten normative objects still load.
+
+The source state planner derives the finite lproc closure, global location
+records, reference counter widths, W_cell, maximum positional displacement
+widths, sparse ordinary-memory images, pinned alloctab bits and ordered byte
+partitions. Mapped cells retain input identity; hidden ordinary bytes remain
+zero. B frames are lazy metadata. Normative through has W_cell=5 and Q=25 at
+depth_limit=1; sum_db has W_cell=32 and Q=106 at depth_limit=0. The existing
+memoryless oracle adapter now consumes this shared plan. Layout/lproc gate
+emission is still an explicit ark deferral, so descriptor tests do not claim
+those complete schedules.
+
+Host limits return NoMem rather than UNSUPPORTED: extent integers use an 8 MiB
+host workspace, the materialized oracle state adapter budgets 64 MiB, and image
+materialization takes an explicit caller buffer budget. The symbolic plan
+does not allocate B frame records. These are resource failures, not ISA width
+or budget restrictions. Constructor stacks remain explicitly provisioned.
+
+Concrete call metadata resolves each positional binding key in the caller
+instance, including recursive aliases. Activation records use exact global ids
+and declaration slots. Captures preserve source/parameter identities and use
+offsets computed from the complete frame slot widths. Return delivery sizes
+include every closure location visited by R4, including unused wider locations;
+a regression checks that case. The record-level tests pass; complete call/return
+gate construction is still pending.
+
+The first new full checkpoint reached pipeline tests without an assertion
+failure but exhausted the 300-second execution budget on the shared runner.
+The test profile now uses opt-level=1 while retaining debug assertions and
+overflow checks. All exhaustive domains remain in the gate; latest verified
+command outcomes are recorded in the Resume block.

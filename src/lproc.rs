@@ -155,6 +155,112 @@ fn labels(f: &Function, first: u64) -> Result<BTreeMap<String, u64>> {
 }
 
 impl IndexSpace {
+    /// Resolve one source call using positional bindings of its containing
+    /// instance. Runtime argument values never participate in this lookup.
+    pub fn call_target(
+        &self,
+        object: &Object,
+        caller: Option<&Instance>,
+        node: &object::Node,
+    ) -> Result<&Instance> {
+        if node.op != "lift.call" || ![2, 5].contains(&node.operands.len()) {
+            return Err(Error::arg("expected a complete lift.call row"));
+        }
+        let root = &object.functions[&self.oracle];
+        let mut bindings = Bindings::new();
+        if let Some(instance) = caller {
+            if !self.instances.iter().any(|i| {
+                i.name == instance.name && i.key == instance.key && i.first == instance.first
+            }) {
+                return Err(Error::arg(
+                    "caller instance is not in this oracle's index space",
+                ));
+            }
+            let f = &object.functions[&instance.name];
+            let groups = f.groups[2..].iter().flatten().collect::<Vec<_>>();
+            if groups.len() != instance.key.len() {
+                return Err(Error::arg("instance binding key arity mismatch"));
+            }
+            for (parameter, index) in groups.into_iter().zip(&instance.key) {
+                let origin = if parameter.ty.starts_with("region[") {
+                    let (address, cell) = object::region_shape(&parameter.ty)?;
+                    Origin::Region {
+                        index: *index,
+                        address,
+                        cell,
+                    }
+                } else {
+                    Origin::Argument {
+                        index: *index,
+                        ty: parameter.ty.clone(),
+                    }
+                };
+                bindings.insert(parameter.name.clone(), origin);
+            }
+        } else {
+            for (index, p) in root.groups[4].iter().enumerate() {
+                bindings.insert(
+                    p.name.clone(),
+                    Origin::Argument {
+                        index: index as u64,
+                        ty: p.ty.clone(),
+                    },
+                );
+            }
+            for (index, p) in root.groups[3].iter().enumerate() {
+                let (address, cell) = object::region_shape(&p.ty)?;
+                bindings.insert(
+                    p.name.clone(),
+                    Origin::Region {
+                        index: index as u64,
+                        address,
+                        cell,
+                    },
+                );
+            }
+        }
+        let name = node.operands[0]
+            .strip_prefix('@')
+            .ok_or_else(|| Error::arg("lift.call requires a symbol"))?;
+        let callee = object
+            .functions
+            .get(name)
+            .ok_or_else(|| Error::arg("unresolved lproc call"))?;
+        validate_lproc(callee)?;
+        if node.operands.len() == 2 && callee.groups[2..].iter().any(|g| !g.is_empty()) {
+            return Err(Error::arg("fixed lproc bindings require all four lists"));
+        }
+        let mut key = Vec::new();
+        for group in 2..=4 {
+            let actuals = if node.operands.len() == 5 {
+                object::list(&node.operands[group])?
+            } else {
+                vec![]
+            };
+            if actuals.len() != callee.groups[group].len() {
+                return Err(Error::arg("lproc fixed argument count mismatch"));
+            }
+            for (p, actual) in callee.groups[group].iter().zip(actuals) {
+                let index = match (group, bindings.get(&actual)) {
+                    (2 | 3, Some(Origin::Argument { index, ty })) if *ty == p.ty => *index,
+                    (
+                        4,
+                        Some(Origin::Region {
+                            index,
+                            address,
+                            cell,
+                        }),
+                    ) if object::region_shape(&p.ty)? == (*address, *cell) => *index,
+                    _ => return Err(Error::arg("invalid fixed binding in source call")),
+                };
+                key.push(index);
+            }
+        }
+        self.instances
+            .iter()
+            .find(|i| i.name == name && i.key == key)
+            .ok_or_else(|| Error::arg("call target is not in the fixed binding closure"))
+    }
     pub fn resolve_bindings(
         &self,
         object: &Object,

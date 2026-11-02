@@ -30,3 +30,15 @@ test threads, Rust tests, linked C11 consumers, gate protocol regression, fmt).
 Latest exact command results are in .tmp/PROGRESS.md. The runner must also run
 the default hook on the committed SHA; working-tree and mocked protocol tests
 do not establish actual committed-snapshot verification. Hooks/worklog untouched.
+
+Layout admission and state planning now have regressions for schema/ranges,
+zero-size globals, per-oracle mappings, image identity, complete block sectors,
+64-bit endpoints, and bounded host metadata. The shared oracle_state plan derives
+reference counters, global location descriptors, sparse ordinary-memory images,
+pinned alloctab initialization and byte-map partitions. It sizes through frames
+at 25 bits and sum_db frames at 106 bits for the tested budgets. Frames are lazy
+metadata, including B=UINT64_MAX; materializing an oversized source trace reports
+NoMem. The memoryless adapter consumes the shared plan. Full layout/lproc row
+emission and capture/activation forwarding remain required. The observed ISA
+commit advanced to ecaaac060c44e317d1181345fa6b8e38c096c099 with unchanged spec and
+catalog hashes.
