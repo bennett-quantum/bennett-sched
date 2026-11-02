@@ -217,6 +217,24 @@ fn source_literals_and_fault_causes_are_validated_without_truncating_illegal_val
 }
 
 #[test]
-fn oracle_row_reads_cannot_resolve_targets_faults_or_private_constructor_names(){
-    let sig=json!({"abi":"0.9","tier":"q","kind":"oracle","in":[1],"tgt":1,"fault":4,"mem":[],"args":[]});for body in ["r = lift.mov t\nlift.retval r","r = lift.icmp.eq f f\nlift.retval r","r = lift.icmp.eq pc pc\nlift.retval r"]{let bytes=common::action("oracle","a",sig.clone(),"oracle @a (x:wire in) (t:wire) (f:wire[4]) () ()\nregs { r:reg[1] }",body);let error=Object::parse(&bytes).and_then(|o|Trace::build(&o,"a",0,&json!([]),[2,0,0,0])).err().expect(body);assert_eq!(error.status,bennett_sched::Status::Arg,"{body}: {error}");}
+fn oracle_row_reads_cannot_resolve_targets_faults_or_private_constructor_names() {
+    let sig = json!({"abi":"0.9","tier":"q","kind":"oracle","in":[1],"tgt":1,"fault":4,"mem":[],"args":[]});
+    for body in [
+        "r = lift.mov t\nlift.retval r",
+        "r = lift.icmp.eq f f\nlift.retval r",
+        "r = lift.icmp.eq pc pc\nlift.retval r",
+    ] {
+        let bytes = common::action(
+            "oracle",
+            "a",
+            sig.clone(),
+            "oracle @a (x:wire in) (t:wire) (f:wire[4]) () ()\nregs { r:reg[1] }",
+            body,
+        );
+        let error = Object::parse(&bytes)
+            .and_then(|o| Trace::build(&o, "a", 0, &json!([]), [2, 0, 0, 0]))
+            .err()
+            .expect(body);
+        assert_eq!(error.status, bennett_sched::Status::Arg, "{body}: {error}");
+    }
 }

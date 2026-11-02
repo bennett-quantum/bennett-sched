@@ -78,7 +78,23 @@ fn expansion_envelope_is_the_published_complete_catalog() {
 }
 
 #[test]
-fn host_nesting_exhaustion_is_distinct_from_a_malformed_request(){
-    let source=format!("{}0{}","[".repeat(258),"]".repeat(258));assert_eq!(canonical::parse(source.as_bytes()).unwrap_err().status,bennett_sched::Status::NoMem);
-    let library=bennett_sched::expansion::Library::published().unwrap();let mut body=json!([]);for _ in 0..258{body=json!([{"inverse":true,"body":body}]);}let error=library.body(body.as_array().unwrap(),&bennett_sched::expansion::Env::new(),&[]).unwrap_err();assert_eq!(error.status,bennett_sched::Status::NoMem);
+fn host_nesting_exhaustion_is_distinct_from_a_malformed_request() {
+    let source = format!("{}0{}", "[".repeat(258), "]".repeat(258));
+    assert_eq!(
+        canonical::parse(source.as_bytes()).unwrap_err().status,
+        bennett_sched::Status::NoMem
+    );
+    let library = bennett_sched::expansion::Library::published().unwrap();
+    let mut body = json!([]);
+    for _ in 0..258 {
+        body = json!([{"inverse":true,"body":body}]);
+    }
+    let error = library
+        .body(
+            body.as_array().unwrap(),
+            &bennett_sched::expansion::Env::new(),
+            &[],
+        )
+        .unwrap_err();
+    assert_eq!(error.status, bennett_sched::Status::NoMem);
 }

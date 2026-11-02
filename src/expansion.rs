@@ -264,7 +264,9 @@ impl Library {
         }
         Ok(())
     }
-    pub fn expand(&self,kind:&str,args:&Value,caller:&Env)->Result<Vec<Leaf>>{expansion_stack(||self.expand_inner(kind,args,caller))}
+    pub fn expand(&self, kind: &str, args: &Value, caller: &Env) -> Result<Vec<Leaf>> {
+        expansion_stack(|| self.expand_inner(kind, args, caller))
+    }
     fn expand_inner(&self, kind: &str, args: &Value, caller: &Env) -> Result<Vec<Leaf>> {
         let r = self
             .recipes
@@ -287,7 +289,9 @@ impl Library {
         validate_lifetimes(&leaves)?;
         Ok(leaves)
     }
-    pub fn body(&self,body:&[Value],env:&Env,controls:&[String])->Result<Vec<Leaf>>{expansion_stack(||self.body_inner(body,env,controls))}
+    pub fn body(&self, body: &[Value], env: &Env, controls: &[String]) -> Result<Vec<Leaf>> {
+        expansion_stack(|| self.body_inner(body, env, controls))
+    }
     fn body_inner(&self, body: &[Value], env: &Env, controls: &[String]) -> Result<Vec<Leaf>> {
         validate_body(body)?;
         let mut c = Compiler {
@@ -307,10 +311,22 @@ impl Library {
 }
 /// Keep constructor recursion on an explicitly provisioned stack. Rust callers
 /// may use small thread stacks; host exhaustion must be a status, not SIGABRT.
-fn expansion_stack<T:Send>(work:impl FnOnce()->Result<T>+Send)->Result<T>{
-    std::thread::scope(|scope|{
-        let worker=std::thread::Builder::new().name("bennett-expansion".into()).stack_size(16*1024*1024).spawn_scoped(scope,work).map_err(|e|Error::new(crate::Status::NoMem,format!("expansion stack allocation: {e}")))?;
-        match worker.join(){Ok(result)=>result,Err(panic)=>std::panic::resume_unwind(panic)}
+fn expansion_stack<T: Send>(work: impl FnOnce() -> Result<T> + Send) -> Result<T> {
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new()
+            .name("bennett-expansion".into())
+            .stack_size(16 * 1024 * 1024)
+            .spawn_scoped(scope, work)
+            .map_err(|e| {
+                Error::new(
+                    crate::Status::NoMem,
+                    format!("expansion stack allocation: {e}"),
+                )
+            })?;
+        match worker.join() {
+            Ok(result) => result,
+            Err(panic) => std::panic::resume_unwind(panic),
+        }
     })
 }
 fn number(leaves: &mut [Leaf]) {
@@ -470,61 +486,62 @@ fn validate_formals(params: &[Value]) -> Result<()> {
     Ok(())
 }
 fn validate_body(body: &[Value]) -> Result<()> {
-    let mut pending=vec![body];
-    while let Some(body)=pending.pop(){for c in body {
-        let required: &[&str] = if c.get("gate").is_some() {
-            &["gate", "wires"]
-        } else if c.get("alloc").is_some() {
-            &["alloc", "width", "class", "state"]
-        } else if c.get("release").is_some() {
-            &["release"]
-        } else if c.get("classical").is_some() {
-            &["classical", "point"]
-        } else if c.get("for").is_some() {
-            &["for", "from", "to", "body"]
-        } else if c.get("invoke").is_some() {
-            &["invoke", "args"]
-        } else if c.get("inverse").is_some() {
-            if c["inverse"] != true {
-                return Err(Error::arg("inverse must be true"));
-            }
-            &["inverse", "body"]
-        } else if c.get("each").is_some() {
-            &["each", "in", "body"]
-        } else if c.get("splice").is_some() {
-            &["splice"]
-        } else if c.get("call").is_some() {
-            &["call", "args"]
-        } else if c.get("under").is_some() {
-            &["under", "body"]
-        } else if c.get("image").is_some() {
-            &["image", "wires"]
-        } else if c.get("apply").is_some() {
-            &["apply", "index", "args"]
-        } else if c.get("visit").is_some() {
-            &["visit", "body"]
-        } else if c.get("declare").is_some() {
-            &["declare", "width", "class", "state", "body"]
-        } else if c.get("acquire").is_some() {
-            &["acquire"]
-        } else if c.get("relinquish").is_some() {
-            &["relinquish"]
-        } else {
-            return Err(Error::arg("§11.1: unknown constructor"));
-        };
-        fields(
-            c,
-            required,
-            if c.get("gate").is_some() {
-                &["params"]
+    let mut pending = vec![body];
+    while let Some(body) = pending.pop() {
+        for c in body {
+            let required: &[&str] = if c.get("gate").is_some() {
+                &["gate", "wires"]
+            } else if c.get("alloc").is_some() {
+                &["alloc", "width", "class", "state"]
+            } else if c.get("release").is_some() {
+                &["release"]
+            } else if c.get("classical").is_some() {
+                &["classical", "point"]
+            } else if c.get("for").is_some() {
+                &["for", "from", "to", "body"]
+            } else if c.get("invoke").is_some() {
+                &["invoke", "args"]
+            } else if c.get("inverse").is_some() {
+                if c["inverse"] != true {
+                    return Err(Error::arg("inverse must be true"));
+                }
+                &["inverse", "body"]
+            } else if c.get("each").is_some() {
+                &["each", "in", "body"]
+            } else if c.get("splice").is_some() {
+                &["splice"]
+            } else if c.get("call").is_some() {
+                &["call", "args"]
+            } else if c.get("under").is_some() {
+                &["under", "body"]
+            } else if c.get("image").is_some() {
+                &["image", "wires"]
+            } else if c.get("apply").is_some() {
+                &["apply", "index", "args"]
+            } else if c.get("visit").is_some() {
+                &["visit", "body"]
+            } else if c.get("declare").is_some() {
+                &["declare", "width", "class", "state", "body"]
+            } else if c.get("acquire").is_some() {
+                &["acquire"]
+            } else if c.get("relinquish").is_some() {
+                &["relinquish"]
             } else {
-                &[]
-            },
-        )?;
-        if let Some(body) = c.get("body") {
-            pending.push(array(body)?.as_slice());
+                return Err(Error::arg("§11.1: unknown constructor"));
+            };
+            fields(
+                c,
+                required,
+                if c.get("gate").is_some() {
+                    &["params"]
+                } else {
+                    &[]
+                },
+            )?;
+            if let Some(body) = c.get("body") {
+                pending.push(array(body)?.as_slice());
+            }
         }
-    }
     }
     Ok(())
 }
@@ -875,7 +892,10 @@ impl Compiler<'_> {
     ) -> Result<Vec<Leaf>> {
         self.depth += 1;
         if self.depth > 256 {
-            return Err(Error::new(crate::Status::NoMem,"§11.1: expansion host nesting limit 256"));
+            return Err(Error::new(
+                crate::Status::NoMem,
+                "§11.1: expansion host nesting limit 256",
+            ));
         }
         let mut out = Vec::new();
         for c in body {
@@ -1335,7 +1355,9 @@ pub fn validate_value(ty: &Value, v: &Value) -> Result<()> {
             return Err(Error::arg("token tuple requires four components"));
         }
         for n in a {
-            canonical_unsigned(n)?;
+            if canonical_unsigned(n)?.bits() > 64 {
+                return Err(Error::arg("§5.4: token tuple component exceeds uint64"));
+            }
         }
         return Ok(());
     }

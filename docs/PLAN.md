@@ -27,8 +27,8 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | ISA-11-P4, §8.3 | Interface/control placements, per-class vertices, lifetimes, adjacency, no routing | Default class/vertex placement, capacity and adjacency implemented; finite class/per-bit vertex search implemented; cost optimisation remains open (ark) |
 | ISA-11-P5 / K52 | Invocation-chain prefixes; source-loop iteration, nested budget/step/phase; no `lift.call` edge | Nested coordinate resolver tested; action call source paths tested; memoryless oracle step/phase/support coordinates and reverse ordinals checked; nested oracle calls remain ark |
 | ISA-11-P6 | Lexicographic specificity, maximal ties independent of document order and entry kind; defaults replace rather than inherit fields | Per-operation maximal ties and independent kinds tested, including K63 specificity neutrality |
-| ISA-11-P7 / K55 | Admission/concrete validation stages, literal-only nested-budget derivation; exact rational decimal equivalence | Exact decimals implemented; linked source-path/request admission implemented; lproc/nested-budget concrete staging deferred (ark) |
-| K63 | Fixed-instance and semantic-call-occurrence identity and selectors, without extra specificity | Selectors and typed semantic-call occurrence spaces implemented; lproc instance formation deferred (ark) |
+| ISA-11-P7 / K55 | Admission/concrete validation stages, literal-only nested-budget derivation; exact rational decimal equivalence | Exact decimals implemented; linked source-path/request admission implemented; lproc concrete instance admission implemented; nested-budget/complete generated domains remain ark |
+| K63 | Fixed-instance and semantic-call-occurrence identity and selectors, without extra specificity | Selectors and typed semantic-call occurrence spaces implemented; Finite positional lproc closure, row ranges, location IDs and activations formed; concrete selector keys validated; row emission remains ark |
 | K64 | `$construct/$step/$commit/$release`, separate support ordinal spaces, B=0 construction/commit/release | All four support points emitted for memoryless oracles, including B=0; forward/reverse step coordinates and shared Rows/Next ordinals checked (`oracle`) |
 | K65 | Non-emitting ordinal-0 whole-cleanup carriers, reverse/recompute selection before leaf expansion | Carriers formed from source version matches; all selections stage before mutation; reverse and primitive/intrinsic recompute checked (`cleanup`) |
 | K81 | Source occurrence/version cleanup partition, indivisible joint inverses, intrinsic boundaries, first-release ownership | Semantic calls remain atomic; intrinsic boundaries and first-release ownership of joint inverses checked; broader source forms remain ark |
@@ -156,3 +156,32 @@ The exact proposed frame selector, domain.workspace component schema and
 expected:"borrow_frame" tensor-factor relation are in the bead and queued in
 .tmp/cross-repo-beads.md under COMMON rule 14. No unratified field is emitted;
 entry-state analysis and other independent algorithms can still proceed.
+
+Latest focused evidence: `lproc` forms the normative worker key [0,1,0], rows
+2..7 and R_worker=8, and recursive sum's single empty key with 13 ordered
+locations/R_sum=16. Fixed values preserve the explicit nested token tuple and
+classical values independently of the outer budget. Equal root argument values
+cannot merge distinct positional keys. Admission checks concrete lproc keys
+against that finite closure. Memoryless object rules and root/token heap/stack
+limits reject invalid input; token components fit uint64. Host nesting limits
+return NoMem, and constructor execution uses an explicit bounded worker stack.
+The oracle fault-rate field replays only its declared zero-input witness, with
+inherited controls fixed at zero; no full-distribution assertion is inferred.
+All 13 quantum regions in the ten normative objects are audited with a universal
+exact target: seven OK and six explicitly postponed outcomes (layout/lproc,
+classical pseudo-location and qinplace paths). This audits producer behavior,
+not independent 0.9 checker success.
+
+## Classical pseudo-location binding gap — bennett-sched-r28
+
+§4.7 treats bit-readable classical parameters as pseudo-locations. The published
+row recipes take wire formals, while K24 forbids implicit conversion and K25's
+explicit State list omits their storage/initialization. Per-read scratch, shared
+argument storage and constant-control pruning would give different charged leaf
+streams. The exact proposed text adds immutable class-any pseudo-location State
+records in a fixed order with unsigned iN/ptr/binary64 initial bits, excluding
+tokens and without adding location IDs, rows, stack cells or R_f terms. It also
+specifies separate records for distinct lproc keys and the frame records and
+vectors. The proposal is in the local P0 bead and upstream queue; no unratified
+wire adapter is guessed. Metadata forwarding and every independent algorithm
+continue. The existing catalog bytes/hash can remain unchanged under this edit.

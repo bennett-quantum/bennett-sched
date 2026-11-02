@@ -157,6 +157,7 @@ impl Trace {
         budget: [u64; 4],
     ) -> Result<Self> {
         object.validate_params(name, params)?;
+        object.validate_budget(budget)?;
         let f = object
             .functions
             .get(name)

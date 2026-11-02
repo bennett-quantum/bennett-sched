@@ -35,7 +35,10 @@ fn allocation(name: &str, width: u64) -> Result<Binding> {
 fn read(name: &str, env: &Env) -> Result<Vec<String>> {
     match env.get(name) {
         Some(Binding::Wires(w) | Binding::Allocation { wires: w, .. }) => Ok(w.clone()),
-        Some(Binding::Value { .. }) => Err(postponed("classical pseudo-location bit adapters")),
+        Some(Binding::Value { .. }) => Err(Error::new(
+            Status::GateUnsupported,
+            "§4.7/K25: classical pseudo-location wire initialization needs contract decision bennett-sched-r28; source adapter tracked by bennett-sched-ark",
+        )),
         _ => Err(Error::arg(format!("§4.2: unbound oracle operand {name}"))),
     }
 }
@@ -429,7 +432,7 @@ pub fn build(
     budget: [u64; 4],
 ) -> Result<Trace> {
     let f = &object.functions[name];
-    let _index_space=crate::lproc::IndexSpace::form(object,name)?;
+    let plan = crate::oracle_state::Plan::form(object, name, budget)?;
     if object.metadata.contains_key("layout") {
         return Err(postponed(
             "layout state and fixed-binding lproc oracle construction",
@@ -474,11 +477,11 @@ pub fn build(
             },
         );
     }
-    let n = f.body.len() as u64;
+    let n = plan.index.halt;
     if n == 0 || f.body.iter().any(|r| !r.bodies.is_empty()) {
         return Err(Error::arg("oracle rows must be nonempty and unstructured"));
     }
-    let p = (64 - n.leading_zeros()) as u64;
+    let p = plan.index.pc_width;
     let fault = object::wire_width(&f.groups[2][0].ty)?;
     let target = object::wire_width(&f.groups[1][0].ty)?;
     let mut locations = BTreeMap::new();
@@ -524,74 +527,47 @@ pub fn build(
             .map(|s| rename(s, &names))
             .collect::<Result<_>>()?;
     }
-    let mut slot_widths = Vec::<u64>::new();
-    for node in &nodes {
-        for (i, width) in widths(node, &env, &locations)?.into_iter().enumerate() {
-            if i == slot_widths.len() {
-                slot_widths.push(width);
-            } else {
-                slot_widths[i] = slot_widths[i].max(width);
-            }
-        }
-    }
-    let q = p
-        .checked_mul(2)
-        .and_then(|v| v.checked_add(1))
-        .and_then(|v| v.checked_add(slot_widths.iter().sum()))
-        .ok_or_else(|| Error::new(Status::NoMem, "oracle frame exceeds host width"))?;
+    let slot_widths = &plan.slot_widths;
+    let q = plan.frame_width;
     let state_schema = library.recipes["oracle.construct"]["parameters"][13].clone();
     let frames_schema = library.recipes["oracle.construct"]["parameters"][14].clone();
+    // This materialized adapter has a finite host workspace. State shape remains
+    // available symbolically through Plan even when this invocation cannot fit.
+    const HOST_STATE_BYTES: u64 = 64 * 1024 * 1024;
+    let wires = plan.base.iter().try_fold(0u64, |a,r| a.checked_add(r.width))
+        .and_then(|a| q.checked_mul(budget[0]).and_then(|b| a.checked_add(b)));
+    let estimate = wires.and_then(|w| w.checked_mul(128))
+        .and_then(|w| budget[0].checked_mul(1024).and_then(|b| w.checked_add(b)));
+    if estimate.is_none_or(|n| n > HOST_STATE_BYTES) {
+        return Err(Error::new(Status::NoMem, "oracle construction exceeds 64 MiB host state workspace"));
+    }
     let mut state = Vec::new();
-    let frame_count = usize::try_from(budget[0])
-        .map_err(|_| Error::new(Status::NoMem, "history count exceeds host size"))?;
-    state
-        .try_reserve_exact(frame_count)
-        .map_err(|_| Error::new(Status::NoMem, "state descriptors exceed host memory"))?;
-    let mut add_state = |name: &str, width: u64, env: &mut Env| -> Result<()> {
-        let storage = allocation(name, width)?;
-        env.insert(name.into(), storage.clone());
-        state.push(Env::from([
-            ("width".into(), Binding::Integer(width.into())),
-            ("initial".into(), Binding::Integer(0u8.into())),
-            ("I".into(), Binding::Image(String::new())),
-            ("storage".into(), storage),
-        ]));
-        Ok(())
-    };
-    for (name, width) in [
-        ("pc", p),
-        ("next", p),
-        ("faulted", 1),
-        ("code", fault),
-        ("result", target),
-    ] {
-        if env.contains_key(name) {
-            return Err(Error::arg(
-                "source name conflicts with oracle adapter state; qualified binding required",
-            ));
-        }
-        add_state(name, width, &mut env)?;
-    }
-    for reg in &f.regs {
-        add_state(
-            &format!("source.{}", reg.name),
-            locations[&format!("source.{}", reg.name)],
-            &mut env,
-        )?;
-    }
     let mut frames = Vec::new();
     let frame_count = usize::try_from(budget[0])
         .map_err(|_| Error::new(Status::NoMem, "history count exceeds host size"))?;
-    frames
-        .try_reserve_exact(frame_count)
+    state.try_reserve_exact(plan.base.len() + frame_count)
+        .map_err(|_| Error::new(Status::NoMem, "state descriptors exceed host memory"))?;
+    frames.try_reserve_exact(frame_count)
         .map_err(|_| Error::new(Status::NoMem, "history descriptors exceed host memory"))?;
-    for index in 0..budget[0] {
-        let name = format!("history-{index}");
-        add_state(&name, q, &mut env)?;
-        frames.push(Env::from([
-            ("index".into(), Binding::Integer(index.into())),
-            ("frame".into(), env[&name].clone()),
+    for record in plan.records() {
+        let storage = allocation(&record.name, record.width)?;
+        env.insert(record.name.clone(), storage.clone());
+        let image = if let Some(image) = record.image {
+            image.materialize(HOST_STATE_BYTES as usize)?.iter().map(|b| format!("{b:02x}")).collect()
+        } else { String::new() };
+        state.push(Env::from([
+            ("width".into(), Binding::Integer(record.width.into())),
+            ("initial".into(), Binding::Integer(record.initial.into())),
+            ("I".into(), Binding::Image(image)),
+            ("storage".into(), storage.clone()),
         ]));
+        if let Some(index) = record.name.strip_prefix("history-") {
+            let index = index.parse::<u64>().expect("source-derived frame index");
+            frames.push(Env::from([
+                ("index".into(), Binding::Integer(index.into())),
+                ("frame".into(), storage),
+            ]));
+        }
     }
     env.insert(
         "State".into(),
@@ -623,8 +599,17 @@ pub fn build(
     }
     let mut rows = Vec::new();
     let mut next = Vec::new();
-    let readable=f.groups[0].iter().chain(f.groups[4].iter().filter(|p|p.ty!="token")).chain(&f.regs).map(|p|format!("source.{}",p.name)).collect::<std::collections::BTreeSet<_>>();
-    let source_env=env.iter().filter(|(name,_)|readable.contains(*name)).map(|(name,binding)|(name.clone(),binding.clone())).collect::<Env>();
+    let readable = f.groups[0]
+        .iter()
+        .chain(f.groups[4].iter().filter(|p| p.ty != "token"))
+        .chain(&f.regs)
+        .map(|p| format!("source.{}", p.name))
+        .collect::<std::collections::BTreeSet<_>>();
+    let source_env = env
+        .iter()
+        .filter(|(name, _)| readable.contains(*name))
+        .map(|(name, binding)| (name.clone(), binding.clone()))
+        .collect::<Env>();
     for (i, node) in nodes.iter().enumerate() {
         let (body, successor) = row(
             node,
@@ -633,7 +618,7 @@ pub fn build(
             p,
             fault,
             target,
-            &slot_widths,
+            slot_widths,
             &source_env,
             &locations,
             &labels,

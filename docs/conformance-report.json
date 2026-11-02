@@ -20,6 +20,15 @@
     "not-exercised-scheduler-vector": 5,
     "partial-reference-expansion": 20
   },
+  "normative_scheduler_audit": {
+    "regions": 13,
+    "outcomes": {
+      "OK": 7,
+      "UNSUPPORTED": 6
+    },
+    "request": "B=3, heap=stack=depth=0; typed zero args, tokens=(3,0,0,0); universal exact target, unbounded capacity, no topology",
+    "meaning": "Producer schedule/document audit with tracked deferrals; no independent checker verdict."
+  },
   "cases": [
     {
       "id": "A-effects-tape",
@@ -5646,62 +5655,185 @@
       "coverage": "all-interface-hashes-checked",
       "test": "normative_objects",
       "schedule": "pipeline::normative_inc8_schedules_through_the_abi_with_history_and_oracle_claim",
-      "semantics": "oracle (equivalent two-bit increment full input/target/fault/control domains, budgets 0-4)"
+      "semantics": "oracle (equivalent two-bit increment full input/target/fault/control domains, budgets 0-4)",
+      "quantum_region_audit": [
+        {
+          "name": "inc8",
+          "interface_hash": "ed9865300b85a519c2379de98e36e635e72b5b78d8bdfca03dccf9a09aa3df5e",
+          "outcome": "OK",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"
+        }
+      ]
     },
     {
       "number": 2,
       "sha256": "1977bfd3a4a89ff6b278ec6325c23590817d54a806b63c001df56d2975f4dec2",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "quantum_region_audit": [
+        {
+          "name": "sum_db",
+          "interface_hash": "3ad937b1cd867454989c5c5f58244681ef2c09dbabf7fce56515a68f63462ee6",
+          "outcome": "UNSUPPORTED",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
+          "reason": "layout/lproc construction",
+          "beads": [
+            "bennett-sched-ark"
+          ]
+        }
+      ]
     },
     {
       "number": 3,
       "sha256": "d5b4f9d7a0e58798eb3e7eedc47305c32a1ce514636dc57782bc39df6154a4a0",
       "coverage": "all-interface-hashes-checked",
       "test": "normative_objects",
-      "semantics": "borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record (all 8 basis tuples and 16 inherited-control tuples)"
+      "semantics": "borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record (all 8 basis tuples and 16 inherited-control tuples)",
+      "quantum_region_audit": [
+        {
+          "name": "borrow_demo",
+          "interface_hash": "6f4782e9bde4267acd1afddd650093722a056d9d50ee465b79cb86a4606b2a94",
+          "outcome": "OK",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"
+        }
+      ]
     },
     {
       "number": 4,
       "sha256": "20c59e8d1724208e6501e1fc10f23ad73720a486df79134ce19de636a6343ad8",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "quantum_region_audit": [
+        {
+          "name": "flip",
+          "interface_hash": "3860ea712b2d70fc495834586bb397656a467c85235aa069768318a06e9fa89b",
+          "outcome": "OK",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"
+        }
+      ]
     },
     {
       "number": 5,
       "sha256": "e957f05d8a4077f875dca7f1ad5a0a8bca3680521042dec80b601214d64fa744",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "quantum_region_audit": [
+        {
+          "name": "flip",
+          "interface_hash": "3860ea712b2d70fc495834586bb397656a467c85235aa069768318a06e9fa89b",
+          "outcome": "OK",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"
+        }
+      ]
     },
     {
       "number": 6,
       "sha256": "09d5382675721285ca24713a90086a9149b351e5e6f5234f860f3cdaf4387b09",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "quantum_region_audit": [
+        {
+          "name": "inc8",
+          "interface_hash": "ed9865300b85a519c2379de98e36e635e72b5b78d8bdfca03dccf9a09aa3df5e",
+          "outcome": "OK",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"
+        }
+      ]
     },
     {
       "number": 7,
       "sha256": "246a226d251a3767a0fb8dfe62fe15b4302b8adc6a6e062601d68eeec4a1b19b",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "quantum_region_audit": [
+        {
+          "name": "g",
+          "interface_hash": "0d65d926275688cfebf2831c1de960b03a6b8ea6400866e6d9fef8f393ca2c2e",
+          "outcome": "UNSUPPORTED",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
+          "reason": "classical pseudo-location wire binding",
+          "beads": [
+            "bennett-sched-r28",
+            "bennett-sched-ark"
+          ]
+        },
+        {
+          "name": "ginv",
+          "interface_hash": "786f1970ca3d78ef3d5de795411ee276286711c89b756872757c24f9bd569cc9",
+          "outcome": "UNSUPPORTED",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
+          "reason": "classical pseudo-location wire binding",
+          "beads": [
+            "bennett-sched-r28",
+            "bennett-sched-ark"
+          ]
+        },
+        {
+          "name": "addya",
+          "interface_hash": "5999b6d3d2362f8c1971ef6f37b404766aa5c18f6ba1880d767bfde351e47392",
+          "outcome": "UNSUPPORTED",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
+          "reason": "qinplace inverse-pair construction",
+          "beads": [
+            "bennett-sched-ark"
+          ]
+        }
+      ]
     },
     {
       "number": 8,
       "sha256": "d8409af50c41993d0f1c6a0b2e12a9c860c80435ae96c78606b97d232db84768",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "quantum_region_audit": []
     },
     {
       "number": 9,
       "sha256": "99cd11b7da4184801665ec14f37bd771287daad9bf7d049d792375d81513d757",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "quantum_region_audit": [
+        {
+          "name": "zero_cause",
+          "interface_hash": "badf7dd2a59afa879f092921946539dfb918cedd35f6fbbaa838c630577eaed4",
+          "outcome": "OK",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"
+        }
+      ]
     },
     {
       "number": 10,
       "sha256": "4c43955526de1820fac44c6683624cd78706c6b9394d3c0efecaf9f208091ca9",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "quantum_region_audit": [
+        {
+          "name": "through",
+          "interface_hash": "4ee502a2d517d53d229f2ae21346505af06a228a2f0d2967938d48683e16d9e7",
+          "outcome": "UNSUPPORTED",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
+          "reason": "layout/lproc construction",
+          "beads": [
+            "bennett-sched-ark"
+          ]
+        },
+        {
+          "name": "plus_db",
+          "interface_hash": "c6e53733d87782414d05720d444734d9335244155518db4f60916e3d4b06dd1d",
+          "outcome": "UNSUPPORTED",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
+          "reason": "layout state construction",
+          "beads": [
+            "bennett-sched-ark"
+          ]
+        },
+        {
+          "name": "flip_arg",
+          "interface_hash": "bfa13d9a564e3f8562098c4ea39330d947efa64521310afad6a329dc594bd671",
+          "outcome": "OK",
+          "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"
+        }
+      ]
     }
   ],
   "portable_manifests": [
@@ -5773,5 +5905,5 @@
     "stdout": "",
     "stderr": "§1: expected isa=0.8\n"
   },
-  "recorded_at_utc": "2026-11-02T00:12:54Z"
+  "recorded_at_utc": "2026-11-02T00:49:27Z"
 }

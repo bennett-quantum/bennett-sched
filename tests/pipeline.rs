@@ -365,8 +365,14 @@ fn normative_inc8_schedules_through_the_abi_with_history_and_oracle_claim() {
         region["claims"][claim]["invocation"]["budget"],
         json!(["3", "0", "0", "0"])
     );
-    r.budget=Some([2,0,0,0]);let result=r.schedule().unwrap();assert_eq!(result.outcome,Outcome::Ok);let c=canonical::parse(&result.certificate).unwrap();assert_eq!(c["regions"][&hash]["verification"]["fault_rate"]["faults_by_code"],json!({"1":1}));
-
+    r.budget = Some([2, 0, 0, 0]);
+    let result = r.schedule().unwrap();
+    assert_eq!(result.outcome, Outcome::Ok);
+    let c = canonical::parse(&result.certificate).unwrap();
+    assert_eq!(
+        c["regions"][&hash]["verification"]["fault_rate"]["faults_by_code"],
+        json!({"1":1})
+    );
 }
 
 #[test]

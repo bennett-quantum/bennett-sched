@@ -91,6 +91,16 @@ def main():
             record={"number": len(examples) + 1, "sha256": sha(block.encode()), "coverage": "all-interface-hashes-checked", "test": "normative_objects"}
             if record["number"]==1: record.update(schedule="pipeline::normative_inc8_schedules_through_the_abi_with_history_and_oracle_claim",semantics="oracle (equivalent two-bit increment full input/target/fault/control domains, budgets 0-4)")
             if record["number"]==3: record.update(semantics="borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record (all 8 basis tuples and 16 inherited-control tuples)")
+            symbols=json.loads(block.split("section symbols\n",1)[1].split("\n",1)[0])
+            regions=[]
+            deferred={"sum_db":"layout/lproc construction", "through":"layout/lproc construction", "plus_db":"layout state construction", "g":"classical pseudo-location wire binding", "ginv":"classical pseudo-location wire binding", "addya":"qinplace inverse-pair construction"}
+            for symbol in symbols.values():
+                if symbol["kind"] in {"oracle","action","perm_action"}:
+                    name=symbol["name"]
+                    region={"name":name,"interface_hash":symbol["interface_hash"],"outcome":"UNSUPPORTED" if name in deferred else "OK","test":"normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"}
+                    if name in deferred: region.update(reason=deferred[name],beads=["bennett-sched-r28","bennett-sched-ark"] if name in {"g","ginv"} else ["bennett-sched-ark"])
+                    regions.append(region)
+            record["quantum_region_audit"]=regions
             examples.append(record)
     portable = []
     for path in sorted((SPEC / "conformance/fixtures").glob("accepted-*/*.json")):
@@ -110,6 +120,7 @@ def main():
         "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
         "spec_sha256": sha(spec_bytes), "case_count": len(records), "suites": dict(sorted(suites.items())),
         "coverage_counts": dict(sorted(collections.Counter(r["coverage"] for r in records).items())),
+        "normative_scheduler_audit":{"regions":sum(len(e["quantum_region_audit"]) for e in examples),"outcomes":dict(collections.Counter(r["outcome"] for e in examples for r in e["quantum_region_audit"])),"request":"B=3, heap=stack=depth=0; typed zero args, tokens=(3,0,0,0); universal exact target, unbounded capacity, no topology","meaning":"Producer schedule/document audit with tracked deferrals; no independent checker verdict."},
         "cases": records, "normative_objects": examples, "portable_manifests": portable,
         "reference_schedule_execution": "not claimed; installed reference interpreter documents staged target/schedule execution",
     }

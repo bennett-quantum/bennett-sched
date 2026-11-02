@@ -94,7 +94,10 @@ fn normative_translation_frame_is_universal_and_emits_a_separate_borrow_record()
         assert_eq!(region["frame"]["scratch"], json!([]));
         let index = region["verification"]["borrow_frames"][0].as_u64().unwrap() as usize;
         assert_eq!(region["claims"][index]["rule"], "translation_lemma");
-        assert_eq!(region["claims"][index]["witness"]["V"][0],json!([object.symbols["borrow_demo"].interface_hash,"entry",2]));
+        assert_eq!(
+            region["claims"][index]["witness"]["V"][0],
+            json!([object.symbols["borrow_demo"].interface_hash, "entry", 2])
+        );
         assert_eq!(
             region["claims"][index]["witness"]["X"]
                 .as_array()

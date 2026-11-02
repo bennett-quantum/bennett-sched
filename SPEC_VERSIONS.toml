@@ -1,5 +1,5 @@
 # Targeted published contracts. Status is partial, not a complete conformance claim.
-status = "partial-implementation"
+status = "partial-implementation-with-contract-gaps"
 sched = "0.9"
 isa = "0.9"
 object = "0.9"

@@ -77,8 +77,38 @@ fn malformed_object_metadata_and_bad_identity_are_rejected() {
 }
 
 #[test]
-fn memoryless_objects_cannot_hide_interface_regions_or_lprocs(){
-    mod common {include!("common/mod.rs");}
-    let sig=json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[{"A":0,"W":1,"role":"in"}],"args":[],"bounds":[]});let source=common::action("perm_action","a",sig,"perm_action @a (t:wire mut) () (r:region[0,1] in) () ()","x t");assert!(Object::parse(&source).is_err());
-    let sig=json!({"abi":"0.9","tier":"q","kind":"lproc","params":[],"result":1,"tokens":[],"args":[],"mem":[]});let source=common::action("lproc","f",sig,"lproc @f () (r:reg[1]) () () ()","lift.ret r");assert!(Object::parse(&source).is_err());
+fn memoryless_objects_cannot_hide_interface_regions_or_lprocs() {
+    mod common {
+        include!("common/mod.rs");
+    }
+    let sig = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[{"A":0,"W":1,"role":"in"}],"args":[],"bounds":[]});
+    let source = common::action(
+        "perm_action",
+        "a",
+        sig,
+        "perm_action @a (t:wire mut) () (r:region[0,1] in) () ()",
+        "x t",
+    );
+    assert!(Object::parse(&source).is_err());
+    let sig = json!({"abi":"0.9","tier":"q","kind":"lproc","params":[],"result":1,"tokens":[],"args":[],"mem":[]});
+    let source = common::action(
+        "lproc",
+        "f",
+        sig,
+        "lproc @f () (r:reg[1]) () () ()",
+        "lift.ret r",
+    );
+    assert!(Object::parse(&source).is_err());
+}
+
+#[test]
+fn memoryless_budget_validation_does_not_substitute_nonzero_memory_limits() {
+    let object = Object::parse(inc8().as_bytes()).unwrap();
+    object.validate_budget([3, 0, 0, 0]).unwrap();
+    for budget in [[3, 1, 0, 0], [3, 0, 1, 0], [3, 0, 0, 1]] {
+        assert_eq!(
+            object.validate_budget(budget).unwrap_err().status,
+            bennett_sched::Status::Budget
+        );
+    }
 }

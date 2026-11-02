@@ -35,7 +35,9 @@ recompute and input-history replay, qinplace, general cleanup and borrow proofs,
 nested region coordinates, and objective optimisation remain `bennett-sched-ark`.
 Varying invocation frame descriptors require the `bennett-sched-lzv` contract
 decision; restricted T3 borrow certificates require the `bennett-sched-awo`
-frame-domain decision. Encountered postponed features return `UNSUPPORTED` with a specific
+frame-domain decision. Classical pseudo-location initialization requires
+`bennett-sched-r28`; its exact state/cost proposal is queued upstream. Encountered
+postponed features return `UNSUPPORTED` with a specific
 reason and issue; constraint failures return `INFEASIBLE`; malformed requests
 return a `bennett_status` error. The deterministic candidate is not claimed optimal.
 

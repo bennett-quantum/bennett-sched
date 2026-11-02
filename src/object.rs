@@ -385,16 +385,46 @@ impl Object {
             interfaces: BTreeMap::new(),
             closures: BTreeMap::new(),
         };
-        if !object.metadata.contains_key("layout"){
-            for function in object.functions.values(){
-                if function.kind=="lproc"||function.signature.get("mem").and_then(Value::as_array).is_some_and(|m|!m.is_empty()){
-                    return Err(Error::arg("§7.2: memoryless objects cannot contain lprocs or interface regions"));
+        if !object.metadata.contains_key("layout") {
+            for function in object.functions.values() {
+                if function.kind == "lproc"
+                    || function
+                        .signature
+                        .get("mem")
+                        .and_then(Value::as_array)
+                        .is_some_and(|m| !m.is_empty())
+                {
+                    return Err(Error::arg(
+                        "§7.2: memoryless objects cannot contain lprocs or interface regions",
+                    ));
                 }
-                for node in flattened(&function.body){let op=node.op.as_str();if ["lift.addr","lift.boundscheck","lift.alloc","lift.free","lift.call","lift.ret","alloc","free","load","store"].contains(&op)||["lift.load.i","lift.store.i","load.i","store.i"].iter().any(|prefix|op.starts_with(prefix)){
-                    return Err(Error::arg("§7.2: memory operation in an object without layout"));
-                }}
+                for node in flattened(&function.body) {
+                    let op = node.op.as_str();
+                    if [
+                        "lift.addr",
+                        "lift.boundscheck",
+                        "lift.alloc",
+                        "lift.free",
+                        "lift.call",
+                        "lift.ret",
+                        "alloc",
+                        "free",
+                        "load",
+                        "store",
+                    ]
+                    .contains(&op)
+                        || ["lift.load.i", "lift.store.i", "load.i", "store.i"]
+                            .iter()
+                            .any(|prefix| op.starts_with(prefix))
+                    {
+                        return Err(Error::arg(
+                            "§7.2: memory operation in an object without layout",
+                        ));
+                    }
+                }
             }
         }
+        crate::layout::Layout::from_object(&object)?;
         let interfaces = object.hashes(false)?;
         for (n, s) in &object.symbols {
             let hash = interfaces
@@ -445,6 +475,32 @@ impl Object {
                 },
                 v,
             )?;
+            if t == "token" {
+                let tuple = array(v)?
+                    .iter()
+                    .map(|n| uint(n))
+                    .collect::<Result<Vec<_>>>()?;
+                self.validate_budget(tuple.try_into().expect("validated token arity"))
+                    .map_err(|e| Error::arg(format!("§5.4: invalid token tuple: {}", e.reason)))?;
+            }
+        }
+        Ok(())
+    }
+    pub fn validate_budget(&self, budget: [u64; 4]) -> Result<()> {
+        if let Some(layout) = self.metadata.get("layout") {
+            let heap = uint(&layout["heap_limit_max"])?;
+            let cells = uint(&layout["S_cells"])?;
+            if budget[1] > heap || (cells < 64 && budget[2] > (1u64 << cells)) {
+                return Err(Error::new(
+                    Status::Budget,
+                    "§5.4: heap or stack limit exceeds object layout",
+                ));
+            }
+        } else if budget[1..].iter().any(|n| *n != 0) {
+            return Err(Error::new(
+                Status::Budget,
+                "§5.4: memoryless tuple requires zero heap/stack/depth",
+            ));
         }
         Ok(())
     }
@@ -596,9 +652,30 @@ impl Object {
         }
         Ok(out.into_bytes())
     }
-    pub(crate) fn dispatch_component_key(&self,members:&[String])->Result<String>{
-        if members.len()==1{return Ok(self.closure_hash(&members[0])?.into());}
-        let mut bytes=Vec::new();for name in members{let mut replacements=members.iter().enumerate().map(|(i,n)|(n.clone(),format!("${i}"))).collect::<BTreeMap<_,_>>();let mut external=Vec::new();let mut seen=BTreeSet::new();for reference in self.refs(name){if members.contains(&reference)||!seen.insert(reference.clone()){continue;}let hash=self.closure_hash(&reference)?.to_owned();external.push(hash.clone());replacements.insert(reference,hash);}bytes.extend(self.envelope(name,&replacements,&external)?);}Ok(canonical::hash(&bytes))
+    pub(crate) fn dispatch_component_key(&self, members: &[String]) -> Result<String> {
+        if members.len() == 1 {
+            return Ok(self.closure_hash(&members[0])?.into());
+        }
+        let mut bytes = Vec::new();
+        for name in members {
+            let mut replacements = members
+                .iter()
+                .enumerate()
+                .map(|(i, n)| (n.clone(), format!("${i}")))
+                .collect::<BTreeMap<_, _>>();
+            let mut external = Vec::new();
+            let mut seen = BTreeSet::new();
+            for reference in self.refs(name) {
+                if members.contains(&reference) || !seen.insert(reference.clone()) {
+                    continue;
+                }
+                let hash = self.closure_hash(&reference)?.to_owned();
+                external.push(hash.clone());
+                replacements.insert(reference, hash);
+            }
+            bytes.extend(self.envelope(name, &replacements, &external)?);
+        }
+        Ok(canonical::hash(&bytes))
     }
     fn hashes(&self, closure: bool) -> Result<BTreeMap<String, Result<String>>> {
         let names: Vec<_> = self.symbols.keys().cloned().collect();
