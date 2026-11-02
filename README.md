@@ -13,7 +13,7 @@ headers are in the published ISA repository and [data/bennett_sched.h](data/benn
 `bennett_sched_version()` is an additional compatibility probe returning 9.
 
 The implemented path covers memoryless oracles, layout-backed root oracles with
-address/load/bounds-check rows and lproc call/return rows, and actions, plain/while loops and source adjoints,
+address/load/store/bounds-check/allocator/free rows and lproc call/return rows, and actions, plain/while loops and source adjoints,
 qif, copy/XOR/exchange, local regions and coherent memory, action calls and
 translation-lemma borrow frames. Native and approximate/exact target schemes
 use deterministic sequential timing, class capacity and topology placement,
@@ -38,7 +38,7 @@ respect intrinsic boundaries and joint inverse ownership; primitive/intrinsic
 recompute preserves carrier coordinates. Finite class/vertex search finds a
 feasible assignment when an earlier assignment fails.
 
-Store/allocator row adapters, nested semantic calls/domain checks, fresh semantic-call
+Nested semantic calls/domain checks, fresh semantic-call
 recompute and input-history replay, qinplace, general cleanup and borrow proofs,
 and objective optimisation remain `bennett-sched-ark`. Accepted K83 action-region
 support coordinates and recursive declaration collection are implemented and

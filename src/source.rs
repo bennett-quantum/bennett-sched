@@ -8,6 +8,8 @@ use crate::{
 };
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
+mod call_graph;
+mod oracle_call;
 #[derive(Clone, Debug)]
 pub struct Slot {
     pub id: String,
@@ -162,11 +164,12 @@ impl Trace {
             .functions
             .get(name)
             .ok_or_else(|| Error::arg("unknown source region"))?;
+        if !["oracle", "action", "perm_action"].contains(&f.kind.as_str()) {
+            return Err(Error::arg("§11: root must be an oracle or action"));
+        }
+        call_graph::validate(object, name)?;
         if f.kind == "oracle" {
             return crate::oracle::build(object, name, inherited, params, budget);
-        }
-        if !["action", "perm_action"].contains(&f.kind.as_str()) {
-            return Err(Error::arg("§11: root must be an oracle or action"));
         }
         let mut env = Env::new();
         let mut slots = Vec::new();
@@ -254,6 +257,11 @@ impl Trace {
         if f.kind=="perm_action"&&trace.events.iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !["x","cx","ccx","mcx","swap"].contains(&g.op.as_str()))){return Err(Error::arg("§5.3: permutation actions require permutation gates transitively"));}
         trace.borrow_proofs = crate::borrow::prove(object, &trace)?;
         for owner in 0..trace.invocations.len() {
+            if object.functions[&trace.invocations[owner].name].kind == "oracle" {
+                // The implicit full-history construction and its inverse are
+                // supplied by the bound library, as for standalone roots.
+                continue;
+            }
             let events = crate::source_ir::events(object, &trace, owner)?;
             let (matching, permutation) = verify_clean_lifetimes(&events)?;
             trace.cleanups.extend(crate::cleanup::partition(
@@ -605,8 +613,32 @@ impl Builder<'_> {
             self.emit(f, &release, &[], chain, owner, leaves)?;
         }
         if adjoint {
-            for inv in self.trace.invocations.iter_mut().skip(owner) {
-                inv.adjoint = !inv.adjoint;
+            // §5.3 replaces oracle_call by the same involution. Preserve its
+            // entire forward construction, including any descendants, while
+            // reversing the enclosing action's source instruction order.
+            let old_spans = self
+                .trace
+                .invocations
+                .iter()
+                .map(|i| (i.start, i.end))
+                .collect::<Vec<_>>();
+            let mut frozen = BTreeMap::new();
+            for index in owner..self.trace.invocations.len() {
+                let inv = &self.trace.invocations[index];
+                let top = inv
+                    .parent
+                    .and_then(|p| frozen.get(&p).copied())
+                    .or_else(|| {
+                        (self.object.functions[&inv.name].kind == "oracle").then_some(index)
+                    });
+                if let Some(top) = top {
+                    frozen.insert(index, top);
+                }
+            }
+            for (index, inv) in self.trace.invocations.iter_mut().enumerate().skip(owner) {
+                if !frozen.contains_key(&index) {
+                    inv.adjoint = !inv.adjoint;
+                }
             }
             let end = self.trace.events.len();
             for inv in self.trace.invocations.iter_mut().skip(owner + 1) {
@@ -616,7 +648,27 @@ impl Builder<'_> {
             }
             let mut events = self.trace.events.split_off(start);
             events.reverse();
-            for e in &mut events {
+            let mut at = 0;
+            while at < events.len() {
+                if let Some(top) = frozen.get(&events[at].owner).copied() {
+                    let end = at
+                        + events[at..]
+                            .iter()
+                            .take_while(|e| frozen.get(&e.owner) == Some(&top))
+                            .count();
+                    events[at..end].reverse();
+                    for (&index, &root) in &frozen {
+                        if root == top {
+                            self.trace.invocations[index].start =
+                                start + at + old_spans[index].0 - old_spans[top].0;
+                            self.trace.invocations[index].end =
+                                start + at + old_spans[index].1 - old_spans[top].0;
+                        }
+                    }
+                    at = end;
+                    continue;
+                }
+                let e = &mut events[at];
                 e.leaf = expansion::inverse(std::slice::from_ref(&e.leaf))
                     .pop()
                     .unwrap();
@@ -630,6 +682,7 @@ impl Builder<'_> {
                         _ => {}
                     }
                 }
+                at += 1;
             }
             remap_adjoint_iterations(
                 &mut events,
@@ -637,9 +690,12 @@ impl Builder<'_> {
                 self.object,
                 chain.len(),
             )?;
-            form_while_adjoint(&mut events, &self.trace.invocations)?;
+            form_while_adjoint(&mut events, &self.trace.invocations, &frozen)?;
             let mut ordinals = BTreeMap::new();
             for e in &mut events {
+                if frozen.contains_key(&e.owner) {
+                    continue;
+                }
                 let key = canonical::to_vec(&json!(
                     e.location
                         .path
@@ -1453,9 +1509,15 @@ impl Builder<'_> {
                     )?;
                     continue;
                 }
-                "oracle_call" | "qinplace" => {
+                "oracle_call" => {
+                    self.oracle_call(
+                        f, node, &operands, env, &effective, &readonly, chain, iteration, owner,
+                    )?;
+                    continue;
+                }
+                "qinplace" => {
                     return Err(deferred(
-                        "oracle token context, construction and inverse-pair coverage",
+                        "qinplace inverse-pair coverage and source transfer",
                     ));
                 }
                 "qregion" => continue,
@@ -1524,12 +1586,6 @@ impl Builder<'_> {
                         origin: vec![],
                         op: Operation::Gate(g),
                     });
-                }
-                lifted
-                    if lifted.starts_with("lift.")
-                        || ["qbranch", "qjump", "fault"].contains(&lifted) =>
-                {
-                    return Err(deferred("lifted source row and successor templates"));
                 }
                 _ => {
                     return Err(Error::arg(format!(
@@ -1606,6 +1662,11 @@ fn remap_adjoint_iterations(
                     .and_then(|last| last.checked_sub(*i))
                     .ok_or_else(|| Error::arg("adjoint source iteration outside loop"))?;
             }
+            if occurrence.entered_oracle.is_some() {
+                // The call site is adjointed in this action; the entered
+                // oracle and all its internal source coordinates stay forward.
+                break;
+            }
         }
         Ok(())
     };
@@ -1621,11 +1682,17 @@ fn remap_adjoint_iterations(
 /// K62 forms the while action adjoint before recipe instantiation: all flags
 /// are computed before the descending controlled bodies. Reversing an expanded
 /// stream alone would interleave flag destruction with those bodies.
-fn form_while_adjoint(events: &mut Vec<Event>, invocations: &[Invocation]) -> Result<()> {
+fn form_while_adjoint(
+    events: &mut Vec<Event>,
+    invocations: &[Invocation],
+    frozen: &BTreeMap<usize, usize>,
+) -> Result<()> {
     let ids = events
         .iter()
         .filter_map(|e| match &e.leaf.op {
-            Operation::Alloc { identity, .. } if identity.starts_with("source-flags/") => {
+            Operation::Alloc { identity, .. }
+                if identity.starts_with("source-flags/") && !frozen.contains_key(&e.owner) =>
+            {
                 Some(identity.clone())
             }
             _ => None,

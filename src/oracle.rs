@@ -576,8 +576,15 @@ fn row(
             ],
         ));
         flagged = true;
-    } else {
+    } else if ["lift.oracle_call", "lift.oracle_uncall", "lift.perm_call"]
+        .contains(&node.op.as_str())
+    {
         return Err(postponed(&format!("source row adapter for {}", node.op)));
+    } else {
+        return Err(Error::arg(format!(
+            "§4.2: unknown or misplaced oracle row {}",
+            node.op
+        )));
     }
     let value = if dynamic {
         vec![

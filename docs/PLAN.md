@@ -22,7 +22,7 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | Clause | Required behavior | Evidence / state |
 |---|---|---|
 | §11 C declarations | Opaque owned requests/responses, all setters, copied buffers, status and typed OK/INFEASIBLE/UNSUPPORTED, reasons, accessors and frees | Exported; Rust ownership/null tests and C11 cdylib consumer (`ffi`, `c_link`) |
-| ISA-11-P2 | Expand every row/instruction in specified source order; stable generated ordinals; removals only from library permission | Primitive action source expansion checked; memoryless oracle state/row/commit/history construction implemented; layout address/load/bounds-check root rows implemented; lproc call/return rows implemented; nested semantic calls and store/allocator row adapters remain ark |
+| ISA-11-P2 | Expand every row/instruction in specified source order; stable generated ordinals; removals only from library permission | Primitive action source expansion checked; memoryless oracle state/row/commit/history construction implemented; layout address/load/bounds-check root rows implemented; lproc call/return rows implemented; store/allocator/free rows implemented; nested semantic calls remain ark |
 | ISA-11-P3 | JCS schedule; exact bindings; cleanup/gate/alloc/start entries, selectors and defaults | Strict schema and output binding tests; generated action schedules (`selectors`, `pipeline`) |
 | ISA-11-P4, §8.3 | Interface/control placements, per-class vertices, lifetimes, adjacency, no routing | Default class/vertex placement, capacity and adjacency implemented; finite class/per-bit vertex search implemented; cost optimisation remains open (ark) |
 | ISA-11-P5 / K52 | Invocation-chain prefixes; source-loop iteration, nested budget/step/phase; no `lift.call` edge | Nested coordinate resolver tested; action call source paths tested; memoryless oracle step/phase/support coordinates and reverse ordinals checked; nested oracle calls remain ark |
@@ -88,7 +88,7 @@ No unratified certificate field is emitted. Independent work continues.
 
 ## Postponed mechanics and conformance limits
 
-`bennett-sched-ark` tracks store/allocator row adapters, nested semantic
+`bennett-sched-ark` tracks nested semantic
 call construction and budget validation, fresh semantic-call recompute and
 nonzero target history replay, qinplace coverage, general factorisation and non-translation
 borrow T3 proofs and objective
@@ -204,7 +204,7 @@ partitions. Mapped cells retain input identity; hidden ordinary bytes remain
 zero. B frames are lazy metadata. Normative through has W_cell=5 and Q=25 at
 depth_limit=1; sum_db has W_cell=32 and Q=106 at depth_limit=0. The existing
 memoryless oracle adapter now consumes this shared plan. Address/load/boundscheck and lproc call/return rows now have source expansion
-tests. Store/allocator and nested semantic-call adapters remain explicit ark
+tests. Nested semantic-call adapters remain explicit ark
 deferrals, so descriptor tests alone do not claim their complete schedules.
 
 Host limits return NoMem rather than UNSUPPORTED: extent integers use an 8 MiB
@@ -244,8 +244,8 @@ A mixed-width constant assignment regression exposed an oversized displacement
 binding; constants now bind exactly their low-width frame slice.
 
 Focused layout milestone: lproc 6, oracle_state 7 and oracle_memory 6 pass.
-Lproc call/return source expansion now has full small-domain tests. Allocator/store
-and nested semantic-call schedules remain required.
+Lproc call/return source expansion now has full small-domain tests. Store/allocator/free source expansion is now implemented under px2;
+nested semantic-call schedules remain required.
 
 ## Design-review fixes and remaining contract decisions
 
@@ -311,3 +311,21 @@ Focused region/structure/admission/borrow tests pass (17 tests), followed by
 full gate success (129 tests). Ecz is closed.
 Observed ISA main is d2602c4efec21f92221c6e752cfd73f03fdf83ad with spec hash
 7458b362d22d2b89912331da8866e334385686faf8e2b51d8d49684e522c3034.
+
+
+Lifted memory milestone px2 uses published lift.store, lift.alloc and lift.free
+recipes. Four allocator displacement fields use the global source slot widths,
+with heap and table flags evaluated before exchanges. Length locations retain
+their declared width; source literals must fit ptr_width, use at least one bit,
+and are explicitly initialized and cleared around the row. Free binds the
+catalog's unused length formal without allocating extra wires. Load/store widths
+retain the specified 8..128-bit whole-byte limit.
+
+Focused memory/allocator verification passed 16 tests: all small allocator
+input/target/fault/control tuples over B/heap 0..3, zero-size allocation,
+double-free and non-reused table entries, same-base pinned zero-size globals,
+wide location lengths, invalid literal bounds, an encoded schedule/certificate,
+every input/old mapped-byte pair and both controls for store/load, and full
+arbitrary target/fault/control domains for store cuts and bounds faults. These
+are explicit finite test domains, not an independent checker verdict. The
+additional load-width regression and full gate are pending.

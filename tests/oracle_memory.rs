@@ -356,3 +356,18 @@ fn store_bounds_faults_and_step_cuts_preserve_arbitrary_target_fault_and_memory(
         }
     }
 }
+
+#[test]
+fn load_width_suffix_is_limited_to_the_published_whole_byte_range() {
+    for width in [0, 7, 136] {
+        let mut object = mapped_reader();
+        let f = object.functions.get_mut("read").unwrap();
+        f.regs.iter_mut().find(|r| r.name == "r").unwrap().ty = format!("reg[{width}]");
+        f.body[1].op = format!("lift.load.i{width}");
+        f.body[2].operands = vec!["x".into()];
+        let error = Trace::build(&object, "read", 0, &json!([]), [3, 0, 0, 0])
+            .err()
+            .expect("invalid lifted load width admitted");
+        assert_eq!(error.status, bennett_sched::Status::Arg, "{width}: {error}");
+    }
+}

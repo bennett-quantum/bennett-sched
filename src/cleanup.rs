@@ -27,7 +27,7 @@ fn intrinsic(e: &Event) -> bool {
     matches!(&e.leaf.op,Operation::Gate(g)if g.op.starts_with("$perm/intrinsic/"))
 }
 fn call(e: &Event) -> bool {
-    matches!(&e.leaf.op,Operation::Gate(g)if g.op.starts_with("$perm/call")||g.op.starts_with("$other/call"))
+    matches!(&e.leaf.op,Operation::Gate(g)if g.op.starts_with("$perm/call")||g.op.starts_with("$other/call")||g.op.starts_with("$perm/oracle/"))
 }
 fn pair(
     owner: usize,

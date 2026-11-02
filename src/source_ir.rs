@@ -86,12 +86,12 @@ pub fn events(object: &Object, trace: &Trace, owner: usize) -> Result<Vec<Event>
             let targets = child
                 .slots
                 .iter()
-                .filter(|s| s.role == "mut" || s.role == "mem_mut")
+                .filter(|s| ["mut", "mem_mut", "tgt", "fault"].contains(&s.role.as_str()))
                 .flat_map(|s| s.wires.clone())
                 .collect::<Vec<_>>();
             let mut controls = child.controls.clone();
             for slot in &child.slots {
-                if slot.role != "mut" && slot.role != "mem_mut" {
+                if !["mut", "mem_mut", "tgt", "fault"].contains(&slot.role.as_str()) {
                     controls.extend(slot.wires.clone());
                 }
             }
@@ -108,7 +108,8 @@ pub fn events(object: &Object, trace: &Trace, owner: usize) -> Result<Vec<Event>
                     .collect::<Vec<_>>(),
                 controls
             ]))?);
-            let kind = if object.functions[&child.name].kind == "perm_action" {
+            let oracle = object.functions[&child.name].kind == "oracle";
+            let kind = if oracle || object.functions[&child.name].kind == "perm_action" {
                 "perm"
             } else {
                 "other"
@@ -122,7 +123,11 @@ pub fn events(object: &Object, trace: &Trace, owner: usize) -> Result<Vec<Event>
                     calls: vec![],
                     origin: vec![],
                     op: Operation::Gate(Gate {
-                        op: format!("${kind}/call{sign}/{identity}"),
+                        op: if oracle {
+                            format!("$perm/oracle/{identity}")
+                        } else {
+                            format!("${kind}/call{sign}/{identity}")
+                        },
                         wires: targets,
                         controls,
                         theta: None,

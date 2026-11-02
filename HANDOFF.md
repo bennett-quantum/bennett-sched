@@ -22,7 +22,7 @@ records. Root interface defaults are reproducible from the document. Placement
 conflicts reuse the prepared source trace and skip irrelevant decisions.
 
 Memoryless/layout oracle construction derives State, ordered byte/location
-maps, counters, sparse images, pinned table and full history. Address/load/
+maps, counters, sparse images, pinned table and full history. Address/load/store/allocator/free/
 boundscheck rows preserve every mapped input and reverse initialization.
 Lproc call/return rows use the published activation/capture recipes and exact
 positional keys. Full small input/target/fault/control domains B=0..5 pass;
@@ -35,8 +35,7 @@ and selector rules. K83 focused command timeout 180 cargo test --offline -j2 --t
 structure --test admission --test borrow -- --test-threads=2 passed 17 tests.
 The full 129-test checkpoint also passed.
 
-Main akl/ark/qnl remain in progress. Required mechanics include store/allocator
-row adapters, nested semantic calls/budgets, qinplace, fresh-call recompute and
+Main akl/ark/qnl remain in progress. Required mechanics include nested semantic calls/budgets, qinplace, fresh-call recompute and
 prehistory, general cleanup/borrow proofs, objective optimization and streaming
 2u4. Normative sum_db B=3 reports explicit NoMem at the materialized leaf
 workspace bound; B=0 has a successful schedule witness. No test domain is pruned.
@@ -61,3 +60,10 @@ tests do not establish actual committed-SHA verification. Host advisory requires
 free -g/uptime before long runs, max j4, threads2 below 6 GB available. Gate chooses
 these limits automatically. Root gate.toml remains outside authorized paths
 (68k). Hooks/worklog untouched.
+
+
+Px2 focused memory/allocator suite passed 16 tests, including every small
+allocator interface tuple, same-base pinned zero-size global preservation,
+source literal ranges and complete store input/old-byte pairs. The encoded
+allocator request yields an admitted schedule and three width-21 history frames.
+The extra load-width regression and full gate are pending; px2 remains in progress.
