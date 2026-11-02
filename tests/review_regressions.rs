@@ -151,16 +151,67 @@ fn topology_vertices_serialize_a_selected_interface_class() {
 }
 
 #[test]
-fn infeasible_topology_search_skips_unused_interface_vertex_permutations(){
-    use std::{sync::mpsc,time::Duration};
-    for width in [2,8]{
-        let bytes=common::action("perm_action","w",signature(&[width],&[],&[]),&format!("perm_action @w (t:wire[{width}] mut) () () () ()"),"cx t[0] t[1]");
-        let mut target=target(json!({"fast":{"capacity":12,"qubit_second":1,"dirty_rate":1}}),gates());
-        target["topology"]=json!({"vertices":(0..12).map(|_|json!({"class":"fast"})).collect::<Vec<_>>(),"edges":[]});
-        let r=request(&bytes,"w",&target);
-        let (sender,receiver)=mpsc::channel();
-        std::thread::spawn(move||{let _=sender.send(r.schedule().map(|r|r.outcome));});
-        let result=receiver.recv_timeout(Duration::from_secs(30)).expect("placement search explored irrelevant wire permutations for over30s");
-        assert_eq!(result.unwrap(),Outcome::Infeasible,"width{width}");
+fn infeasible_topology_search_skips_unused_interface_vertex_permutations() {
+    use std::{sync::mpsc, time::Duration};
+    for width in [2, 8] {
+        let bytes = common::action(
+            "perm_action",
+            "w",
+            signature(&[width], &[], &[]),
+            &format!("perm_action @w (t:wire[{width}] mut) () () () ()"),
+            "cx t[0] t[1]",
+        );
+        let mut target = target(
+            json!({"fast":{"capacity":12,"qubit_second":1,"dirty_rate":1}}),
+            gates(),
+        );
+        target["topology"] = json!({"vertices":(0..12).map(|_|json!({"class":"fast"})).collect::<Vec<_>>(),"edges":[]});
+        let r = request(&bytes, "w", &target);
+        let (sender, receiver) = mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = sender.send(r.schedule().map(|r| r.outcome));
+        });
+        let result = receiver
+            .recv_timeout(Duration::from_secs(30))
+            .expect("placement search explored irrelevant wire permutations for over30s");
+        assert_eq!(result.unwrap(), Outcome::Infeasible, "width{width}");
     }
+}
+
+#[test]
+fn class_conflicts_skip_vertex_permutations_without_losing_a_feasible_class() {
+    use std::{sync::mpsc, time::Duration};
+    let bytes = common::action(
+        "perm_action",
+        "w",
+        signature(&[8], &[], &[]),
+        "perm_action @w (t:wire[8] mut) () () () ()",
+        "cx t[0] t[1]",
+    );
+    let mut target = target(
+        json!({"a":{"capacity":12,"qubit_second":1,"dirty_rate":1},"b":{"capacity":8,"qubit_second":1,"dirty_rate":1}}),
+        json!([{"op":"cx","classes":["b"],"controls":{"min":0,"max":"unbounded"},"epsilon":0,"cost":{"time":1}}]),
+    );
+    let vertices = (0..20)
+        .map(|i| json!({"class":if i<12{"a"}else{"b"}}))
+        .collect::<Vec<_>>();
+    let edges = (12..20)
+        .flat_map(|a| (a + 1..20).map(move |b| json!([a, b])))
+        .collect::<Vec<_>>();
+    target["topology"] = json!({"vertices":vertices,"edges":edges});
+    let r = request(&bytes, "w", &target);
+    let (sender, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = sender.send(r.schedule());
+    });
+    let response = receiver
+        .recv_timeout(Duration::from_secs(30))
+        .expect("class mismatch retried irrelevant vertex permutations")
+        .unwrap();
+    assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+    let schedule = canonical::require_jcs(&response.schedule).unwrap();
+    assert_eq!(
+        schedule["interface_vertices"],
+        json!([(12..20).collect::<Vec<_>>()])
+    );
 }

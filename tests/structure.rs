@@ -96,6 +96,22 @@ fn nested_adjoint_calls_leave_every_outside_loop_coordinate_unchanged() {
         })
         .collect::<Vec<_>>();
     assert_eq!(actual, expected);
+    for invocation in trace.invocations.iter().skip(1) {
+        let expected = invocation.path.iter().map(|p| p.json()).collect::<Vec<_>>();
+        for event in &trace.events[invocation.start..invocation.end] {
+            let prefix = event
+                .location
+                .path
+                .iter()
+                .take(invocation.path.len())
+                .map(|p| p.json())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                prefix, expected,
+                "descendant invocation path must follow its remapped events"
+            );
+        }
+    }
 }
 
 #[test]

@@ -34,6 +34,7 @@ struct Search {
     domains: Vec<usize>,
     epsilon_divisor: u64,
     required_divisor: u64,
+    conflict_prefix: Option<usize>,
 }
 impl Search {
     fn choose(&mut self, count: usize) -> Result<usize> {
@@ -51,6 +52,10 @@ impl Search {
         Ok(choice)
     }
     fn advance(&mut self) -> bool {
+        if let Some(prefix) = self.conflict_prefix.take() {
+            self.domains.truncate(prefix);
+            self.plan.truncate(prefix);
+        }
         for i in (0..self.domains.len()).rev() {
             let current = self.plan.get(i).copied().unwrap_or(0);
             if current + 1 < self.domains[i] {
@@ -66,6 +71,8 @@ struct Allocator<'a> {
     target: &'a Target,
     limits: &'a BTreeMap<String, u64>,
     live: BTreeMap<String, (String, Option<u64>)>,
+    placement_prefixes: BTreeMap<String, usize>,
+    class_prefixes: BTreeMap<String, usize>,
     allocations: Vec<Allocation>,
     active: BTreeMap<String, usize>,
     counts: BTreeMap<String, u64>,
@@ -155,6 +162,11 @@ impl Allocator<'_> {
             }
             source_class.into()
         };
+        let class_prefix = if source_class == "any" {
+            self.search.domains.len()
+        } else {
+            0
+        };
         if self.active.contains_key(&identity) || wires.iter().any(|w| self.live.contains_key(w)) {
             return Err(Error::infeasible("allocation aliases live wires"));
         }
@@ -166,6 +178,11 @@ impl Allocator<'_> {
                 None
             };
             self.live.insert(w.clone(), (class.clone(), vertex));
+            // A selected vertex depends on the preceding occupied vertices as
+            // well as its own choice. Later decisions cannot change this wire.
+            self.placement_prefixes
+                .insert(w.clone(), self.search.domains.len());
+            self.class_prefixes.insert(w.clone(), class_prefix);
         }
         *self.counts.entry(class.clone()).or_default() += n;
         self.active.insert(identity.clone(), self.allocations.len());
@@ -195,6 +212,8 @@ impl Allocator<'_> {
         self.order += 1;
         for w in &a.wires {
             self.live.remove(w);
+            self.placement_prefixes.remove(w);
+            self.class_prefixes.remove(w);
         }
         *self.counts.get_mut(&a.class).unwrap() -= a.wires.len() as u64;
         Ok(())
@@ -210,7 +229,15 @@ impl Allocator<'_> {
             })
             .collect()
     }
-    fn check_topology(&self, wires: &[String]) -> Result<()> {
+    fn class_prefix(&self, wires: &[String]) -> usize {
+        wires
+            .iter()
+            .filter_map(|w| self.class_prefixes.get(w))
+            .copied()
+            .max()
+            .unwrap_or(0)
+    }
+    fn check_topology(&mut self, wires: &[String], realisation_prefix: usize) -> Result<()> {
         if self.target.value.get("topology").is_none() {
             return Ok(());
         }
@@ -224,6 +251,12 @@ impl Allocator<'_> {
             })
             .collect::<Result<Vec<_>>>()?;
         if !self.target.adjacent(&vertices) {
+            let prefix = wires
+                .iter()
+                .map(|w| self.placement_prefixes.get(w).copied().unwrap_or(0))
+                .max()
+                .unwrap_or(0);
+            self.search.conflict_prefix = Some(prefix.max(realisation_prefix));
             return Err(Error::infeasible(
                 "§8.3 / §17 item 15: native leaf operands are not adjacent",
             ));
@@ -254,12 +287,14 @@ fn selector_entry(event: &Event, kind: &str, decision: Value) -> Value {
     e
 }
 pub fn run(request: &Request) -> Result<Response> {
+    let trace = prepare(request)?;
     let mut search = Search::default();
     let mut unsupported = None;
     loop {
         search.domains.clear();
         search.required_divisor = 0;
-        let result = candidate(request, &mut search);
+        search.conflict_prefix = None;
+        let result = candidate(request, &mut search, &trace);
         match result {
             Ok(response) => return Ok(response),
             Err(error)
@@ -366,7 +401,7 @@ fn oracle_capacity_preflight(
     }
     Ok(())
 }
-fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
+fn prepare(request: &Request) -> Result<Trace> {
     let object = request
         .object
         .as_ref()
@@ -379,7 +414,7 @@ fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
         .region
         .as_ref()
         .ok_or_else(|| Error::arg("§11: request region is unset"))?;
-    let variant = request
+    let _variant = request
         .variant
         .as_ref()
         .ok_or_else(|| Error::arg("§11: request variant is unset"))?;
@@ -390,7 +425,6 @@ fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
         .params
         .as_ref()
         .ok_or_else(|| Error::arg("§11: request params are unset (use [] for no arguments)"))?;
-    let epsilon = request.epsilon.clone().unwrap_or_else(Rational::zero);
     let f = object.region(hash)?;
     object.validate_params(&f.name, params)?;
     object.validate_budget(budget)?;
@@ -420,11 +454,23 @@ fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
     if f.kind == "oracle" {
         oracle_capacity_preflight(object, f, request, target, budget)?;
     }
-    let trace = Trace::build(object, &f.name, request.inherited_controls, params, budget)?;
+    Trace::build(object, &f.name, request.inherited_controls, params, budget)
+}
+fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Response> {
+    let object = request.object.as_ref().expect("prepared object");
+    let target = request.target.as_ref().expect("prepared target");
+    let hash = request.region.as_ref().expect("prepared region");
+    let variant = request.variant.as_ref().expect("prepared variant");
+    let budget = request.budget.expect("prepared budget");
+    let params = request.params.as_ref().expect("prepared params");
+    let epsilon = request.epsilon.clone().unwrap_or_else(Rational::zero);
+    let f = &object.functions[&trace.invocations[0].name];
     let mut allocator = Allocator {
         target,
         limits: &request.capacities,
         live: BTreeMap::new(),
+        placement_prefixes: BTreeMap::new(),
+        class_prefixes: BTreeMap::new(),
         allocations: vec![],
         active: BTreeMap::new(),
         counts: BTreeMap::new(),
@@ -514,6 +560,7 @@ fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
             Operation::Release { identity, .. } => allocator.release(identity, &now)?,
             Operation::Gate(g) => {
                 let classes = allocator.classes(&g.all_wires())?;
+                let realisation_prefix = allocator.class_prefix(&g.all_wires());
                 if let Some(n) = target.value["capabilities"]["max_predicate_depth"].as_u64() {
                     if g.controls.len() as u64 > n {
                         return Err(Error::infeasible("max_predicate_depth exceeded"));
@@ -533,6 +580,7 @@ fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
                 } else {
                     let identity = format!("scheme/{source_index}");
                     let plan = target.scheme(g, &identity)?.ok_or_else(|| {
+                        allocator.search.conflict_prefix = Some(realisation_prefix);
                         Error::infeasible(format!(
                             "§8.3: no target entry or scheme covers {} at the requested accuracy",
                             g.op
@@ -553,7 +601,10 @@ fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
                     let mut realized = Vec::new();
                     for leaf in plan.leaves {
                         let classes = allocator.classes(&leaf.all_wires())?;
-                        let cost=target.native(&leaf,&classes,&share)?.ok_or_else(||Error::infeasible("§8.3: scheme leaf does not match a native gates entry; schemes do not nest"))?;
+                        let cost=target.native(&leaf,&classes,&share)?.ok_or_else(||{
+                            allocator.search.conflict_prefix=Some(realisation_prefix.max(allocator.class_prefix(&leaf.all_wires())));
+                            Error::infeasible("§8.3: scheme leaf does not match a native gates entry; schemes do not nest")
+                        })?;
                         realized.push((leaf, cost));
                     }
                     realisation = plan.name;
@@ -567,7 +618,7 @@ fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
                     ));
                 }
                 for (leaf, cost) in realized {
-                    allocator.check_topology(&leaf.all_wires())?;
+                    allocator.check_topology(&leaf.all_wires(), realisation_prefix)?;
                     if object.functions[&trace.invocations[event.owner].name].kind == "perm_action"
                         && !cost.epsilon.is_zero()
                     {

@@ -610,7 +610,12 @@ impl Builder<'_> {
                     .pop()
                     .unwrap();
             }
-            remap_adjoint_iterations(&mut events, self.object, chain.len())?;
+            remap_adjoint_iterations(
+                &mut events,
+                &mut self.trace.invocations[owner + 1..],
+                self.object,
+                chain.len(),
+            )?;
             form_while_adjoint(&mut events, &self.trace.invocations)?;
             let mut ordinals = BTreeMap::new();
             for e in &mut events {
@@ -1542,6 +1547,7 @@ pub(crate) fn is_descendant(mut owner: usize, ancestor: usize, invocations: &[In
 
 fn remap_adjoint_iterations(
     events: &mut [Event],
+    descendants: &mut [Invocation],
     object: &Object,
     caller_depth: usize,
 ) -> Result<()> {
@@ -1564,12 +1570,10 @@ fn remap_adjoint_iterations(
         collect(&f.body, &[], &mut points)?;
         maps.insert(object.symbols[&f.name].interface_hash.clone(), points);
     }
-    for event in events {
+    let remap = |path: &mut [Occurrence]| -> Result<()> {
         // The call's caller prefix is outside this adjoint. Only this
         // invocation and its descendants reverse their local loop traversal.
-        let path = event
-            .location
-            .path
+        let path = path
             .get_mut(caller_depth..)
             .ok_or_else(|| Error::arg("adjoint event is missing its caller path"))?;
         for occurrence in path {
@@ -1587,6 +1591,13 @@ fn remap_adjoint_iterations(
                     .ok_or_else(|| Error::arg("adjoint source iteration outside loop"))?;
             }
         }
+        Ok(())
+    };
+    for event in events {
+        remap(&mut event.location.path)?;
+    }
+    for invocation in descendants {
+        remap(&mut invocation.path)?;
     }
     Ok(())
 }
