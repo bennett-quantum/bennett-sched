@@ -278,6 +278,7 @@ impl Library {
             depth: 0,
             live: BTreeSet::new(),
             owned: BTreeMap::new(),
+            remaining: 1_000_000,
         };
         let mut frame = Frame::default();
         let bound = c.bind(array(&r["parameters"])?, array(args)?, caller, &[], true)?;
@@ -290,9 +291,26 @@ impl Library {
         Ok(leaves)
     }
     pub fn body(&self, body: &[Value], env: &Env, controls: &[String]) -> Result<Vec<Leaf>> {
-        expansion_stack(|| self.body_inner(body, env, controls))
+        self.body_with_budget(body, env, controls, 1_000_000)
     }
-    fn body_inner(&self, body: &[Value], env: &Env, controls: &[String]) -> Result<Vec<Leaf>> {
+    /// Available host space for materialized leaf descriptors. Exhaustion never
+    /// changes the trace or narrows the ISA's domains; it returns NoMem.
+    pub fn body_with_budget(
+        &self,
+        body: &[Value],
+        env: &Env,
+        controls: &[String],
+        max_leaves: usize,
+    ) -> Result<Vec<Leaf>> {
+        expansion_stack(|| self.body_inner(body, env, controls, max_leaves))
+    }
+    fn body_inner(
+        &self,
+        body: &[Value],
+        env: &Env,
+        controls: &[String],
+        max_leaves: usize,
+    ) -> Result<Vec<Leaf>> {
         validate_body(body)?;
         let mut c = Compiler {
             library: self,
@@ -300,6 +318,7 @@ impl Library {
             depth: 0,
             live: BTreeSet::new(),
             owned: BTreeMap::new(),
+            remaining: max_leaves,
         };
         let mut frame = Frame::default();
         let mut leaves = c.compile(body, &mut env.clone(), controls, &mut frame, false)?;
@@ -555,9 +574,22 @@ struct Compiler<'a> {
     depth: usize,
     live: BTreeSet<String>,
     owned: BTreeMap<String, String>,
+    remaining: usize,
 }
 impl Compiler<'_> {
-    fn emit(&mut self, out: &mut Vec<Leaf>, op: Operation) {
+    fn emit(&mut self, out: &mut Vec<Leaf>, op: Operation) -> Result<()> {
+        self.remaining = self.remaining.checked_sub(1).ok_or_else(|| {
+            Error::new(
+                crate::Status::NoMem,
+                "constructor leaf descriptors exhaust host workspace",
+            )
+        })?;
+        out.try_reserve(1).map_err(|_| {
+            Error::new(
+                crate::Status::NoMem,
+                "constructor leaf descriptors exceed host memory",
+            )
+        })?;
         match &op {
             Operation::Alloc {
                 identity, wires, ..
@@ -578,6 +610,7 @@ impl Compiler<'_> {
             origin: vec![],
             op,
         });
+        Ok(())
     }
 
     fn bind(
@@ -928,7 +961,7 @@ impl Compiler<'_> {
                         "§11.1 K27: wire use of an inactive allocation declaration",
                     ));
                 }
-                self.emit(&mut out, Operation::Gate(g));
+                self.emit(&mut out, Operation::Gate(g))?;
             } else if let Some(name) = c.get("alloc") {
                 let name = text(name)?;
                 let width = size(&c["width"], env)?;
@@ -974,7 +1007,7 @@ impl Compiler<'_> {
                         class,
                         state,
                     },
-                );
+                )?;
                 env.insert(name.into(), b);
             } else if let Some(name) = c.get("release") {
                 let Some(Binding::Allocation {
@@ -994,7 +1027,7 @@ impl Compiler<'_> {
                         class: class.clone(),
                         state: state.clone(),
                     },
-                );
+                )?;
             } else if c.get("inverse").is_some() {
                 let before = self.live.clone();
                 let leaves =
@@ -1110,7 +1143,7 @@ impl Compiler<'_> {
                                     controls: vec![],
                                     theta: None,
                                 }),
-                            );
+                            )?;
                         }
                     }
                 }
@@ -1269,7 +1302,7 @@ impl Compiler<'_> {
                             state,
                         }
                     },
-                );
+                )?;
             } else if let Some(op) = c.get("classical") {
                 let point = text(&c["point"])?;
                 let event = match env.get(point) {
@@ -1295,7 +1328,7 @@ impl Compiler<'_> {
                         opcode: text(op)?.into(),
                         event,
                     },
-                );
+                )?;
             } else if let Some(name) = c.get("call") {
                 let Some(Binding::Symbol(symbol)) = env.get(text(name)?).cloned() else {
                     return Err(Error::arg("unbound semantic-call symbol"));

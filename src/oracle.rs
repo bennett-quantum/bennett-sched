@@ -32,7 +32,7 @@ fn allocation(name: &str, width: u64) -> Result<Binding> {
         state: "clean".into(),
     })
 }
-fn read(name: &str, env: &Env) -> Result<Vec<String>> {
+pub(crate) fn read(name: &str, env: &Env) -> Result<Vec<String>> {
     match env.get(name) {
         Some(Binding::Wires(w) | Binding::Allocation { wires: w, .. }) => Ok(w.clone()),
         Some(Binding::Value { .. }) => Err(Error::new(
@@ -45,7 +45,7 @@ fn read(name: &str, env: &Env) -> Result<Vec<String>> {
 fn invoke(name: &str, args: Vec<Value>) -> Value {
     json!({"invoke":name,"args":args})
 }
-fn slice(from: u64, width: u64) -> Value {
+pub(crate) fn slice(from: u64, width: u64) -> Value {
     json!({"range":"frame","from":from,"to":from+width})
 }
 fn widths(node: &Node, env: &Env, locations: &BTreeMap<String, u64>) -> Result<Vec<u64>> {
@@ -85,10 +85,16 @@ fn widths(node: &Node, env: &Env, locations: &BTreeMap<String, u64>) -> Result<V
         Ok(vec![])
     }
 }
-struct Source<'a> {
-    object: &'a Object,
-    name: &'a str,
-    layout: Option<&'a crate::layout::Layout>,
+pub(crate) struct Source<'a> {
+    pub object: &'a Object,
+    pub name: &'a str,
+    pub layout: Option<&'a crate::layout::Layout>,
+    pub plan: &'a crate::oracle_state::Plan,
+    pub function: &'a object::Function,
+    pub instance: Option<usize>,
+    pub original: &'a Node,
+    pub budget: [u64; 4],
+    pub first: u64,
 }
 fn row(
     node: &Node,
@@ -467,7 +473,17 @@ fn row(
             ],
         ));
         flagged = true;
+    } else if node.op == "lift.call" || node.op == "lift.ret" {
+        let (operation, target, is_dynamic) =
+            crate::oracle_activation::row(node, source, p, f, slots, env)?;
+        body.push(operation);
+        successor = target;
+        dynamic = is_dynamic;
+        flagged = true;
     } else if node.op == "lift.retval" {
+        if source.function.kind != "oracle" {
+            return Err(Error::arg("lift.retval inside lproc"));
+        }
         arity(1)?;
         if width(&operands[0])? != t {
             return Err(Error::arg("retval width does not match target"));
@@ -507,8 +523,8 @@ fn row(
             vec![
                 json!(p),
                 json!(f),
-                json!(0),
-                json!(n),
+                json!(source.first),
+                json!(source.function.body.len()),
                 json!(operands[0]),
                 succ.clone(),
                 flag.clone(),
@@ -590,9 +606,6 @@ pub fn build(
     let f = &object.functions[name];
     let plan = crate::oracle_state::Plan::form(object, name, budget)?;
     let layout = crate::layout::Layout::from_object(object)?;
-    if !plan.index.instances.is_empty() {
-        return Err(postponed("fixed-binding lproc oracle row construction"));
-    }
     if layout.is_none() && !f.groups[3].is_empty() {
         return Err(Error::arg(
             "memoryless oracle cannot declare interface memory",
@@ -722,15 +735,19 @@ pub fn build(
             return Err(Error::arg("invalid/duplicate oracle location"));
         }
     }
-    fn rename(value: &str, names: &std::collections::BTreeSet<String>) -> Result<String> {
+    fn rename(
+        value: &str,
+        names: &std::collections::BTreeSet<String>,
+        prefix: &str,
+    ) -> Result<String> {
         if names.contains(value) {
-            Ok(format!("source.{value}"))
+            Ok(format!("{prefix}{value}"))
         } else if value.starts_with('(') {
             Ok(format!(
                 "({})",
                 object::list(value)?
                     .iter()
-                    .map(|n| rename(n, names))
+                    .map(|n| rename(n, names, prefix))
                     .collect::<Result<Vec<_>>>()?
                     .join(", ")
             ))
@@ -747,11 +764,15 @@ pub fn build(
         .collect::<std::collections::BTreeSet<_>>();
     let mut nodes = f.body.clone();
     for node in &mut nodes {
-        node.lhs = node.lhs.as_ref().map(|s| rename(s, &names)).transpose()?;
+        node.lhs = node
+            .lhs
+            .as_ref()
+            .map(|s| rename(s, &names, "source."))
+            .transpose()?;
         node.operands = node
             .operands
             .iter()
-            .map(|s| rename(s, &names))
+            .map(|s| rename(s, &names, "source."))
             .collect::<Result<_>>()?;
     }
     let slot_widths = &plan.slot_widths;
@@ -915,10 +936,138 @@ pub fn build(
                 object,
                 name,
                 layout: layout.as_ref(),
+                plan: &plan,
+                function: f,
+                instance: None,
+                original: &f.body[i],
+                budget,
+                first: 0,
             },
         )?;
         rows.push(json!({"parameters":[{"name":"frame","type":"wire","width":q}],"body":body}));
         next.push(json!({"parameters":[{"name":"frame","type":"wire","width":q},{"name":"next","type":"wire","width":p}],"body":successor}));
+    }
+    let mut row_points = f
+        .body
+        .iter()
+        .map(|node| {
+            (
+                object.symbols[name].interface_hash.clone(),
+                node.point.clone(),
+                Vec::<u64>::new(),
+            )
+        })
+        .collect::<Vec<_>>();
+    for (instance_index, instance) in plan.index.instances.iter().enumerate() {
+        let function = &object.functions[&instance.name];
+        let prefix = format!("instance/{instance_index}/source.");
+        let fixed = plan.index.resolve_bindings(object, instance, params)?;
+        for (parameter, value) in function.groups[2].iter().zip(fixed.tokens) {
+            env.insert(
+                format!("{prefix}{}", parameter.name),
+                Binding::Value {
+                    isa_type: json!("token"),
+                    value,
+                },
+            );
+        }
+        for (parameter, value) in function.groups[3].iter().zip(fixed.classical) {
+            let isa_type = if parameter.ty == "ptr" {
+                json!({"ptr":object.ptr_width})
+            } else {
+                json!(parameter.ty)
+            };
+            env.insert(
+                format!("{prefix}{}", parameter.name),
+                Binding::Value { isa_type, value },
+            );
+        }
+        for (parameter, position) in function.groups[4].iter().zip(fixed.regions) {
+            let root = f.groups[3]
+                .get(position as usize)
+                .ok_or_else(|| Error::arg("invalid fixed region position"))?;
+            let binding = env
+                .get(&format!("source.{}", root.name))
+                .ok_or_else(|| Error::arg("missing root mapped region"))?
+                .clone();
+            env.insert(format!("{prefix}{}", parameter.name), binding);
+        }
+        let locations = instance
+            .locations
+            .iter()
+            .map(|l| (format!("{prefix}{}", l.name), l.width))
+            .collect::<BTreeMap<_, _>>();
+        let names = function
+            .groups
+            .iter()
+            .flatten()
+            .chain(&function.regs)
+            .map(|p| p.name.clone())
+            .collect::<std::collections::BTreeSet<_>>();
+        let readable = function.groups[..2]
+            .iter()
+            .flatten()
+            .chain(&function.regs)
+            .map(|p| format!("{prefix}{}", p.name))
+            .chain(
+                function.groups[3]
+                    .iter()
+                    .map(|p| format!("{prefix}{}", p.name)),
+            )
+            .collect::<std::collections::BTreeSet<_>>();
+        let source_env = env
+            .iter()
+            .filter(|(name, _)| readable.contains(*name))
+            .map(|(n, b)| (n.clone(), b.clone()))
+            .collect::<Env>();
+        if rows.len() as u64 != instance.first {
+            return Err(Error::arg(
+                "lproc rows differ from the canonical index space",
+            ));
+        }
+        for original in &function.body {
+            let mut node = original.clone();
+            node.lhs = node
+                .lhs
+                .as_ref()
+                .map(|s| rename(s, &names, &prefix))
+                .transpose()?;
+            node.operands = node
+                .operands
+                .iter()
+                .map(|s| rename(s, &names, &prefix))
+                .collect::<Result<_>>()?;
+            let (body, successor) = row(
+                &node,
+                rows.len() as u64,
+                n,
+                p,
+                fault,
+                target,
+                slot_widths,
+                &source_env,
+                &locations,
+                &instance.labels,
+                &Source {
+                    object,
+                    name,
+                    layout: layout.as_ref(),
+                    plan: &plan,
+                    function,
+                    instance: Some(instance_index),
+                    original,
+                    budget,
+                    first: instance.first,
+                },
+            )?;
+            rows.push(json!({"parameters":[{"name":"frame","type":"wire","width":q}],"body":body}));
+            next.push(json!({"parameters":[{"name":"frame","type":"wire","width":q},{"name":"next","type":"wire","width":p}],"body":successor}));
+            row_points.push((
+                object.symbols[&instance.name].interface_hash.clone(),
+                original.point.clone(),
+                instance.key.clone(),
+            ));
+        }
     }
     let args = json!([
         p,
@@ -947,7 +1096,7 @@ pub fn build(
         &env,
         &inherited,
     )?;
-    let mut counts = BTreeMap::<(u64, String), u64>::new();
+    let mut counts = BTreeMap::<(u64, usize), u64>::new();
     for leaf in &leaves {
         if let Some(frame) = leaf
             .origin
@@ -960,12 +1109,12 @@ pub fn build(
                 .iter()
                 .rev()
                 .find(|o| o.constructor == "apply" && (o.name == "Rows" || o.name == "Next"))
-                .map(|o| f.body[o.index].point.clone())
-                .unwrap_or_else(|| "$step".into());
+                .map(|o| o.index)
+                .unwrap_or(usize::MAX);
             *counts.entry((frame.index as u64 + 1, point)).or_default() += 1;
         }
     }
-    let mut ordinals = BTreeMap::<(Option<u64>, bool, String), u64>::new();
+    let mut ordinals = BTreeMap::<(Option<u64>, bool, usize), u64>::new();
     let mut events = Vec::new();
     for mut leaf in leaves {
         let state = leaf
@@ -978,7 +1127,7 @@ pub fn build(
             .iter()
             .rev()
             .find(|o| o.constructor == "visit" && o.name == "Frames");
-        let (point, step, phase) = if let Some(state) = state {
+        let (point, step, phase, space) = if let Some(state) = state {
             (
                 if state.reverse {
                     "$release"
@@ -988,6 +1137,7 @@ pub fn build(
                 .to_owned(),
                 None,
                 None,
+                row_points.len() + usize::from(state.reverse),
             )
         } else if let Some(frame) = frame {
             let point = leaf
@@ -995,25 +1145,29 @@ pub fn build(
                 .iter()
                 .rev()
                 .find(|o| o.constructor == "apply" && (o.name == "Rows" || o.name == "Next"))
-                .map(|o| f.body[o.index].point.clone())
-                .unwrap_or_else(|| "$step".into());
+                .map(|o| o.index)
+                .unwrap_or(usize::MAX);
             (
-                point,
+                row_points
+                    .get(point)
+                    .map(|r| r.1.clone())
+                    .unwrap_or_else(|| "$step".into()),
                 Some(frame.index as u64 + 1),
                 Some(if frame.reverse {
                     Phase::Rev
                 } else {
                     Phase::Fwd
                 }),
+                point,
             )
         } else {
-            ("$commit".into(), None, None)
+            ("$commit".into(), None, None, row_points.len() + 2)
         };
         let counter = ordinals
-            .entry((step, phase == Some(Phase::Rev), point.clone()))
+            .entry((step, phase == Some(Phase::Rev), space))
             .or_default();
         let ordinal = if phase == Some(Phase::Rev) {
-            counts[&(step.unwrap(), point.clone())] - 1 - *counter
+            counts[&(step.unwrap(), space)] - 1 - *counter
         } else {
             *counter
         };
@@ -1033,10 +1187,16 @@ pub fn build(
             location: Location {
                 root: Coordinate { step, phase },
                 path: vec![Occurrence {
-                    symbol: object.symbols[name].interface_hash.clone(),
+                    symbol: row_points
+                        .get(space)
+                        .map(|r| r.0.clone())
+                        .unwrap_or_else(|| object.symbols[name].interface_hash.clone()),
                     point,
                     iteration: vec![],
-                    instance: vec![],
+                    instance: row_points
+                        .get(space)
+                        .map(|r| r.2.clone())
+                        .unwrap_or_default(),
                     call_index: None,
                     entered_oracle: None,
                 }],

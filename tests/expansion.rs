@@ -3,6 +3,25 @@ use serde_json::json;
 use std::collections::BTreeMap;
 
 #[test]
+fn constructor_leaf_workspace_exhaustion_is_nomem_and_never_prunes_the_trace() {
+    let library = Library::published().unwrap();
+    let body = json!([{"for":"i","from":0,"to":3,"body":[{"gate":"x","wires":["w"]}]}]);
+    let env = Env::from([("w".into(), Binding::Wires(vec!["q".into()]))]);
+    let error = library
+        .body_with_budget(body.as_array().unwrap(), &env, &[], 2)
+        .unwrap_err();
+    assert_eq!(error.status, bennett_sched::Status::NoMem);
+    let leaves = library
+        .body_with_budget(body.as_array().unwrap(), &env, &[], 3)
+        .unwrap();
+    assert_eq!(leaves.len(), 3);
+    assert_eq!(
+        leaves.iter().map(|l| l.ordinal).collect::<Vec<_>>(),
+        [0, 1, 2]
+    );
+}
+
+#[test]
 fn published_bound_qxor_all_sixteen_tuples_and_inverse_ordinals() {
     let lib = Library::published().unwrap();
     let leaves = lib
