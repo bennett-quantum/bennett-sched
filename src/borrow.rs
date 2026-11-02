@@ -68,7 +68,8 @@ fn translation(events: &[&Event], borrowed: &BTreeSet<String>) -> Option<Value> 
         }
         let point = |e: &Event| {
             let p = e.location.path.last().unwrap();
-            json!({"symbol":p.symbol,"point":p.point})
+            let (block,ordinal)=p.point.rsplit_once(':').expect("parsed source program point");
+            json!([p.symbol,block,ordinal.parse::<u64>().expect("parsed source ordinal")])
         };
         return Some(
             json!({"V":events[..v_len].iter().map(|e|point(e)).collect::<Vec<_>>(),"W":events[v_len..v_len+w_len].iter().map(|e|point(e)).collect::<Vec<_>>(),"X":x,"B":borrowed,"frame":[point(events[0]),point(events[events.len()-1])]}),

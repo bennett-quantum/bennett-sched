@@ -429,6 +429,7 @@ pub fn build(
     budget: [u64; 4],
 ) -> Result<Trace> {
     let f = &object.functions[name];
+    let _index_space=crate::lproc::IndexSpace::form(object,name)?;
     if object.metadata.contains_key("layout") {
         return Err(postponed(
             "layout state and fixed-binding lproc oracle construction",

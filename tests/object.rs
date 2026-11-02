@@ -75,3 +75,10 @@ fn malformed_object_metadata_and_bad_identity_are_rejected() {
     );
     assert!(Object::parse(source.replace("isa=0.9", "isa=0.8").as_bytes()).is_err());
 }
+
+#[test]
+fn memoryless_objects_cannot_hide_interface_regions_or_lprocs(){
+    mod common {include!("common/mod.rs");}
+    let sig=json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[{"A":0,"W":1,"role":"in"}],"args":[],"bounds":[]});let source=common::action("perm_action","a",sig,"perm_action @a (t:wire mut) () (r:region[0,1] in) () ()","x t");assert!(Object::parse(&source).is_err());
+    let sig=json!({"abi":"0.9","tier":"q","kind":"lproc","params":[],"result":1,"tokens":[],"args":[],"mem":[]});let source=common::action("lproc","f",sig,"lproc @f () (r:reg[1]) () () ()","lift.ret r");assert!(Object::parse(&source).is_err());
+}

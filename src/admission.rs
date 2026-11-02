@@ -5,7 +5,7 @@ use crate::{
     schedule::{Document, Kind, Selector, array, text, uint},
 };
 use num_traits::Zero;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap,BTreeSet};
 
 fn fail(reason: impl Into<String>) -> Error {
     Error::infeasible(format!("§11: {}", reason.into()))
@@ -108,6 +108,7 @@ impl Document {
             return Err(fail("region name does not match closure binding"));
         }
         let root_scope = oracle_scope(object, &root.name)?;
+        let mut index_spaces=BTreeMap::new();
         let recompute = self
             .entries
             .iter()
@@ -115,6 +116,7 @@ impl Document {
         for entry in &self.entries {
             let mut scope = root_scope.clone();
             let mut orientation = false;
+            let mut current_oracles=if root.kind=="oracle"{BTreeSet::from([root.name.clone()])}else{BTreeSet::new()};
             for (index, point) in entry.path.iter().enumerate() {
                 let f = object
                     .functions
@@ -152,12 +154,9 @@ impl Document {
                 }
                 if let Selector::Exact(instance) = &point.instance {
                     if f.kind == "lproc" {
-                        return Err(Error::new(
-                            Status::GateUnsupported,
-                            "§3.7/§11: concrete lproc instance path admission is postponed (bennett-sched-ark)",
-                        ));
-                    }
-                    if !instance.is_empty() {
+                        let mut formed=false;for oracle in &current_oracles{if !index_spaces.contains_key(oracle){index_spaces.insert(oracle.clone(),crate::lproc::IndexSpace::form(object,oracle).map_err(|e|fail(e.reason))?);}formed|=index_spaces[oracle].instances.iter().any(|i|i.name==f.name&&i.key==*instance);}
+                        if !formed{return Err(fail("concrete lproc instance is absent from the source binding closure"));}
+                    } else if !instance.is_empty() {
                         return Err(fail(
                             "non-lproc source point requires the empty instance key",
                         ));
@@ -186,7 +185,9 @@ impl Document {
                         return Err(fail("path descends through a non-call source point"));
                     }
                     scope = BTreeSet::new();
+                    current_oracles=BTreeSet::new();
                     for target in selected {
+                        if object.functions.get(&target).is_some_and(|f|f.kind=="oracle"){current_oracles.insert(target.clone());}
                         scope.extend(oracle_scope(object, &target)?);
                     }
                     orientation = if scope.iter().any(|n| object.functions[n].kind == "oracle") {

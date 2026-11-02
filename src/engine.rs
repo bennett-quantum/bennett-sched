@@ -720,6 +720,14 @@ fn certificate(
             let index = record["claims"].as_array().unwrap().len();
             record["claims"].as_array_mut().unwrap().push(json!({"kind":"exhaustive","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"expected":"oracle","domain":{"bundles":bundles,"borrowed":[],"regions":[]}}));
             record["verification"]["oracle"] = json!(index);
+            // The rate domain is a stated finite witness: omitted interfaces
+            // are held at zero (K72), with every inherited control fixed at zero.
+            // Do not report an empty fault histogram without replaying that tuple.
+            let mut bits=inv.controls.iter().cloned().chain(inv.slots.iter().flat_map(|s|s.wires.clone())).map(|w|(w,false)).collect::<BTreeMap<_,_>>();
+            let leaves=trace.events[inv.start..inv.end].iter().map(|e|e.leaf.clone()).collect::<Vec<_>>();crate::expansion::simulate_basis(&leaves,&mut bits)?;
+            let mut cause=num_bigint::BigUint::zero();for slot in inv.slots.iter().filter(|s|s.role=="fault"){for (i,wire) in slot.wires.iter().enumerate(){if bits[wire]{cause.set_bit(i as u64,true);}}}
+            let controls=inv.controls.iter().enumerate().map(|(i,_)|json!({"name":format!("control:{i}"),"width":1,"lo":0,"hi":0})).collect::<Vec<_>>();let faults=if cause.is_zero(){json!({})}else{let mut faults=serde_json::Map::new();faults.insert(cause.to_string(),json!(1));Value::Object(faults)};
+            record["verification"]["fault_rate"]=json!({"domain":{"bundles":controls,"borrowed":[],"regions":[]},"faults_by_code":faults,"undefined_excluded":0,"layout_dependent_excluded":0});
         }
         for proof in trace.borrow_proofs.iter().filter(|p| p.owner == i) {
             let index = record["claims"].as_array().unwrap().len();

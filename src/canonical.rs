@@ -50,7 +50,7 @@ pub fn parse(bytes: &[u8]) -> Result<Value> {
         }
         fn value(&mut self, depth: usize) -> Result<Value> {
             if depth > 256 {
-                return Err(Error::arg("JSON: host nesting limit 256"));
+                return Err(Error::new(crate::Status::NoMem,"JSON: host nesting limit 256"));
             }
             self.ws();
             match self.bytes.get(self.pos) {
