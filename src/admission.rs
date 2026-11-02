@@ -2,7 +2,8 @@
 use crate::{
     Error, Request, Result, Status, canonical, decimal,
     object::{Node, Object},
-    schedule::{Document, Kind, Selector, array, text, uint},
+    schedule::{Document, Kind, Selector, array, resolve, text, uint},
+    source::Trace,
 };
 use num_traits::Zero;
 use std::collections::{BTreeMap, BTreeSet};
@@ -137,11 +138,15 @@ impl Document {
                     })?;
                 let reserved = point.point.starts_with('$');
                 let (node, depth) = if reserved {
-                    if f.kind != "oracle"
-                        || !["$construct", "$step", "$commit", "$release"]
-                            .contains(&point.point.as_str())
-                    {
-                        return Err(fail("reserved support point is not in an oracle"));
+                    let allowed = match f.kind.as_str() {
+                        "oracle" => &["$construct", "$step", "$commit", "$release"][..],
+                        "action" | "perm_action" => &["$construct", "$release"][..],
+                        _ => &[],
+                    };
+                    if !allowed.contains(&point.point.as_str()) {
+                        return Err(fail(
+                            "reserved support point is not valid for this region kind",
+                        ));
                     }
                     (None, 0)
                 } else {
@@ -227,7 +232,7 @@ impl Document {
         }
         Ok(())
     }
-    pub fn validate_request(&self, request: &Request) -> Result<()> {
+    fn validate_request_bindings(&self, request: &Request) -> Result<()> {
         let object = request
             .object
             .as_ref()
@@ -275,6 +280,81 @@ impl Document {
         {
             return Err(fail("placements must be absent without a target topology"));
         }
+        for entry in &self.entries {
+            if entry.kind == Kind::Alloc
+                && !target.classes.contains_key(text(&entry.decision["class"])?)
+            {
+                return Err(fail(format!(
+                    "allocation references undeclared target class {}",
+                    entry.decision["class"]
+                )));
+            }
+            if entry.kind == Kind::Gate {
+                let name = text(&entry.decision["realisation"])?;
+                if name != "native"
+                    && !target.value["schemes"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|s| s["name"] == name)
+                {
+                    return Err(fail(format!(
+                        "gate references undeclared target scheme {name}"
+                    )));
+                }
+            }
+        }
         self.validate_paths(object)
+    }
+    fn validate_generated(&self, trace: &Trace, concrete: bool) -> Result<()> {
+        // In Q source, a nested oracle token forwards an unresolved root
+        // argument at object admission. Learning its concrete tuple does not
+        // move K55's prescribed check earlier. Root/lproc/action domains use
+        // the bound root budget and are checked here.
+        let known = |location: &crate::schedule::Location| {
+            concrete || !location.path.iter().any(|p| p.entered_oracle.is_some())
+        };
+        for pair in &trace.cleanups {
+            if known(&pair.carrier) {
+                resolve(&self.entries, &pair.carrier, Kind::Cleanup)?;
+            }
+        }
+        for event in &trace.events {
+            if !known(&event.location) {
+                continue;
+            }
+            if matches!(event.location.kind, Kind::Gate | Kind::Alloc) {
+                resolve(&self.entries, &event.location, event.location.kind)?;
+            }
+            resolve(&self.entries, &event.location, Kind::Start)?;
+        }
+        Ok(())
+    }
+    /// Admission against the source-generated domains, before target schemes.
+    pub fn validate_request(&self, request: &Request) -> Result<()> {
+        self.validate_request_bindings(request)?;
+        let object = request.object.as_ref().expect("validated object");
+        let f = object.region(request.region.as_ref().expect("validated region"))?;
+        let mut trace = Trace::build(
+            object,
+            &f.name,
+            request.inherited_controls,
+            request.params.as_ref().expect("validated params"),
+            request.budget.expect("validated budget"),
+        )?;
+        if self.entries.iter().any(|e| e.kind == Kind::Cleanup) {
+            trace.realise_cleanup_entries(&self.entries)?;
+        }
+        self.validate_generated(&trace, false)
+    }
+    /// Producer verification can reuse its prepared trace and check every
+    /// concrete operation without re-expanding the same reference construction.
+    pub(crate) fn validate_request_with_trace(
+        &self,
+        request: &Request,
+        trace: &Trace,
+    ) -> Result<()> {
+        self.validate_request_bindings(request)?;
+        self.validate_generated(trace, true)
     }
 }

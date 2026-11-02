@@ -14,11 +14,30 @@ fn layout(mut bytes: Vec<u8>) -> Vec<u8> {
 }
 
 fn region_object(address: u64, cell: u64, image: Option<&str>) -> Vec<u8> {
-    let signature = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});
     let image_suffix = if image.is_some() { " @image" } else { "" };
-    let function = format!(
-        "perm_action @a (t:wire mut) () () () ()\n^entry():\nx t\nqregion r {address} {cell}{image_suffix}\nx t"
-    );
+    region_program(
+        &format!("x t\nqregion r {address} {cell}{image_suffix}\nx t"),
+        &[],
+        image,
+    )
+}
+
+fn region_program(body: &str, bounds: &[u64], image: Option<&str>) -> Vec<u8> {
+    let signature = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":bounds});
+    let bound_line = if bounds.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "regs {{  }} bounds {{{}}}\n",
+            bounds
+                .iter()
+                .map(u64::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    };
+    let function =
+        format!("perm_action @a (t:wire mut) () () () ()\n{bound_line}^entry():\n{body}");
     let mut symbols = json!({});
     let mut rewritten = function.clone();
     let mut suffix = String::new();
@@ -58,7 +77,7 @@ fn local_regions_prepare_at_function_entry_restore_at_exit_and_ignore_false_cont
         assert!(
             matches!(&first.leaf.op,Operation::Alloc{wires,..}if wires.len()==(1<<address)*cell as usize)
         );
-        assert_eq!(first.location.path.last().unwrap().point, "entry:1");
+        assert_eq!(first.location.path.last().unwrap().point, "$construct");
         assert!(matches!(
             trace.events.last().unwrap().leaf.op,
             Operation::Release { .. }
@@ -67,7 +86,7 @@ fn local_regions_prepare_at_function_entry_restore_at_exit_and_ignore_false_cont
             .events
             .iter()
             .filter(|e| {
-                e.location.path.last().unwrap().point == "entry:1"
+                ["$construct", "$release"].contains(&e.location.path.last().unwrap().point.as_str())
                     && matches!(e.leaf.op, Operation::Gate(_))
             })
             .collect::<Vec<_>>();
@@ -101,6 +120,218 @@ fn local_regions_prepare_at_function_entry_restore_at_exit_and_ignore_false_cont
     }
     let invalid = Object::parse(&region_object(0, 3, Some("81"))).unwrap();
     assert!(Trace::build(&invalid, "a", 0, &json!([]), [0; 4]).is_err());
+}
+
+#[test]
+fn k83_nested_declarations_are_once_per_invocation_in_canonical_support_order() {
+    let bytes = region_program(
+        "qloop 0 {\nqregion r 0 8 @image\n}\nqloop 2 {\nqregion s 0 8 @image\nx t\nx t\n}\nqif t {\nqregion u 0 8 @image\n} {\nqregion v 0 8 @image\n}",
+        &[0, 2],
+        Some("81"),
+    );
+    let object = Object::parse(&bytes).unwrap();
+    let trace = Trace::build(&object, "a", 1, &json!([]), [0; 4]).unwrap();
+    for (point, names, allocation) in [
+        ("$construct", vec!["r", "s", "u", "v"], true),
+        ("$release", vec!["v", "u", "s", "r"], false),
+    ] {
+        let support = trace
+            .events
+            .iter()
+            .filter(|e| e.location.path.last().unwrap().point == point)
+            .collect::<Vec<_>>();
+        assert_eq!(support.len(), 12);
+        for (ordinal, event) in support.iter().enumerate() {
+            assert_eq!(event.location.generated, ordinal as u64);
+            assert_eq!(event.leaf.ordinal, ordinal as u64);
+            assert!(event.location.path.last().unwrap().iteration.is_empty());
+            assert!(event.location.path.last().unwrap().instance.is_empty());
+            assert_eq!(event.location.root, Default::default());
+            if let Operation::Gate(g) = &event.leaf.op {
+                assert!(g.controls.is_empty(), "images are unconditional");
+            }
+        }
+        let ids = support
+            .iter()
+            .filter_map(|e| match &e.leaf.op {
+                Operation::Alloc { identity, .. } if allocation => Some(identity),
+                Operation::Release { identity, .. } if !allocation => Some(identity),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(ids.len(), names.len());
+        for (id, name) in ids.iter().zip(names) {
+            assert!(id.ends_with(&format!("/{name}")), "{id}");
+        }
+    }
+    let leaves = trace
+        .events
+        .iter()
+        .map(|e| e.leaf.clone())
+        .collect::<Vec<_>>();
+    for control in [false, true] {
+        for t in [false, true] {
+            let before = BTreeMap::from([("control:0".into(), control), ("mut:0[0]".into(), t)]);
+            let mut bits = before.clone();
+            simulate_basis(&leaves, &mut bits).unwrap();
+            assert_eq!(bits, before);
+            simulate_basis(&bennett_sched::expansion::inverse(&leaves), &mut bits).unwrap();
+            assert_eq!(bits, before);
+        }
+    }
+}
+
+#[test]
+fn k83_source_adjoints_have_forward_support_domains_and_raw_inverse_retains_addresses() {
+    let callee = region_program("qloop 0 {\nqregion r 0 8 @image\n}\nx t", &[0], Some("81"));
+    let signature = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[2]});
+    for orientation in ["", "adj ", "adj adj "] {
+        let bytes = common::caller(
+            &callee,
+            "perm_action",
+            "b",
+            signature.clone(),
+            "perm_action @b (t:wire mut) () () () ()",
+            &format!("qloop 2 {{\n{orientation}action_call @a (t) () () ()\n}}"),
+        );
+        let object = Object::parse(&bytes).unwrap();
+        let trace = Trace::build(&object, "b", 0, &json!([]), [0; 4]).unwrap();
+        for inv in trace.invocations.iter().skip(1) {
+            let events = &trace.events[inv.start..inv.end];
+            assert_eq!(
+                events.first().unwrap().location.path.last().unwrap().point,
+                "$construct"
+            );
+            assert_eq!(
+                events.last().unwrap().location.path.last().unwrap().point,
+                "$release"
+            );
+            for point in ["$construct", "$release"] {
+                let group = events
+                    .iter()
+                    .filter(|e| e.location.path.last().unwrap().point == point)
+                    .collect::<Vec<_>>();
+                assert_eq!(
+                    group
+                        .iter()
+                        .map(|e| e.location.generated)
+                        .collect::<Vec<_>>(),
+                    vec![0, 1, 2]
+                );
+                for e in group {
+                    assert_eq!(&e.location.path[..inv.path.len()], inv.path.as_slice());
+                }
+            }
+        }
+        let leaves = trace
+            .events
+            .iter()
+            .map(|e| e.leaf.clone())
+            .collect::<Vec<_>>();
+        let inverse = bennett_sched::expansion::inverse(&leaves);
+        assert_eq!(
+            inverse.iter().map(|l| l.ordinal).collect::<Vec<_>>(),
+            leaves.iter().rev().map(|l| l.ordinal).collect::<Vec<_>>()
+        );
+        for t in [false, true] {
+            let mut bits = BTreeMap::from([("mut:0[0]".into(), t)]);
+            simulate_basis(&leaves, &mut bits).unwrap();
+            assert_eq!(bits, BTreeMap::from([("mut:0[0]".into(), t)]));
+        }
+    }
+}
+
+#[test]
+fn k83_request_support_selectors_check_exact_generated_domains_and_empty_points() {
+    use bennett_sched::{Outcome, Request, Status, schedule::Document};
+    let gates = ["x","cx","ccx","mcx","swap"].map(|op|json!({"op":op,"classes":["fast"],"controls":{"min":0,"max":"unbounded"},"epsilon":0,"cost":{"time":1}}));
+    let target = json!({"ptr_widths_supported":[32],"classes":{"fast":{"capacity":"unbounded","qubit_second":1,"dirty_rate":1}},"resources":{"time":{"kind":"time","unit":"second"},"peak_qubits":{"kind":"peak","unit":"qubit"}},"gates":gates,"schemes":[],"qram":null,"tables":{},"imports":{},"capabilities":{"measurement":{"mid_circuit":false,"feedforward_latency":0},"mbu":false,"max_parallel":"unbounded","max_predicate_depth":"unbounded","classical_step_time":1},"objective":{"weighted":{"time":1}}});
+    for has_region in [false, true] {
+        let bytes = if has_region {
+            region_program("qloop 0 {\nqregion r 0 8 @image\n}", &[0], Some("81"))
+        } else {
+            region_program("x t", &[], None)
+        };
+        let mut request = Request::default();
+        request.set_object(&bytes).unwrap();
+        request
+            .set_target(&canonical::to_vec(&target).unwrap())
+            .unwrap();
+        let hash = request
+            .object
+            .as_ref()
+            .unwrap()
+            .closure_hash("a")
+            .unwrap()
+            .to_owned();
+        request.set_region(&hash, "forward", 1).unwrap();
+        request.set_params(b"[]").unwrap();
+        request.budget = Some([0; 4]);
+        request.set_accuracy("0").unwrap();
+        let response = request.schedule().unwrap();
+        assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+        let value = canonical::require_jcs(&response.schedule).unwrap();
+        Document::parse(value.clone())
+            .unwrap()
+            .validate_request(&request)
+            .unwrap();
+        if has_region {
+            assert_eq!(value["entries"][0]["path"][0]["point"], "$construct");
+            assert_eq!(value["entries"][0]["generated"], 0);
+            let certificate = canonical::require_jcs(&response.certificate).unwrap();
+            assert_eq!(
+                certificate["regions"][&hash]["frame"]["scratch"]
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                1
+            );
+            assert_eq!(
+                certificate["regions"][&hash]["resources"]["peak_qubits[fast]"],
+                "10"
+            );
+        }
+        for point in ["$construct", "$release"] {
+            let entry = json!({"path":[{"symbol":hash,"point":point,"iteration":[],"instance":[]}],"step":"*","phase":"*","generated":"*","kind":"gate","gate":{"realisation":"native"}});
+            let mut schedule = value.clone();
+            schedule["entries"]
+                .as_array_mut()
+                .unwrap()
+                .extend([entry.clone(), entry]);
+            let result = Document::parse(schedule.clone())
+                .unwrap()
+                .validate_request(&request);
+            if has_region {
+                assert_eq!(result.unwrap_err().status, Status::ScheduleInfeasible);
+            } else {
+                result.unwrap();
+            }
+            // At the action support level neither a concrete step nor phase matches.
+            let entries = schedule["entries"].as_array_mut().unwrap();
+            let n = entries.len();
+            for e in &mut entries[n - 2..] {
+                e["step"] = json!(1);
+                e["phase"] = json!("fwd");
+            }
+            Document::parse(schedule.clone())
+                .unwrap()
+                .validate_request(&request)
+                .unwrap();
+            schedule["entries"]
+                .as_array_mut()
+                .unwrap()
+                .last_mut()
+                .unwrap()["path"][0]["iteration"] = json!([0]);
+            assert_eq!(
+                Document::parse(schedule)
+                    .unwrap()
+                    .validate_request(&request)
+                    .unwrap_err()
+                    .status,
+                Status::ScheduleInfeasible
+            );
+        }
+    }
 }
 
 #[test]

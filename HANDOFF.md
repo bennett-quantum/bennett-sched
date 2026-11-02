@@ -60,3 +60,10 @@ qm2's current C ABI result is reproduced; owner-selection/default schema is
 queued upstream. 4tj tracks explicit no-topology interface classes. No proposed
 field is emitted. Review 1na/760 remain next. Exact current gate/session results
 and host advisory are in the Resume block.
+
+
+Admission review760: declared target classes/schemes and maximal matching
+source-domain ties checked, with shielded/empty patterns retained. Review1na:
+non-root resources/gate counts cannot silently overwrite a different context;
+uniform repeated contexts work, varying reports need the exact schema proposal
+queued in .tmp/cross-repo-beads.md. Fresh full gate pending after these changes.

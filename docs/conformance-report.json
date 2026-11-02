@@ -1,7 +1,7 @@
 {
   "schema": "bennett-sched.conformance-inventory.v1",
   "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
-  "spec_sha256": "021d5df978f293c36174b73de9facc0884f7502a4bc5c0ab7a621b0ca7071c25",
+  "spec_sha256": "7458b362d22d2b89912331da8866e334385686faf8e2b51d8d49684e522c3034",
   "case_count": 519,
   "suites": {
     "A": 22,
@@ -5918,5 +5918,5 @@
     "stdout": "",
     "stderr": "§1: expected isa=0.8\n"
   },
-  "recorded_at_utc": "2026-11-02T08:37:31Z"
+  "recorded_at_utc": "2026-11-02T10:14:12Z"
 }

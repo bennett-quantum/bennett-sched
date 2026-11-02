@@ -37,7 +37,6 @@ pub fn caller(
     body: &str,
 ) -> Vec<u8> {
     let object = bennett_sched::object::Object::parse(base).unwrap();
-    assert!(object.data.is_empty());
     let bounds = signature["bounds"]
         .as_array()
         .filter(|a| !a.is_empty())
@@ -108,5 +107,18 @@ pub fn caller(
             )
         })
         .unwrap_or_default();
-    format!("bennett-object isa=0.9 object=0.9 launch=0.9 sched=0.9 cert=0.9 coverage=0.9 target=0.9 ptr_width=32\n\nsection symbols\n{}\n\nsection functions\n{}\n{function}\n{layout}",String::from_utf8(canonical::to_vec(&symbols).unwrap()).unwrap(),old.trim_end_matches('\n')).into_bytes()
+    let data = if object.data.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "\nsection data\n{}\n",
+            object
+                .data
+                .iter()
+                .map(|(name, hex)| format!("{name} {hex}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    };
+    format!("bennett-object isa=0.9 object=0.9 launch=0.9 sched=0.9 cert=0.9 coverage=0.9 target=0.9 ptr_width=32\n\nsection symbols\n{}\n\nsection functions\n{}\n{function}\n{data}{layout}",String::from_utf8(canonical::to_vec(&symbols).unwrap()).unwrap(),old.trim_end_matches('\n')).into_bytes()
 }

@@ -273,10 +273,19 @@ struct Builder<'a> {
     active: BTreeSet<String>,
 }
 struct LocalRegion {
-    node: Node,
     identity: String,
     wires: Vec<String>,
     image: Vec<Gate>,
+}
+fn support_point(point: &str) -> Node {
+    Node {
+        point: point.into(),
+        line: String::new(),
+        lhs: None,
+        op: "qregion".into(),
+        operands: vec![],
+        bodies: vec![],
+    }
 }
 struct MemoryBinding {
     kind: String,
@@ -568,8 +577,9 @@ impl Builder<'_> {
             .collect::<BTreeSet<_>>();
         preflight_memory(&f.body, &mut env.clone(), &readonly)?;
         self.nodes(f, &f.body, &mut env, &controls, chain, &[], owner)?;
+        let release = support_point("$release");
+        let mut ordinal = 0;
         for region in locals.into_iter().rev() {
-            let mut ordinal = 1 + region.image.len() as u64;
             let mut leaves = Vec::new();
             for gate in region.image.into_iter().rev() {
                 leaves.push(Leaf {
@@ -591,7 +601,8 @@ impl Builder<'_> {
                     state: "clean".into(),
                 },
             });
-            self.emit(f, &region.node, &[], chain, owner, leaves)?;
+            ordinal += 1;
+            self.emit(f, &release, &[], chain, owner, leaves)?;
         }
         if adjoint {
             for inv in self.trace.invocations.iter_mut().skip(owner) {
@@ -609,6 +620,16 @@ impl Builder<'_> {
                 e.leaf = expansion::inverse(std::slice::from_ref(&e.leaf))
                     .pop()
                     .unwrap();
+                // K83 source adjoints form fresh forward entry/exit support
+                // domains. Raw expansion::inverse retains its old addresses.
+                if self.object.functions[&self.trace.invocations[e.owner].name].kind != "oracle" {
+                    let point = &mut e.location.path.last_mut().unwrap().point;
+                    match point.as_str() {
+                        "$construct" => *point = "$release".into(),
+                        "$release" => *point = "$construct".into(),
+                        _ => {}
+                    }
+                }
             }
             remap_adjoint_iterations(
                 &mut events,
@@ -719,22 +740,13 @@ impl Builder<'_> {
         chain: &[Occurrence],
         owner: usize,
     ) -> Result<Vec<LocalRegion>> {
-        let declarations = f
-            .body
-            .iter()
+        let declarations = object::flattened(&f.body)
+            .into_iter()
             .filter(|n| n.op == "qregion")
             .collect::<Vec<_>>();
-        if object::flattened(&f.body)
-            .iter()
-            .filter(|n| n.op == "qregion")
-            .count()
-            != declarations.len()
-        {
-            return Err(deferred(
-                "source addresses for region declarations nested inside structure",
-            ));
-        }
         let mut regions = Vec::new();
+        let construct = support_point("$construct");
+        let mut ordinal = 0;
         for node in declarations {
             if node.lhs.is_some()
                 || !node.bodies.is_empty()
@@ -802,7 +814,7 @@ impl Builder<'_> {
                 }
             }
             let mut leaves = vec![Leaf {
-                ordinal: 0,
+                ordinal,
                 calls: vec![],
                 origin: vec![],
                 op: Operation::Alloc {
@@ -813,12 +825,13 @@ impl Builder<'_> {
                 },
             }];
             leaves.extend(gates.iter().enumerate().map(|(i, g)| Leaf {
-                ordinal: i as u64 + 1,
+                ordinal: ordinal + i as u64 + 1,
                 calls: vec![],
                 origin: vec![],
                 op: Operation::Gate(g.clone()),
             }));
-            self.emit(f, node, &[], chain, owner, leaves)?;
+            ordinal += leaves.len() as u64;
+            self.emit(f, &construct, &[], chain, owner, leaves)?;
             env.insert(
                 name.clone(),
                 Binding::Region {
@@ -830,7 +843,6 @@ impl Builder<'_> {
                 },
             );
             regions.push(LocalRegion {
-                node: node.clone(),
                 identity,
                 wires: w,
                 image: gates,
@@ -1568,6 +1580,10 @@ fn remap_adjoint_iterations(
     for f in object.functions.values() {
         let mut points = BTreeMap::new();
         collect(&f.body, &[], &mut points)?;
+        if ["action", "perm_action"].contains(&f.kind.as_str()) {
+            points.insert("$construct".into(), vec![]);
+            points.insert("$release".into(), vec![]);
+        }
         maps.insert(object.symbols[&f.name].interface_hash.clone(), points);
     }
     let remap = |path: &mut [Occurrence]| -> Result<()> {

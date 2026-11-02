@@ -74,9 +74,13 @@ fn published_nonexistent_inc8_row_rejects_and_reserved_oracle_points_are_valid()
             .unwrap();
     }
     let (action, mut a) = controlled();
-    a["entries"][0]["path"] =
-        json!([{"symbol":a["bindings"]["closure_hash"],"point":"$construct","iteration":[]}]);
-    assert!(Document::parse(a).unwrap().validate_paths(&action).is_err());
+    for point in ["$construct", "$release", "$step", "$commit"] {
+        a["entries"][0]["path"] =
+            json!([{"symbol":a["bindings"]["closure_hash"],"point":point,"iteration":[]}]);
+        let result = Document::parse(a.clone()).unwrap().validate_paths(&action);
+        // K83 admits action entry/exit support even when its domain is empty.
+        assert_eq!(result.is_ok(), ["$construct", "$release"].contains(&point));
+    }
 }
 
 #[test]

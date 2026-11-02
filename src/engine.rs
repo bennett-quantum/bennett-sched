@@ -696,7 +696,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
     if let Some(placements) = root_placements {
         schedule["interface_vertices"] = json!(placements);
     }
-    schedule::Document::parse(schedule.clone())?.validate_request(request)?;
+    schedule::Document::parse(schedule.clone())?.validate_request_with_trace(request, trace)?;
     // Emitted selectors have complete paths and concrete operation coordinates.
     // Detect duplicate maximal addresses before exposing a schedule to consumers.
     let mut addresses = BTreeSet::new();
@@ -774,6 +774,7 @@ fn certificate(
     let mut regions = json!({});
     let mut multiplicities: BTreeMap<String, u64> = BTreeMap::new();
     let mut context_frames: BTreeMap<String, Value> = BTreeMap::new();
+    let mut context_gates: BTreeMap<String, BTreeMap<String, u64>> = BTreeMap::new();
     for inv in &trace.invocations {
         let slots = json!(
             inv.slots
@@ -934,6 +935,12 @@ fn certificate(
                 *counts.entry(g.op.clone()).or_default() += 1;
             }
         }
+        if context_gates
+            .insert(inv.hash.clone(), counts.clone())
+            .is_some_and(|previous| previous != counts)
+        {
+            return Err(context_resource_error());
+        }
         record["gates_used"] = Value::Object(
             counts
                 .into_iter()
@@ -944,6 +951,7 @@ fn certificate(
     regions[&root.hash]["resources"] = root_rows.display_json();
     regions[&root.hash]["estimate"] =
         json!({"precision_digits":34,"exact_resources":root_rows.exact_json()});
+    let mut context_resources: BTreeMap<String, BTreeMap<String, Rational>> = BTreeMap::new();
     // Each subregion report charges its interface and controls for its invocation duration.
     for (inv_index, inv) in trace.invocations.iter().enumerate().skip(1) {
         let start = &times[inv.start];
@@ -998,10 +1006,23 @@ fn certificate(
             })
             .collect::<Vec<_>>();
         let rows = resources::aggregate_ordered(target, &subset, &live, &orders)?;
+        if context_resources
+            .insert(inv.hash.clone(), rows.exact.clone())
+            .is_some_and(|previous| previous != rows.exact)
+        {
+            return Err(context_resource_error());
+        }
         regions[&inv.hash]["resources"] = rows.display_json();
     }
     let total: Rational = errors.iter().cloned().sum();
     Ok(
         json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":{"args":request.params.as_ref().unwrap(),"budget":request.budget.unwrap().iter().map(u64::to_string).collect::<Vec<_>>() }},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::upper(&(d::integer(2)*total))?},"method":"sum_over_multiplicities"}}),
+    )
+}
+
+fn context_resource_error() -> Error {
+    Error::new(
+        crate::Status::GateUnsupported,
+        "§12.3: differing per-invocation resources or gate counts require a context report schema (bennett-sched-1na); no last-invocation report is substituted",
     )
 }

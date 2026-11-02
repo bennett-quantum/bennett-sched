@@ -277,5 +277,28 @@ charging proposal is queued upstream; no unrelated owner's charge is silently
 subtracted. Dirty borrowing remains required scope.
 
 The gate now reads free -g and uptime and selects two build/test threads when
-MemAvailable is below6GiB, otherwise at most four. The last full checkpoint
-passed118 tests; the additional review changes require a fresh full gate.
+MemAvailable is below6GiB, otherwise at most four. The last complete full checkpoint passed123 tests before admission and resource-context changes. The first admission gate encountered the newly added red resource-context regression. The next gate found that upstream had accepted K83 and changed the spec hash; the inventory and pin were refreshed. A stable-tree gate is required after those updates.
+
+
+Review760 admission now checks declared allocation classes and gate schemes,
+and maximal matching ties on each source-generated gate/allocation/start/cleanup
+operation whose domain is known at admission. It accepts shielded duplicate
+patterns and empty generated domains; K55 deferred nested-oracle domains remain
+at their specified concrete check. Producer validation reuses the prepared trace.
+
+Review1na confirms order-dependent non-root resource reports. Identical repeated
+contexts remain supported. Differing exact rows or inclusive gate counts now
+return the explicit1na contract diagnostic rather than choosing the last call.
+The proposed per-invocation realisation_contexts schema and uniform legacy-map
+rule are queued upstream. This guard does not complete mixed-context reporting;
+resources and gates_used need a contract decision distinct from error bounds.
+
+
+Accepted K83 adds action-local $construct/$release support domains, recursive
+once-per-invocation qregion collection even in zero-trip loops and both qif
+arms, unconditional preparation/restoration and contiguous support ordinals.
+This is newly required mechanics tracked by bennett-sched-ecz. The previous
+nested-declaration address deferral must be replaced by that published rule;
+current ordinary declaration support coordinates are not claimed K83 compliant.
+Observed ISA main is d2602c4efec21f92221c6e752cfd73f03fdf83ad with spec hash
+7458b362d22d2b89912331da8866e334385686faf8e2b51d8d49684e522c3034.
