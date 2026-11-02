@@ -242,3 +242,40 @@ binding; constants now bind exactly their low-width frame slice.
 
 Focused layout milestone: lproc 6, oracle_state 7 and oracle_memory 6 pass.
 No complete lproc, allocator/store or nested-oracle scheduling claim follows.
+
+## Design-review fixes and remaining contract decisions
+
+Review 3k1 exposed an adjoint call rewriting its caller's dynamic loop
+coordinates. Remapping is now limited to the adjointed invocation and its
+descendants, and descendant invocation metadata follows the remapped events.
+Caller/callee loops, nested adjoints and while/double-adjoint regressions pass.
+
+Review mi3 exposed a blanket refusal of repeated callees with workspace.
+Identical interface contexts now share a closure record containing every
+realised dynamic allocation in first-allocation order. Dynamic ids remain
+distinct; the one/two/three-call regression checks complete frames and unchanged
+physical peak/occupancy. Different interface slot classes still need lzv.
+
+Review io7 exposed an unbound root interface class choice. Without topology
+the scheduler now preserves the document's first-capacity class defaults.
+Explicit scratch alloc.class choices and topology interface_vertices still
+carry class choices. 4tj queues the exact optional interface_classes contract
+extension for non-topology choices; no unratified field is emitted.
+
+Review 2qd exposed enumeration of irrelevant vertex permutations and repeated
+source expansion. The trace is now prepared once. Adjacency conflicts backtrack
+the decision prefix affecting the failed operands and realization; class
+mismatches skip unrelated vertex decisions. This retains finite exhaustive
+choices without an attempt cutoff or inserted routing. Tests include a feasible
+later class and infeasible two/eight-wire graphs.
+
+Review qm2 remains open. A current C ABI probe reproduces capacity3 INFEASIBLE
+and capacity8 peak4/occupancy14. The current model creates a separate dirty
+requirement, with no represented owner alias. Reusing the caller's idle wire
+needs a reproducible owner designation. The exact borrow_from/default and
+charging proposal is queued upstream; no unrelated owner's charge is silently
+subtracted. Dirty borrowing remains required scope.
+
+The gate now reads free -g and uptime and selects two build/test threads when
+MemAvailable is below6GiB, otherwise at most four. The last full checkpoint
+passed118 tests; the additional review changes require a fresh full gate.

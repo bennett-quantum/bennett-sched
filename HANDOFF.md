@@ -52,3 +52,11 @@ domains include every interface region cell. Constants bind only their declared
 low-width displacement slice. Host workspace checks run before interface wire
 allocation and return NoMem on oversized input bundles. Allocator/store rows,
 lproc call/return emission and nested semantic calls remain open.
+
+Review priority is 3k1, then mi3/io7/2qd/qm2. Scoped adjoint event/context paths,
+repeated identical scratch-frame records, reproducible root interface classes
+and conflict-directed placement/cached trace preparation have focused tests.
+qm2's current C ABI result is reproduced; owner-selection/default schema is
+queued upstream. 4tj tracks explicit no-topology interface classes. No proposed
+field is emitted. Review 1na/760 remain next. Exact current gate/session results
+and host advisory are in the Resume block.

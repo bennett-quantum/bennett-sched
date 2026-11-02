@@ -215,3 +215,40 @@ fn class_conflicts_skip_vertex_permutations_without_losing_a_feasible_class() {
         json!([(12..20).collect::<Vec<_>>()])
     );
 }
+
+#[test]
+fn admission_rejects_root_maximal_ties_but_accepts_shielded_or_empty_domains(){
+    use bennett_sched::{Status,schedule::Document};
+    let bytes=common::action("perm_action","flip",signature(&[1],&[],&[]),"perm_action @flip (t:wire mut) () () () ()","x t");
+    let t=target(json!({"fast":{"capacity":8,"qubit_second":1,"dirty_rate":1}}),gates());
+    let r=request(&bytes,"flip",&t);
+    let response=r.schedule().unwrap();
+    let mut schedule=canonical::require_jcs(&response.schedule).unwrap();
+    let hash=r.object.as_ref().unwrap().symbols["flip"].interface_hash.clone();
+    let broad=json!({"path":[],"step":"*","phase":"*","generated":"*","kind":"gate","gate":{"realisation":"native"}});
+    schedule["entries"]=json!([broad.clone(),broad.clone()]);
+    let error=Document::parse(schedule.clone()).unwrap().validate_request(&r).unwrap_err();
+    assert_eq!(error.status,Status::ScheduleInfeasible);
+    assert_eq!(error.reason,"§11: multiple maximal matching schedule entries");
+    let exact=json!({"path":[{"symbol":hash,"point":"entry:0","iteration":[]}],"step":"*","phase":"*","generated":0,"kind":"gate","gate":{"realisation":"native"}});
+    schedule["entries"]=json!([broad.clone(),broad.clone(),exact]);
+    Document::parse(schedule).unwrap().validate_request(&r).unwrap();
+    let empty=common::action("perm_action","empty",signature(&[1],&[],&[0]),"perm_action @empty (t:wire mut) () () () ()","qloop 0 {\nx t\n}");
+    let r=request(&empty,"empty",&t);let response=r.schedule().unwrap();
+    let mut schedule=canonical::require_jcs(&response.schedule).unwrap();
+    schedule["entries"]=json!([broad.clone(),broad]);
+    Document::parse(schedule).unwrap().validate_request(&r).unwrap();
+}
+
+#[test]
+fn admission_rejects_an_alloc_decision_naming_an_undeclared_target_class(){
+    use bennett_sched::schedule::Document;
+    let bytes=common::action("perm_action","scratch",signature(&[1],&[],&[]),"perm_action @scratch (t:wire mut) () () () ()","d = qalloc any 1\ncx t d\ncx t d\nqfree d");
+    let r=request(&bytes,"scratch",&target(json!({"fast":{"capacity":8,"qubit_second":1,"dirty_rate":1}}),gates()));
+    let response=r.schedule().unwrap();
+    let mut schedule=canonical::require_jcs(&response.schedule).unwrap();
+    let entry=schedule["entries"].as_array_mut().unwrap().iter_mut().find(|e|e["kind"]=="alloc").unwrap();
+    entry["alloc"]["class"]=json!("missing");
+    let error=Document::parse(schedule).unwrap().validate_request(&r).unwrap_err();
+    assert!(error.reason.contains("undeclared target class"),"{error}");
+}
