@@ -58,67 +58,93 @@ impl Program {
         Ok(Self { ids, steps })
     }
     pub fn run(&self, bits: &mut BTreeMap<String, bool>) -> Result<()> {
-        let mut values = vec![false; self.ids.len()];
-        let mut active = vec![false; self.ids.len()];
-        for (name, value) in bits.iter() {
-            if let Some(id) = self.ids.get(name) {
-                values[*id] = *value;
-                active[*id] = true;
-            }
-        }
-        for step in &self.steps {
-            match step {
-                Step::Acquire(ids) => {
-                    for id in ids {
-                        if active[*id] {
-                            return Err(Error::arg("duplicate dense wire"));
-                        }
-                        active[*id] = true;
-                        values[*id] = false;
-                    }
-                }
-                Step::Release(ids) => {
-                    for id in ids {
-                        if !active[*id] || values[*id] {
-                            return Err(Error::arg("unclean/missing dense release"));
-                        }
-                        active[*id] = false;
-                    }
-                }
-                Step::X(controls, _) | Step::Swap(controls, _, _) => {
-                    let mut enabled = true;
-                    for id in controls {
-                        if !active[*id] {
-                            return Err(Error::arg("missing dense control"));
-                        }
-                        enabled &= values[*id];
-                    }
-                    if !enabled {
-                        continue;
-                    }
-                    match step {
-                        Step::X(_, target) => {
-                            if !active[*target] {
-                                return Err(Error::arg("missing dense target"));
-                            }
-                            values[*target] ^= true;
-                        }
-                        Step::Swap(_, a, b) => {
-                            if !active[*a] || !active[*b] {
-                                return Err(Error::arg("missing dense swap wire"));
-                            }
-                            values.swap(*a, *b);
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-            }
-        }
-        for (name, id) in &self.ids {
-            if active[*id] {
-                bits.insert(name.clone(), values[*id]);
+        self.run_many(std::slice::from_mut(bits))
+    }
+    /// Pack up to 64 independent basis tuples into the bits of each word.
+    /// Allocation remains unconditional; a zero release word proves every lane.
+    pub fn run_many(&self, cases: &mut [BTreeMap<String, bool>]) -> Result<()> {
+        for cases in cases.chunks_mut(64) {
+            let mask = if cases.len() == 64 {
+                u64::MAX
             } else {
-                bits.remove(name);
+                (1u64 << cases.len()) - 1
+            };
+            let mut values = vec![0u64; self.ids.len()];
+            let mut input = vec![0u64; self.ids.len()];
+            for (lane, bits) in cases.iter().enumerate() {
+                for (name, value) in bits {
+                    if let Some(id) = self.ids.get(name) {
+                        input[*id] |= 1u64 << lane;
+                        if *value {
+                            values[*id] |= 1u64 << lane;
+                        }
+                    }
+                }
+            }
+            if input.iter().any(|p| *p != 0 && *p != mask) {
+                return Err(Error::arg("nonuniform dense interface"));
+            }
+            let mut active = input.iter().map(|p| *p != 0).collect::<Vec<_>>();
+            for step in &self.steps {
+                match step {
+                    Step::Acquire(ids) => {
+                        for id in ids {
+                            if active[*id] {
+                                return Err(Error::arg("duplicate dense wire"));
+                            }
+                            active[*id] = true;
+                            values[*id] = 0;
+                        }
+                    }
+                    Step::Release(ids) => {
+                        for id in ids {
+                            if !active[*id] || values[*id] != 0 {
+                                return Err(Error::arg("unclean/missing dense release"));
+                            }
+                            active[*id] = false;
+                        }
+                    }
+                    Step::X(controls, _) | Step::Swap(controls, _, _) => {
+                        let mut enabled = mask;
+                        for id in controls {
+                            if !active[*id] {
+                                return Err(Error::arg("missing dense control"));
+                            }
+                            enabled &= values[*id];
+                        }
+                        if enabled == 0 {
+                            continue;
+                        }
+                        match step {
+                            Step::X(_, target) => {
+                                if !active[*target] {
+                                    return Err(Error::arg("missing dense target"));
+                                }
+                                values[*target] ^= enabled;
+                            }
+                            Step::Swap(_, a, b) => {
+                                if !active[*a] || !active[*b] {
+                                    return Err(Error::arg("missing dense swap wire"));
+                                }
+                                let change = (values[*a] ^ values[*b]) & enabled;
+                                values[*a] ^= change;
+                                values[*b] ^= change;
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+                }
+            }
+            for (name, id) in &self.ids {
+                if active[*id] {
+                    for (lane, bits) in cases.iter_mut().enumerate() {
+                        bits.insert(name.clone(), values[*id] & (1u64 << lane) != 0);
+                    }
+                } else if input[*id] != 0 {
+                    for bits in cases.iter_mut() {
+                        bits.remove(name);
+                    }
+                }
             }
         }
         Ok(())
@@ -138,6 +164,8 @@ fn dense_witness_matches_map_interpreter_with_controls_clean_lifetimes_and_reacq
         .body(body.as_array().unwrap(), &env, &["c".into()])
         .unwrap();
     let program = Program::compile(&leaves).unwrap();
+    let mut bulk = Vec::new();
+    let mut expected = Vec::new();
     for tuple in 0..8 {
         let mut slow = BTreeMap::from([
             ("a".into(), tuple & 1 != 0),
@@ -146,8 +174,12 @@ fn dense_witness_matches_map_interpreter_with_controls_clean_lifetimes_and_reacq
             ("untouched".into(), true),
         ]);
         let mut fast = slow.clone();
+        bulk.push(slow.clone());
         simulate_basis(&leaves, &mut slow).unwrap();
         program.run(&mut fast).unwrap();
         assert_eq!(fast, slow);
+        expected.push(slow);
     }
+    program.run_many(&mut bulk).unwrap();
+    assert_eq!(bulk, expected);
 }

@@ -24,7 +24,8 @@
     "regions": 13,
     "outcomes": {
       "OK": 7,
-      "UNSUPPORTED": 6
+      "ERROR": 1,
+      "UNSUPPORTED": 5
     },
     "request": "B=3, heap=stack=depth=0; typed zero args, tokens=(3,0,0,0); universal exact target, unbounded capacity, no topology",
     "meaning": "Producer schedule/document audit with tracked deferrals; no independent checker verdict."
@@ -5645,7 +5646,7 @@
       "source": "conformance/cases/H/H-unsupported/case.json",
       "sha256": "03c962922b4124051f6a4f0401a3272e6dc597f508980c9c49f49770a3685e06",
       "coverage": "equivalent-witness-test",
-      "test": "pipeline::postponed_lproc_oracle_has_a_specific_bead_reason_and_no_feasible_document"
+      "test": "pipeline::context_varying_frame_classes_are_explicitly_deferred_instead_of_misreported"
     }
   ],
   "normative_objects": [
@@ -5674,12 +5675,23 @@
         {
           "name": "sum_db",
           "interface_hash": "3ad937b1cd867454989c5c5f58244681ef2c09dbabf7fce56515a68f63462ee6",
-          "outcome": "UNSUPPORTED",
+          "outcome": "ERROR",
           "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
-          "reason": "layout/lproc construction",
+          "status": "BENNETT_E_NOMEM",
+          "reason": "Materialized reference constructor leaf workspace exhausted at B=3; scalable expansion remains required.",
           "beads": [
+            "bennett-sched-2u4",
             "bennett-sched-ark"
-          ]
+          ],
+          "zero_budget_witness": {
+            "outcome": "OK",
+            "budget": [
+              0,
+              0,
+              0,
+              0
+            ]
+          }
         }
       ]
     },
@@ -5812,7 +5824,7 @@
           "interface_hash": "4ee502a2d517d53d229f2ae21346505af06a228a2f0d2967938d48683e16d9e7",
           "outcome": "UNSUPPORTED",
           "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
-          "reason": "layout/lproc construction",
+          "reason": "nested oracle/permutation call row construction",
           "beads": [
             "bennett-sched-ark"
           ]
@@ -5824,6 +5836,7 @@
           "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
           "reason": "classical pseudo-location wire binding",
           "beads": [
+            "bennett-sched-r28",
             "bennett-sched-ark"
           ]
         },
@@ -5905,5 +5918,5 @@
     "stdout": "",
     "stderr": "§1: expected isa=0.8\n"
   },
-  "recorded_at_utc": "2026-11-02T07:47:57Z"
+  "recorded_at_utc": "2026-11-02T08:37:31Z"
 }

@@ -51,8 +51,9 @@ fn conformance_inventory_records_every_case_and_portable_manifest_without_stale_
     assert_eq!(report["normative_scheduler_audit"]["outcomes"]["OK"], 7);
     assert_eq!(
         report["normative_scheduler_audit"]["outcomes"]["UNSUPPORTED"],
-        6
+        5
     );
+    assert_eq!(report["normative_scheduler_audit"]["outcomes"]["ERROR"], 1);
     for manifest in report["portable_manifests"].as_array().unwrap() {
         let path = manifest["path"].as_str().unwrap();
         assert_eq!(

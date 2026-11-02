@@ -58,6 +58,8 @@ fn complete_lproc_call_return_uses_reference_activation_and_restores_every_priva
             .map(|e| e.leaf.clone())
             .collect::<Vec<_>>();
         let program = basis::Program::compile(&leaves).unwrap();
+        let mut cases = Vec::new();
+        let mut inputs = Vec::new();
         for input in 0..4 {
             for target in 0..4 {
                 for fault in 0..16 {
@@ -67,20 +69,24 @@ fn complete_lproc_call_return_uses_reference_activation_and_restores_every_priva
                         put(&mut bits, "tgt:0", 2, target);
                         put(&mut bits, "fault:0", 4, fault);
                         bits.insert("control:0".into(), control);
-                        program.run(&mut bits).unwrap();
-                        assert_eq!(get(&bits, "in:0", 2), input);
-                        assert_eq!(
-                            get(&bits, "tgt:0", 2),
-                            target ^ if control && budget >= 4 { input } else { 0 }
-                        );
-                        assert_eq!(
-                            get(&bits, "fault:0", 4),
-                            fault ^ u64::from(control && budget < 4)
-                        );
-                        assert_eq!(bits.len(), 9);
+                        cases.push(bits);
+                        inputs.push((input, target, fault, control));
                     }
                 }
             }
+        }
+        program.run_many(&mut cases).unwrap();
+        for (bits, (input, target, fault, control)) in cases.iter().zip(inputs) {
+            assert_eq!(get(bits, "in:0", 2), input);
+            assert_eq!(
+                get(bits, "tgt:0", 2),
+                target ^ if control && budget >= 4 { input } else { 0 }
+            );
+            assert_eq!(
+                get(bits, "fault:0", 4),
+                fault ^ u64::from(control && budget < 4)
+            );
+            assert_eq!(bits.len(), 9);
         }
         if budget > 0 {
             let callee = trace

@@ -717,7 +717,7 @@ fn certificate(
     let mut regions = json!({});
     let mut multiplicities: BTreeMap<String, u64> = BTreeMap::new();
     let mut context_frames: BTreeMap<String, Value> = BTreeMap::new();
-    for (i, inv) in trace.invocations.iter().enumerate() {
+    for inv in &trace.invocations {
         let slots = json!(
             inv.slots
                 .iter()
@@ -725,10 +725,10 @@ fn certificate(
                 .collect::<Result<Vec<_>>>()?
         );
         if let Some(previous) = context_frames.insert(inv.hash.clone(), slots.clone()) {
-            if previous != slots || allocator.allocations.iter().any(|a| a.owner == Some(i)) {
+            if previous != slots {
                 return Err(Error::new(
                     crate::Status::GateUnsupported,
-                    "§9.4/§12: context-varying frame descriptors are postponed (bennett-sched-ark); no single-context frame is substituted",
+                    "§9.4/§12: context-varying interface slot classes need bennett-sched-lzv (source adapter tracked by bennett-sched-ark); no single-context frame is substituted",
                 ));
             }
         }
@@ -745,19 +745,28 @@ fn certificate(
                 .iter()
                 .map(|s| slot_record(s, allocator))
                 .collect::<Result<Vec<_>>>()?;
-            let scratch=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_none()&&a.state!="borrowed"&&!a.identity.starts_with("oracle-state/history-")).map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
-            let ancillae=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_some()).map(|a|json!({"id":a.identity,"scheme":a.scheme,"class":a.class,"state":a.state,"width":a.wires.len()})).collect::<Vec<_>>();
+            // Dynamic workspace ids already carry their invocation identity.
+            // Include every realised allocation for this closure in allocation
+            // order; identical repeated calls are not a slot-schema conflict.
+            let scratch=allocator.allocations.iter().filter(|a|a.owner.is_some_and(|owner| trace.invocations[owner].hash==inv.hash)&&a.scheme.is_none()&&a.state!="borrowed"&&!a.identity.starts_with("oracle-state/history-")).map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
+            let ancillae=allocator.allocations.iter().filter(|a|a.owner.is_some_and(|owner| trace.invocations[owner].hash==inv.hash)&&a.scheme.is_some()).map(|a|json!({"id":a.identity,"scheme":a.scheme,"class":a.class,"state":a.state,"width":a.wires.len()})).collect::<Vec<_>>();
             let borrowed = allocator
                 .allocations
                 .iter()
-                .filter(|a| a.owner == Some(i) && a.state == "borrowed" && a.scheme.is_none())
+                .filter(|a| {
+                    a.owner
+                        .is_some_and(|owner| trace.invocations[owner].hash == inv.hash)
+                        && a.state == "borrowed"
+                        && a.scheme.is_none()
+                })
                 .map(|a| json!({"id":a.identity,"class":a.class,"width":a.wires.len()}))
                 .collect::<Vec<_>>();
             let history = allocator
                 .allocations
                 .iter()
                 .filter(|a| {
-                    a.owner == Some(i)
+                    a.owner
+                        .is_some_and(|owner| trace.invocations[owner].hash == inv.hash)
                         && a.identity.starts_with("oracle-state/history-")
                         && a.scheme.is_none()
                 })

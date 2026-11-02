@@ -43,7 +43,7 @@ EQUIVALENT = {
     "H-reproducibility": "pipeline::schedules_real_controlled_fixture_and_emits_bound_exact_certificate",
     "H-mbu-realisation-invalid": "schedule::parse_entry restricts unitary cleanup; selectors",
     "H-unknown-expansion-library": "selectors::a_schedule_cannot_bind_an_unavailable_expansion_library",
-    "H-unsupported": "pipeline::postponed_lproc_oracle_has_a_specific_bead_reason_and_no_feasible_document",
+    "H-unsupported": "pipeline::context_varying_frame_classes_are_explicitly_deferred_instead_of_misreported",
 }
 
 
@@ -93,12 +93,14 @@ def main():
             if record["number"]==3: record.update(semantics="borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record (all 8 basis tuples and 16 inherited-control tuples)")
             symbols=json.loads(block.split("section symbols\n",1)[1].split("\n",1)[0])
             regions=[]
-            deferred={"sum_db":"layout/lproc construction", "through":"layout/lproc construction", "plus_db":"classical pseudo-location wire binding", "g":"classical pseudo-location wire binding", "ginv":"classical pseudo-location wire binding", "addya":"qinplace inverse-pair construction"}
+            deferred={"through":"nested oracle/permutation call row construction", "plus_db":"classical pseudo-location wire binding", "g":"classical pseudo-location wire binding", "ginv":"classical pseudo-location wire binding", "addya":"qinplace inverse-pair construction"}
             for symbol in symbols.values():
                 if symbol["kind"] in {"oracle","action","perm_action"}:
                     name=symbol["name"]
                     region={"name":name,"interface_hash":symbol["interface_hash"],"outcome":"UNSUPPORTED" if name in deferred else "OK","test":"normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"}
-                    if name in deferred: region.update(reason=deferred[name],beads=["bennett-sched-r28","bennett-sched-ark"] if name in {"g","ginv"} else ["bennett-sched-ark"])
+                    if name in deferred: region.update(reason=deferred[name],beads=["bennett-sched-r28","bennett-sched-ark"] if name in {"g","ginv","plus_db"} else ["bennett-sched-ark"])
+                    if name=="sum_db":
+                        region.update(outcome="ERROR",status="BENNETT_E_NOMEM",reason="Materialized reference constructor leaf workspace exhausted at B=3; scalable expansion remains required.",beads=["bennett-sched-2u4","bennett-sched-ark"],zero_budget_witness={"outcome":"OK","budget":[0,0,0,0]})
                     regions.append(region)
             record["quantum_region_audit"]=regions
             examples.append(record)

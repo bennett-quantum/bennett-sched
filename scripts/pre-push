@@ -10,9 +10,15 @@ script_dir="$(dirname -- "$script_path")"
 root="$(dirname -- "$script_dir")"
 check() {
   local checkout="$1" target="$2"
+  local jobs=4 threads=4 available
+  free -g
+  uptime
+  available="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
+  [[ "$available" =~ ^[0-9]+$ ]] || { echo "pre-push: cannot determine available memory" >&2; return 1; }
+  if (( available < 6 * 1024 * 1024 )); then jobs=2; threads=2; fi
   mkdir -p "$checkout/.tmp/sol-sched/tmp" "$target"
   env TMPDIR="$checkout/.tmp/sol-sched/tmp" CARGO_TARGET_DIR="$target" \
-    timeout 600 cargo test --offline -j4 --manifest-path "$checkout/Cargo.toml" -- --test-threads=4
+    timeout 600 cargo test --offline -j"$jobs" --manifest-path "$checkout/Cargo.toml" -- --test-threads="$threads"
   env TMPDIR="$checkout/.tmp/sol-sched/tmp" \
     cargo fmt --manifest-path "$checkout/Cargo.toml" -- --check
 }

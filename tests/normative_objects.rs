@@ -39,6 +39,7 @@ fn every_normative_quantum_region_has_an_audited_typed_scheduler_outcome() {
     let mut checked = 0;
     let mut ok = 0;
     let mut unsupported = 0;
+    let mut host_limited = 0;
     for source in text
         .split("```")
         .skip(1)
@@ -76,11 +77,31 @@ fn every_normative_quantum_region_has_an_audited_typed_scheduler_outcome() {
                 .set_params(&canonical::to_vec(&json!(args)).unwrap())
                 .unwrap();
             request.set_accuracy("0").unwrap();
-            let result = request
-                .schedule()
-                .unwrap_or_else(|e| panic!("{}: {e}", f.name));
-            let postponed =
-                ["sum_db", "g", "ginv", "addya", "through", "plus_db"].contains(&f.name.as_str());
+            let result = match request.schedule() {
+                Err(error) if f.name == "sum_db" => {
+                    assert_eq!(error.status, bennett_sched::Status::NoMem);
+                    assert!(error.reason.contains("host workspace"));
+                    host_limited += 1;
+                    checked += 1;
+                    // Retain the positive-budget host-limit observation above;
+                    // also exercise this exact object at B=0, including its full
+                    // layout initialization, commit and release construction.
+                    request.budget = Some([0, 0, 0, 0]);
+                    let zero = request.schedule().unwrap();
+                    assert_eq!(zero.outcome, Outcome::Ok, "{:?}", zero.reason);
+                    bennett_sched::schedule::Document::parse(
+                        canonical::require_jcs(&zero.schedule).unwrap(),
+                    )
+                    .unwrap()
+                    .validate_request(&request)
+                    .unwrap();
+                    canonical::require_jcs(&zero.certificate).unwrap();
+                    continue;
+                }
+                Err(error) => panic!("{}: {error}", f.name),
+                Ok(result) => result,
+            };
+            let postponed = ["g", "ginv", "addya", "through", "plus_db"].contains(&f.name.as_str());
             assert_eq!(
                 result.outcome,
                 if postponed {
@@ -115,5 +136,5 @@ fn every_normative_quantum_region_has_an_audited_typed_scheduler_outcome() {
             checked += 1;
         }
     }
-    assert_eq!((checked, ok, unsupported), (13, 7, 6));
+    assert_eq!((checked, ok, unsupported, host_limited), (13, 7, 5, 1));
 }

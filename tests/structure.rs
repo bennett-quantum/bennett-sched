@@ -8,6 +8,97 @@ use std::collections::BTreeMap;
 mod common;
 
 #[test]
+fn adjoint_calls_preserve_caller_loop_coordinates_and_remap_only_the_callee() {
+    let base = common::action(
+        "perm_action",
+        "flip",
+        json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[2]}),
+        "perm_action @flip (t:wire mut) () () () ()",
+        "qloop 2 {\nx t\n}",
+    );
+    for prefix in ["", "adj "] {
+        let caller = common::caller(
+            &base,
+            "perm_action",
+            "outer",
+            json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[3]}),
+            "perm_action @outer (t:wire mut) () () () ()",
+            &format!("qloop 3 {{\n{prefix}action_call @flip (t) () () ()\n}}"),
+        );
+        let object = Object::parse(&caller).unwrap();
+        let trace = Trace::build(&object, "outer", 0, &json!([]), [0; 4]).unwrap();
+        let actual = trace
+            .events
+            .iter()
+            .map(|e| {
+                (
+                    e.location.path[0].iteration.clone(),
+                    e.location.path[1].iteration.clone(),
+                )
+            })
+            .collect::<Vec<_>>();
+        let expected = (0..3)
+            .flat_map(|caller| (0..2).map(move |callee| (vec![caller], vec![callee])))
+            .collect::<Vec<_>>();
+        assert_eq!(actual, expected, "{prefix}action_call");
+    }
+}
+
+#[test]
+fn nested_adjoint_calls_leave_every_outside_loop_coordinate_unchanged() {
+    let base = common::action(
+        "perm_action",
+        "flip",
+        json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[2]}),
+        "perm_action @flip (t:wire mut) () () () ()",
+        "qloop 2 {\nx t\n}",
+    );
+    let middle = common::caller(
+        &base,
+        "perm_action",
+        "middle",
+        json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[3]}),
+        "perm_action @middle (t:wire mut) () () () ()",
+        "qloop 3 {\nadj action_call @flip (t) () () ()\n}",
+    );
+    let outer = common::caller(
+        &middle,
+        "perm_action",
+        "outer",
+        json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[2]}),
+        "perm_action @outer (t:wire mut) () () () ()",
+        "qloop 2 {\nadj action_call @middle (t) () () ()\n}",
+    );
+    let trace = Trace::build(
+        &Object::parse(&outer).unwrap(),
+        "outer",
+        0,
+        &json!([]),
+        [0; 4],
+    )
+    .unwrap();
+    let actual = trace
+        .events
+        .iter()
+        .map(|e| {
+            e.location
+                .path
+                .iter()
+                .map(|p| p.iteration.clone())
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let expected = (0..2)
+        .flat_map(|outer| {
+            (0..3).flat_map(move |middle| {
+                (0..2).map(move |inner| vec![vec![outer], vec![middle], vec![inner]])
+            })
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(actual, expected);
+}
+
+#[test]
 fn while_flags_pad_every_iteration_and_restore_scratch_for_every_condition() {
     for n in 1..=3 {
         let signature = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[n],"mem":[],"args":[],"bounds":[n]});
