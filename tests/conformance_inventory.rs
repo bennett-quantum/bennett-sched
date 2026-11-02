@@ -74,7 +74,25 @@ fn conformance_inventory_records_every_case_and_portable_manifest_without_stale_
                 assert_eq!(manifest["admitted"], 4);
                 assert_eq!(manifest["rejected"], 8);
             }
-            "k80.json" | "k81.json" => {
+            "k83.json" => {
+                assert_eq!(
+                    manifest["coverage"],
+                    "source-traces-and-rebound-schedule-admission"
+                );
+                assert_eq!(manifest["source_cases"], 6);
+                assert_eq!(manifest["rebound_accepted"], 2);
+                assert_eq!(manifest["rebound_rejected"], 6);
+                assert_eq!(manifest["original_missing_expansion"], 8);
+            }
+            "k80.json" => {
+                assert_eq!(
+                    manifest["coverage"],
+                    "version-rebound-source-traces-and-complete-basis-tuples"
+                );
+                assert_eq!(manifest["source_cases"], 5);
+                assert_eq!(manifest["basis_tuples"], 80);
+            }
+            "k81.json" => {
                 assert_eq!(manifest["coverage"], "partial-equivalent-witness")
             }
             _ => assert_eq!(manifest["coverage"], "not-exercised"),

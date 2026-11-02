@@ -26,6 +26,7 @@ DIRECT = {
     "E-mbu-must-be-false": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
     "E-topology-grid-09": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
 }
+DIRECT.update({f"F-k83-{name}": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse" for name in ["zero-trip","qif-arms","image-01","image-81","controlled-image-81","repeated-image-81"]})
 EQUIVALENT = {
     "E-matching-first-entry": "target::matching_continues_after_unachievable_accuracy_and_counts_effective_controls",
     "E-ref-09-qxor-witness": "expansion::published_bound_qxor_all_sixteen_tuples_and_inverse_ordinals",
@@ -71,6 +72,8 @@ def main():
         record = {"id": identifier, "suite": case["suite"], "source": str(path.relative_to(SPEC)), "sha256": sha(raw)}
         if identifier in DIRECT:
             record.update(coverage="direct-fixture-test", test=DIRECT[identifier])
+        elif identifier.startswith("H-k83-"):
+            record.update(coverage="rebound-schedule-fixture-test",test="k83_vectors::published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebinding",remaining="Published schedule omits required expansion binding and has placeholder target hash. Original strict rejection and explicitly rebound admission are separate evidence.",beads=["bennett-sched-qnl"],target_adapter_sha256=sha((ROOT / "data/k83-target.json").read_bytes()))
         elif identifier in EQUIVALENT:
             record.update(coverage="equivalent-witness-test", test=EQUIVALENT[identifier])
         elif identifier.startswith("E-ref-09-"):
@@ -93,12 +96,12 @@ def main():
             if record["number"]==3: record.update(semantics="borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record (all 8 basis tuples and 16 inherited-control tuples)")
             symbols=json.loads(block.split("section symbols\n",1)[1].split("\n",1)[0])
             regions=[]
-            deferred={"through":"nested oracle/permutation call row construction", "plus_db":"classical pseudo-location wire binding", "g":"classical pseudo-location wire binding", "ginv":"classical pseudo-location wire binding", "addya":"qinplace inverse-pair construction"}
+            deferred={"through":"nested oracle/permutation call row construction", "plus_db":"classical pseudo-location wire binding", "g":"classical pseudo-location wire binding", "ginv":"classical pseudo-location wire binding", "addya":"classical pseudo-location wire binding in inverse pair"}
             for symbol in symbols.values():
                 if symbol["kind"] in {"oracle","action","perm_action"}:
                     name=symbol["name"]
                     region={"name":name,"interface_hash":symbol["interface_hash"],"outcome":"UNSUPPORTED" if name in deferred else "OK","test":"normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"}
-                    if name in deferred: region.update(reason=deferred[name],beads=["bennett-sched-r28","bennett-sched-ark"] if name in {"g","ginv","plus_db"} else ["bennett-sched-ark"])
+                    if name in deferred: region.update(reason=deferred[name],beads=["bennett-sched-r28","bennett-sched-ark"] if name in {"g","ginv","plus_db","addya"} else ["bennett-sched-ark"])
                     if name=="sum_db":
                         region.update(outcome="ERROR",status="BENNETT_E_NOMEM",reason="Materialized reference constructor leaf workspace exhausted at B=3; scalable expansion remains required.",beads=["bennett-sched-2u4","bennett-sched-ark"],zero_budget_witness={"outcome":"OK","budget":[0,0,0,0]})
                     regions.append(region)
@@ -112,10 +115,12 @@ def main():
             record.update(coverage="direct-fixture-test",test="named_interface",catalog_interfaces=54,edge_digests=86)
         elif path.name=="k79.json":
             record.update(coverage="source-admission-and-complete-basis-tuples",test="regions::every_k79_source_address_vector_is_admitted_or_rejected_before_ref_helper_expansion",admitted=4,rejected=8,basis_tuples=128)
+        elif path.name=="k83.json":
+            record.update(coverage="source-traces-and-rebound-schedule-admission",test="k83_vectors",source_cases=6,schedule_cases=8,rebound_accepted=2,rebound_rejected=6,original_missing_expansion=8,target_adapter_sha256=sha((ROOT / "data/k83-target.json").read_bytes()),remaining="Original positive schedule schema/bindings need upstream fixture repair; exact request queued under COMMON14.")
         elif path.name=="k80.json":
-            record.update(coverage="partial-equivalent-witness",test="cleanup (primitive/intrinsic recompute, eight-leaf carrier ordinals, loop coordinate provenance)",remaining="fresh semantic-call recompute contexts and direct complete manifest replay")
+            record.update(coverage="version-rebound-source-traces-and-complete-basis-tuples",test="k80_vectors::all_published_k80_trace_fields_and_complete_basis_tuples_match_after_version_rebinding",source_cases=5,basis_tuples=80,remaining="Published 0.8 source bodies are re-enveloped/rehashed for 0.9 without instruction changes; this is not verbatim 0.9 document admission.")
         elif path.name=="k81.json":
-            record.update(coverage="partial-equivalent-witness",test="cleanup::intrinsic_boundaries_and_joint_call_inverses_have_exactly_one_owner",remaining="fresh call recompute, nonzero target history replay and direct complete manifest replay")
+            record.update(coverage="partial-equivalent-witness",test="cleanup::intrinsic_boundaries_and_joint_call_inverses_have_exactly_one_owner",remaining="General mutable-interface/borrowed pre-call history replay and direct complete manifest replay; allocated copy history and fresh call spaces have focused coverage.")
         portable.append(record)
     report = {
         "schema": "bennett-sched.conformance-inventory.v1",
@@ -124,6 +129,7 @@ def main():
         "coverage_counts": dict(sorted(collections.Counter(r["coverage"] for r in records).items())),
         "normative_scheduler_audit":{"regions":sum(len(e["quantum_region_audit"]) for e in examples),"outcomes":dict(collections.Counter(r["outcome"] for e in examples for r in e["quantum_region_audit"])),"request":"B=3, heap=stack=depth=0; typed zero args, tokens=(3,0,0,0); universal exact target, unbounded capacity, no topology","meaning":"Producer schedule/document audit with tracked deferrals; no independent checker verdict."},
         "cases": records, "normative_objects": examples, "portable_manifests": portable,
+        "inline_witnesses": [{"id":"K77-TWO-TOKEN", "source":"spec/Bennett-ISA-Spec-0.9.md", "section":"11.1 Two-token witness", "coverage":"published-source-expansion-witness", "test":"oracle_calls::published_k77_two_token_inc8_witness_covers_every_input_and_both_controls", "registry_adapter_test":"linked_source::source_registry_replays_the_actual_k77_two_token_witness_through_direct_and_captured_adapters", "capture_forms":["direct","manual-body","manual-template","typed-body","typed-template"], "input_values":256, "control_values":2, "initial_target":0, "initial_fault":0, "certificate_limit":"Combined differing-budget resource reports require bennett-sched-1na; no complete certificate claim."}],
         "reference_schedule_execution": "not claimed; installed reference interpreter documents staged target/schedule execution",
     }
     if args.probe_reference:
@@ -139,7 +145,7 @@ def main():
         report["recorded_at_utc"] = subprocess.check_output(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"], text=True).strip()
         (ROOT / "docs/conformance-report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     print(json.dumps({"case_count": len(records), "suites": report["suites"], "coverage_counts": report["coverage_counts"], "normative_objects": len(examples), "portable_manifests": len(portable)}, sort_keys=True))
-    return 2 if args.require_complete and any(r["coverage"].startswith(("partial", "not-")) for r in records) else 0
+    return 2 if args.require_complete and any(r["coverage"].startswith(("partial", "not-", "rebound")) for r in records) else 0
 
 
 if __name__ == "__main__":

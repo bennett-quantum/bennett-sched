@@ -14,6 +14,7 @@ impl Builder<'_> {
         chain: &[Occurrence],
         iteration: &[u64],
         owner: usize,
+        call_index: u64,
     ) -> Result<()> {
         if node.lhs.is_some() || operands.len() != 7 {
             return Err(Error::arg(
@@ -142,7 +143,7 @@ impl Builder<'_> {
             point: node.point.clone(),
             iteration: iteration.to_vec(),
             instance: vec![],
-            call_index: Some(0),
+            call_index: Some(call_index),
             entered_oracle: Some(Coordinate::default()),
         });
         let prefix = format!(

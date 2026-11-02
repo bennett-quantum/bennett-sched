@@ -2,23 +2,24 @@
   "schema": "bennett-sched.conformance-inventory.v1",
   "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
   "spec_sha256": "7458b362d22d2b89912331da8866e334385686faf8e2b51d8d49684e522c3034",
-  "case_count": 519,
+  "case_count": 533,
   "suites": {
     "A": 22,
     "B": 35,
     "C": 340,
     "D": 13,
     "E": 38,
-    "F": 37,
+    "F": 43,
     "G": 24,
-    "H": 10
+    "H": 18
   },
   "coverage_counts": {
-    "direct-fixture-test": 12,
+    "direct-fixture-test": 18,
     "equivalent-witness-test": 17,
     "not-exercised-executor-or-checker-vector": 465,
     "not-exercised-scheduler-vector": 5,
-    "partial-reference-expansion": 20
+    "partial-reference-expansion": 20,
+    "rebound-schedule-fixture-test": 8
   },
   "normative_scheduler_audit": {
     "regions": 13,
@@ -5104,6 +5105,54 @@
       ]
     },
     {
+      "id": "F-k83-controlled-image-81",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k83-controlled-image-81/case.json",
+      "sha256": "6c37891bd7ee491dd74e25d0582487828781b85e63d0319acbe5bfe39b3711c6",
+      "coverage": "direct-fixture-test",
+      "test": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse"
+    },
+    {
+      "id": "F-k83-image-01",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k83-image-01/case.json",
+      "sha256": "7afa0c50332a75b4435291cbe460bb17e9f34104d01b73123a3e167e379c50c3",
+      "coverage": "direct-fixture-test",
+      "test": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse"
+    },
+    {
+      "id": "F-k83-image-81",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k83-image-81/case.json",
+      "sha256": "922dcf89952bfca7cb47b8674b2fce0d1b069e529b31d31623a37081078d77d8",
+      "coverage": "direct-fixture-test",
+      "test": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse"
+    },
+    {
+      "id": "F-k83-qif-arms",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k83-qif-arms/case.json",
+      "sha256": "7968bd669d5aec731f45006ab09f55005bf76a3599ee2cea98edd51e01cbd728",
+      "coverage": "direct-fixture-test",
+      "test": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse"
+    },
+    {
+      "id": "F-k83-repeated-image-81",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k83-repeated-image-81/case.json",
+      "sha256": "fb7fd1fa74cf65d7c1f70dd1eb8338eb269b218a106f858a5719fd7ec7d96145",
+      "coverage": "direct-fixture-test",
+      "test": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse"
+    },
+    {
+      "id": "F-k83-zero-trip",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k83-zero-trip/case.json",
+      "sha256": "13ecae95fdab92f57f17842181cb546a01621a81886bedb917f4d58488ec67f8",
+      "coverage": "direct-fixture-test",
+      "test": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse"
+    },
+    {
       "id": "F-lex-blank-line",
       "suite": "F",
       "source": "conformance/cases/F/F-lex-blank-line/case.json",
@@ -5581,6 +5630,110 @@
       "test": "canonical_cost::decision_decimals_preserve_all_digits_and_shares_round_down; pipeline"
     },
     {
+      "id": "H-k83-action-commit",
+      "suite": "H",
+      "source": "conformance/cases/H/H-k83-action-commit/case.json",
+      "sha256": "885d92ee1804f1d546b8799d555e9e3860c76641d7f6d7177ea8068c8f0a50cd",
+      "coverage": "rebound-schedule-fixture-test",
+      "test": "k83_vectors::published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebinding",
+      "remaining": "Published schedule omits required expansion binding and has placeholder target hash. Original strict rejection and explicitly rebound admission are separate evidence.",
+      "beads": [
+        "bennett-sched-qnl"
+      ],
+      "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123"
+    },
+    {
+      "id": "H-k83-action-step",
+      "suite": "H",
+      "source": "conformance/cases/H/H-k83-action-step/case.json",
+      "sha256": "0840511a0093969aa5a8b2faba131decc55321bdef82ba84488329b0f0b9828c",
+      "coverage": "rebound-schedule-fixture-test",
+      "test": "k83_vectors::published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebinding",
+      "remaining": "Published schedule omits required expansion binding and has placeholder target hash. Original strict rejection and explicitly rebound admission are separate evidence.",
+      "beads": [
+        "bennett-sched-qnl"
+      ],
+      "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123"
+    },
+    {
+      "id": "H-k83-controlled-duplicate-support",
+      "suite": "H",
+      "source": "conformance/cases/H/H-k83-controlled-duplicate-support/case.json",
+      "sha256": "1898ff120464eadfb6aeff623d600bb2774cb3b59e0a039678b1dbdfb7b018dd",
+      "coverage": "rebound-schedule-fixture-test",
+      "test": "k83_vectors::published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebinding",
+      "remaining": "Published schedule omits required expansion binding and has placeholder target hash. Original strict rejection and explicitly rebound admission are separate evidence.",
+      "beads": [
+        "bennett-sched-qnl"
+      ],
+      "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123"
+    },
+    {
+      "id": "H-k83-duplicate-support",
+      "suite": "H",
+      "source": "conformance/cases/H/H-k83-duplicate-support/case.json",
+      "sha256": "4c9248d6de527646765ceb354b2ccf057af9e22ccc6c8c95456299b0f8b92080",
+      "coverage": "rebound-schedule-fixture-test",
+      "test": "k83_vectors::published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebinding",
+      "remaining": "Published schedule omits required expansion binding and has placeholder target hash. Original strict rejection and explicitly rebound admission are separate evidence.",
+      "beads": [
+        "bennett-sched-qnl"
+      ],
+      "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123"
+    },
+    {
+      "id": "H-k83-empty-support",
+      "suite": "H",
+      "source": "conformance/cases/H/H-k83-empty-support/case.json",
+      "sha256": "f7421a83f993d6d775c828988f8245ca62360b4fe76ead8365c66d99ebd61e2c",
+      "coverage": "rebound-schedule-fixture-test",
+      "test": "k83_vectors::published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebinding",
+      "remaining": "Published schedule omits required expansion binding and has placeholder target hash. Original strict rejection and explicitly rebound admission are separate evidence.",
+      "beads": [
+        "bennett-sched-qnl"
+      ],
+      "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123"
+    },
+    {
+      "id": "H-k83-nonempty-instance",
+      "suite": "H",
+      "source": "conformance/cases/H/H-k83-nonempty-instance/case.json",
+      "sha256": "56dd2e1c0e828747d8752c6bedfb04c5e6b873c558ea26594459b910e6725e29",
+      "coverage": "rebound-schedule-fixture-test",
+      "test": "k83_vectors::published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebinding",
+      "remaining": "Published schedule omits required expansion binding and has placeholder target hash. Original strict rejection and explicitly rebound admission are separate evidence.",
+      "beads": [
+        "bennett-sched-qnl"
+      ],
+      "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123"
+    },
+    {
+      "id": "H-k83-nonempty-iteration",
+      "suite": "H",
+      "source": "conformance/cases/H/H-k83-nonempty-iteration/case.json",
+      "sha256": "93c990f737b4f2ce3064536970336541d9793a539607bdcb001b1a50e3ffce29",
+      "coverage": "rebound-schedule-fixture-test",
+      "test": "k83_vectors::published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebinding",
+      "remaining": "Published schedule omits required expansion binding and has placeholder target hash. Original strict rejection and explicitly rebound admission are separate evidence.",
+      "beads": [
+        "bennett-sched-qnl"
+      ],
+      "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123"
+    },
+    {
+      "id": "H-k83-valid-support",
+      "suite": "H",
+      "source": "conformance/cases/H/H-k83-valid-support/case.json",
+      "sha256": "bf0cd2521b4b4e1e9cb387b243c0db9840686caeb4731b88c0d1a15718c402af",
+      "coverage": "rebound-schedule-fixture-test",
+      "test": "k83_vectors::published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebinding",
+      "remaining": "Published schedule omits required expansion binding and has placeholder target hash. Original strict rejection and explicitly rebound admission are separate evidence.",
+      "beads": [
+        "bennett-sched-qnl"
+      ],
+      "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123"
+    },
+    {
       "id": "H-mbu-realisation-invalid",
       "suite": "H",
       "source": "conformance/cases/H/H-mbu-realisation-invalid/case.json",
@@ -5785,8 +5938,9 @@
           "interface_hash": "5999b6d3d2362f8c1971ef6f37b404766aa5c18f6ba1880d767bfde351e47392",
           "outcome": "UNSUPPORTED",
           "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
-          "reason": "qinplace inverse-pair construction",
+          "reason": "classical pseudo-location wire binding in inverse pair",
           "beads": [
+            "bennett-sched-r28",
             "bennett-sched-ark"
           ]
         }
@@ -5876,12 +6030,14 @@
       "path": "conformance/fixtures/accepted-k78-k80-09/k80.json",
       "sha256": "cc12c172ed1c4fef3d02e2ee846d19e76f9081e838e40a7bdde50e67ae4abce2",
       "vectors": 5,
-      "coverage": "partial-equivalent-witness",
+      "coverage": "version-rebound-source-traces-and-complete-basis-tuples",
       "beads": [
         "bennett-sched-ark"
       ],
-      "test": "cleanup (primitive/intrinsic recompute, eight-leaf carrier ordinals, loop coordinate provenance)",
-      "remaining": "fresh semantic-call recompute contexts and direct complete manifest replay"
+      "test": "k80_vectors::all_published_k80_trace_fields_and_complete_basis_tuples_match_after_version_rebinding",
+      "source_cases": 5,
+      "basis_tuples": 80,
+      "remaining": "Published 0.8 source bodies are re-enveloped/rehashed for 0.9 without instruction changes; this is not verbatim 0.9 document admission."
     },
     {
       "path": "conformance/fixtures/accepted-k81-09/k81.json",
@@ -5892,7 +6048,7 @@
         "bennett-sched-ark"
       ],
       "test": "cleanup::intrinsic_boundaries_and_joint_call_inverses_have_exactly_one_owner",
-      "remaining": "fresh call recompute, nonzero target history replay and direct complete manifest replay"
+      "remaining": "General mutable-interface/borrowed pre-call history replay and direct complete manifest replay; allocated copy history and fresh call spaces have focused coverage."
     },
     {
       "path": "conformance/fixtures/accepted-k82-09/k82.json",
@@ -5905,6 +6061,45 @@
       "test": "named_interface",
       "catalog_interfaces": 54,
       "edge_digests": 86
+    },
+    {
+      "path": "conformance/fixtures/accepted-k83-09/k83.json",
+      "sha256": "31471bd3c4a527ccb7dd7d31f10d2b4f8c98230e9418d9dedbb8bb50a3b69034",
+      "vectors": 6,
+      "coverage": "source-traces-and-rebound-schedule-admission",
+      "beads": [
+        "bennett-sched-ark"
+      ],
+      "test": "k83_vectors",
+      "source_cases": 6,
+      "schedule_cases": 8,
+      "rebound_accepted": 2,
+      "rebound_rejected": 6,
+      "original_missing_expansion": 8,
+      "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123",
+      "remaining": "Original positive schedule schema/bindings need upstream fixture repair; exact request queued under COMMON14."
+    }
+  ],
+  "inline_witnesses": [
+    {
+      "id": "K77-TWO-TOKEN",
+      "source": "spec/Bennett-ISA-Spec-0.9.md",
+      "section": "11.1 Two-token witness",
+      "coverage": "published-source-expansion-witness",
+      "test": "oracle_calls::published_k77_two_token_inc8_witness_covers_every_input_and_both_controls",
+      "registry_adapter_test": "linked_source::source_registry_replays_the_actual_k77_two_token_witness_through_direct_and_captured_adapters",
+      "capture_forms": [
+        "direct",
+        "manual-body",
+        "manual-template",
+        "typed-body",
+        "typed-template"
+      ],
+      "input_values": 256,
+      "control_values": 2,
+      "initial_target": 0,
+      "initial_fault": 0,
+      "certificate_limit": "Combined differing-budget resource reports require bennett-sched-1na; no complete certificate claim."
     }
   ],
   "reference_schedule_execution": "not claimed; installed reference interpreter documents staged target/schedule execution",
@@ -5918,5 +6113,5 @@
     "stdout": "",
     "stderr": "§1: expected isa=0.8\n"
   },
-  "recorded_at_utc": "2026-11-02T10:14:12Z"
+  "recorded_at_utc": "2026-11-02T13:13:22Z"
 }

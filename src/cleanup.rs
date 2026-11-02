@@ -6,6 +6,7 @@ use crate::{
     source::Event,
 };
 use std::collections::{BTreeMap, BTreeSet};
+mod replay;
 #[derive(Clone, Debug)]
 pub struct Pair {
     pub owner: usize,
@@ -27,7 +28,7 @@ fn intrinsic(e: &Event) -> bool {
     matches!(&e.leaf.op,Operation::Gate(g)if g.op.starts_with("$perm/intrinsic/"))
 }
 fn call(e: &Event) -> bool {
-    matches!(&e.leaf.op,Operation::Gate(g)if g.op.starts_with("$perm/call")||g.op.starts_with("$other/call")||g.op.starts_with("$perm/oracle/"))
+    matches!(&e.leaf.op,Operation::Gate(g)if g.op.starts_with("$perm/call")||g.op.starts_with("$other/call")||g.op.starts_with("$perm/oracle/")||g.op.starts_with("$perm/qinplace"))
 }
 fn pair(
     owner: usize,
@@ -205,6 +206,9 @@ impl crate::source::Trace {
             .collect::<crate::Result<Vec<_>>>()?;
         let mut staged = self.clone();
         for (pair_index, choice) in choices.iter().enumerate() {
+            if replay::owner_replaced(self, &staged, self.cleanups[pair_index].owner) {
+                continue;
+            }
             if choice == "reverse" {
                 continue;
             }
@@ -229,10 +233,9 @@ impl crate::source::Trace {
                             })
                     })
             }) {
-                return Err(Error::new(
-                    Status::GateUnsupported,
-                    "§11 K80: fresh semantic-call recompute contexts are postponed (bennett-sched-ark)",
-                ));
+                replay::replace(self, &mut staged, pair_index, entries)?;
+                staged.cleanups[pair_index].realisation = choice.clone();
+                continue;
             }
             let targets = pair.targets.iter().cloned().collect::<BTreeSet<_>>();
             let mut mapping = BTreeMap::new();
@@ -412,6 +415,7 @@ impl crate::source::Trace {
             staged.events = events;
             staged.cleanups[pair_index].realisation = choice.clone();
         }
+        replay::remove_replaced_invocations(self, &mut staged)?;
         for owner in 0..staged.invocations.len() {
             let positions = staged
                 .events

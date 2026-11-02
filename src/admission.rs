@@ -11,6 +11,27 @@ use std::collections::{BTreeMap, BTreeSet};
 fn fail(reason: impl Into<String>) -> Error {
     Error::infeasible(format!("§11: {}", reason.into()))
 }
+fn path_prefix_matches(
+    selectors: &[crate::schedule::PathElement],
+    path: &[crate::schedule::Occurrence],
+    carrier: bool,
+) -> bool {
+    fn matches<T: PartialEq>(s: &Selector<T>, v: Option<&T>) -> bool {
+        match s {
+            Selector::Any => true,
+            Selector::Exact(w) => v == Some(w),
+        }
+    }
+    selectors.len() <= path.len()
+        && selectors.iter().zip(path).enumerate().all(|(n, (s, p))| {
+            s.symbol == p.symbol
+                && s.point == p.point
+                && matches(&s.iteration, Some(&p.iteration))
+                && matches(&s.instance, Some(&p.instance))
+                && ((carrier && n + 1 == selectors.len())
+                    || matches(&s.call_index, p.call_index.as_ref()))
+        })
+}
 fn instruction(node: &Node) -> (&str, Vec<&str>, bool) {
     let mut op = node.op.as_str();
     let mut args = node.operands.iter().map(String::as_str).collect::<Vec<_>>();
@@ -99,6 +120,9 @@ impl Document {
     /// Every selector path must identify source points and actual call edges,
     /// including entries which happen not to match a generated leaf this run.
     pub fn validate_paths(&self, object: &Object) -> Result<()> {
+        self.validate_bound_paths(object, None)
+    }
+    fn validate_bound_paths(&self, object: &Object, trace: Option<&Trace>) -> Result<()> {
         let root = object
             .region(text(&self.value["bindings"]["closure_hash"])?)
             .map_err(|e| fail(e.reason))?;
@@ -188,10 +212,33 @@ impl Document {
                         ));
                     }
                 }
-                let (targets, next_orientation) = node
+                let (targets, mut next_orientation) = node
                     .map(|n| call_targets(n, orientation))
                     .unwrap_or_default();
-                let selected = if let Selector::Exact(call_index) = point.call_index {
+                let fresh = trace.filter(|trace| {
+                    trace.cleanups.iter().any(|p| {
+                        p.realisation == "recompute"
+                            && p.carrier.path.len() == index + 1
+                            && path_prefix_matches(&entry.path[..=index], &p.carrier.path, true)
+                    })
+                });
+                let selected = if let Some(trace) = fresh {
+                    let calls = trace
+                        .invocations
+                        .iter()
+                        .filter(|i| {
+                            i.path.len() == index + 1
+                                && path_prefix_matches(&entry.path[..=index], &i.path, false)
+                        })
+                        .collect::<Vec<_>>();
+                    if calls.is_empty() && matches!(point.call_index, Selector::Exact(_)) {
+                        return Err(fail("call_index is not in the recompute expansion"));
+                    }
+                    if let Some(call) = calls.first() {
+                        next_orientation = call.adjoint;
+                    }
+                    calls.into_iter().map(|i| i.name.clone()).collect()
+                } else if let Selector::Exact(call_index) = point.call_index {
                     if let Some(target) = targets.get(call_index as usize) {
                         vec![target.clone()]
                     } else {
@@ -233,7 +280,7 @@ impl Document {
         Ok(())
     }
     fn validate_request_bindings(&self, request: &Request) -> Result<()> {
-        let object = request
+        request
             .object
             .as_ref()
             .ok_or_else(|| Error::arg("request object is unset"))?;
@@ -304,7 +351,7 @@ impl Document {
                 }
             }
         }
-        self.validate_paths(object)
+        Ok(())
     }
     fn validate_generated(&self, trace: &Trace, concrete: bool) -> Result<()> {
         // In Q source, a nested oracle token forwards an unresolved root
@@ -345,6 +392,7 @@ impl Document {
         if self.entries.iter().any(|e| e.kind == Kind::Cleanup) {
             trace.realise_cleanup_entries(&self.entries)?;
         }
+        self.validate_bound_paths(object, Some(&trace))?;
         self.validate_generated(&trace, false)
     }
     /// Producer verification can reuse its prepared trace and check every
@@ -355,6 +403,10 @@ impl Document {
         trace: &Trace,
     ) -> Result<()> {
         self.validate_request_bindings(request)?;
+        self.validate_bound_paths(
+            request.object.as_ref().expect("validated object"),
+            Some(trace),
+        )?;
         self.validate_generated(trace, true)
     }
 }

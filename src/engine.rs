@@ -692,7 +692,30 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
         .map(|a| (a.acquire_order, a.release_order.unwrap()))
         .collect::<Vec<_>>();
     let rows = resources::aggregate_ordered(target, &events, &live, &orders)?;
-    let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|integer_json(*n)).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":entries});
+    // A nested selector reads its own oracle level, so several outer steps can
+    // share one address. They must share its decision rather than form a tie.
+    let mut declared = BTreeMap::new();
+    let mut merged = Vec::new();
+    for entry in entries {
+        let address = canonical::to_vec(&json!([
+            entry["path"],
+            entry["step"],
+            entry["phase"],
+            entry["generated"],
+            entry["kind"]
+        ]))?;
+        if let Some(previous) = declared.get(&address) {
+            if merged[*previous] != entry {
+                return Err(Error::infeasible(
+                    "§11: indistinguishable nested contexts require a common schedule decision",
+                ));
+            }
+        } else {
+            declared.insert(address, merged.len());
+            merged.push(entry);
+        }
+    }
+    let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|integer_json(*n)).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":merged});
     if let Some(placements) = root_placements {
         schedule["interface_vertices"] = json!(placements);
     }
@@ -753,6 +776,14 @@ fn slot_record(slot: &Slot, allocator: &Allocator<'_>) -> Result<Value> {
         .ok_or_else(|| Error::infeasible("interface slot has no recorded class"))?;
     Ok(json!({"id":slot.id,"role":slot.role,"class":class,"width":slot.wires.len()}))
 }
+fn oracle_history(identity: &str) -> bool {
+    let index = identity.strip_prefix("oracle-state/history-").or_else(|| {
+        identity
+            .rsplit_once("/oracle-state/history-")
+            .map(|(_, index)| index)
+    });
+    index.is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
 #[allow(clippy::too_many_arguments)]
 fn certificate(
     request: &Request,
@@ -806,7 +837,7 @@ fn certificate(
             // Dynamic workspace ids already carry their invocation identity.
             // Include every realised allocation for this closure in allocation
             // order; identical repeated calls are not a slot-schema conflict.
-            let scratch=allocator.allocations.iter().filter(|a|a.owner.is_some_and(|owner| trace.invocations[owner].hash==inv.hash)&&a.scheme.is_none()&&a.state!="borrowed"&&!a.identity.starts_with("oracle-state/history-")).map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
+            let scratch=allocator.allocations.iter().filter(|a|a.owner.is_some_and(|owner| trace.invocations[owner].hash==inv.hash)&&a.scheme.is_none()&&a.state!="borrowed"&&!oracle_history(&a.identity)).map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
             let ancillae=allocator.allocations.iter().filter(|a|a.owner.is_some_and(|owner| trace.invocations[owner].hash==inv.hash)&&a.scheme.is_some()).map(|a|json!({"id":a.identity,"scheme":a.scheme,"class":a.class,"state":a.state,"width":a.wires.len()})).collect::<Vec<_>>();
             let borrowed = allocator
                 .allocations
@@ -825,7 +856,7 @@ fn certificate(
                 .filter(|a| {
                     a.owner
                         .is_some_and(|owner| trace.invocations[owner].hash == inv.hash)
-                        && a.identity.starts_with("oracle-state/history-")
+                        && oracle_history(&a.identity)
                         && a.scheme.is_none()
                 })
                 .map(|a| json!({"id":a.identity,"class":a.class,"width":a.wires.len()}))
@@ -922,6 +953,21 @@ fn certificate(
                 .as_array_mut()
                 .unwrap()
                 .push(json!(index));
+        }
+        for proof in trace.qinplaces.iter().filter(|p| p.owner == i) {
+            let index = record["claims"].as_array().unwrap().len();
+            record["claims"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({"kind":"exhaustive","expected":"inverse_pair","domain":proof.domain}));
+            let mut entry = json!({"g":proof.g,"ginv":proof.ginv,"claim":index,"budget":proof.budget.map(|n|n.to_string())});
+            if !proof.arg_tokens.as_object().unwrap().is_empty() {
+                entry["arg_tokens"] = proof.arg_tokens.clone();
+            }
+            record["verification"]["inverse_pairs"]
+                .as_array_mut()
+                .unwrap()
+                .push(entry);
         }
         let index = record["claims"].as_array().unwrap().len();
         record["claims"].as_array_mut().unwrap().push(claim);

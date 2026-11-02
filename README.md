@@ -14,8 +14,8 @@ headers are in the published ISA repository and [data/bennett_sched.h](data/benn
 
 The implemented path covers memoryless oracles, layout-backed root oracles with
 address/load/store/bounds-check/allocator/free rows and lproc call/return rows, and actions, plain/while loops and source adjoints,
-qif, copy/XOR/exchange, local regions and coherent memory, action calls and
-translation-lemma borrow frames. Native and approximate/exact target schemes
+qif, copy/XOR/exchange, local regions and coherent memory, action and explicit-token oracle calls and
+qinplace with complete finite-domain inverse-pair verification, and translation-lemma borrow frames. Native and approximate/exact target schemes
 use deterministic sequential timing, class capacity and topology placement,
 exact rational costs, imported quantities, occupancy and ordered lifetime peaks.
 It emits JCS schedules and bound certificates with exact resource fractions and
@@ -31,18 +31,17 @@ domains.
 The complete published 219-recipe `ref@0.9` is vendored as specification data.
 Accepted K82 governs named helper wire interfaces; all 16 binding cases, 54
 interfaces and 86 published expansion digests pass without changing its hash.
-Typed recipes/templates remain closed. Source version checking treats semantic
+Typed recipes/templates remain closed. Linked source builders validate typed header arguments and preserve the explicit oracle invocation channel across calls, bodies and templates; each tuple builds its own source trace and retains callee provenance. Source version checking treats semantic
 calls and intrinsic copy/load pairs atomically, checks dependency windows and
 uses a sufficient causal factorisation proof for other workspace. Cleanup carriers
 respect intrinsic boundaries and joint inverse ownership; primitive/intrinsic
-recompute preserves carrier coordinates. Finite class/vertex search finds a
+recompute preserves carrier coordinates. Fresh semantic-call replay keeps separate caller-leaf and call-occurrence counters, source callee adjoints and exact allocated pre-call histories. Finite class/vertex search finds a
 feasible assignment when an earlier assignment fails.
 
-Nested semantic calls/domain checks, fresh semantic-call
-recompute and input-history replay, qinplace, general cleanup and borrow proofs,
+Lifted semantic-call rows and remaining domain checks, general mutable-interface/borrowed input-history replay, general cleanup and borrow proofs,
 and objective optimisation remain `bennett-sched-ark`. Accepted K83 action-region
 support coordinates and recursive declaration collection are implemented and
-verified under `bennett-sched-ecz` by the full 129-test working-tree gate. Bounded-memory
+verified under `bennett-sched-ecz`. Qinplace proofs currently use bounded exhaustive tables/replay; scalable proof methods remain `bennett-sched-a0v`. A host-workspace failure reports `BENNETT_E_NOMEM` and never substitutes a smaller domain. Bounded-memory
 streaming remains `bennett-sched-2u4`: normative sum_db at B=3 currently exhausts
 the explicit materialized leaf workspace and reports `BENNETT_E_NOMEM`.
 Varying invocation frame descriptors require the `bennett-sched-lzv` contract

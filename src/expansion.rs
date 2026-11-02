@@ -21,6 +21,7 @@ pub enum Binding {
     Arguments {
         symbol: String,
         values: Vec<Binding>,
+        oracle_invocation: Option<crate::source_registry::OracleInvocation>,
     },
     Event(Value),
     Image(String),
@@ -62,6 +63,18 @@ pub struct Template {
 pub struct Symbol {
     pub parameters: Vec<Value>,
     pub body: Vec<Value>,
+    pub(crate) source: Option<crate::source_registry::Definition>,
+}
+impl Symbol {
+    pub fn constructors(parameters: Vec<Value>, body: Vec<Value>) -> Result<Self> {
+        validate_formals(&parameters)?;
+        validate_body(&body)?;
+        Ok(Self {
+            parameters,
+            body,
+            source: None,
+        })
+    }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Operation {
@@ -94,6 +107,7 @@ pub struct Origin {
     pub name: String,
     pub index: usize,
     pub reverse: bool,
+    pub source: Option<crate::source_registry::SourceOrigin>,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Leaf {
@@ -279,6 +293,8 @@ impl Library {
             live: BTreeSet::new(),
             owned: BTreeMap::new(),
             remaining: 1_000_000,
+            emitted: 0,
+            source_calls: vec![],
         };
         let mut frame = Frame::default();
         let bound = c.bind(array(&r["parameters"])?, array(args)?, caller, &[], true)?;
@@ -302,7 +318,18 @@ impl Library {
         controls: &[String],
         max_leaves: usize,
     ) -> Result<Vec<Leaf>> {
-        expansion_stack(|| self.body_inner(body, env, controls, max_leaves))
+        expansion_stack(|| {
+            self.body_inner(body, env, controls, max_leaves)
+                .map(|out| out.leaves)
+        })
+    }
+    pub fn body_with_sources(
+        &self,
+        body: &[Value],
+        env: &Env,
+        controls: &[String],
+    ) -> Result<crate::source_registry::Expanded> {
+        expansion_stack(|| self.body_inner(body, env, controls, 1_000_000))
     }
     fn body_inner(
         &self,
@@ -310,7 +337,7 @@ impl Library {
         env: &Env,
         controls: &[String],
         max_leaves: usize,
-    ) -> Result<Vec<Leaf>> {
+    ) -> Result<crate::source_registry::Expanded> {
         validate_body(body)?;
         let mut c = Compiler {
             library: self,
@@ -319,13 +346,18 @@ impl Library {
             live: BTreeSet::new(),
             owned: BTreeMap::new(),
             remaining: max_leaves,
+            emitted: 0,
+            source_calls: vec![],
         };
         let mut frame = Frame::default();
         let mut leaves = c.compile(body, &mut env.clone(), controls, &mut frame, false)?;
         number(&mut leaves);
         fresh_acquisitions(&mut leaves);
         validate_lifetimes(&leaves)?;
-        Ok(leaves)
+        Ok(crate::source_registry::Expanded {
+            leaves,
+            source_calls: c.source_calls,
+        })
     }
 }
 /// Keep constructor recursion on an explicitly provisioned stack. Rust callers
@@ -348,10 +380,14 @@ fn expansion_stack<T: Send>(work: impl FnOnce() -> Result<T> + Send) -> Result<T
         }
     })
 }
+fn formal_name(p: &Value) -> &str {
+    p.as_str()
+        .unwrap_or_else(|| p["name"].as_str().expect("validated formal"))
+}
 fn number(leaves: &mut [Leaf]) {
     let mut n = 0;
     for l in leaves {
-        if l.calls.is_empty() {
+        if l.calls.is_empty() && !l.origin.iter().any(|o| o.source.is_some()) {
             l.ordinal = n;
             n += 1;
         }
@@ -598,6 +634,8 @@ struct Compiler<'a> {
     live: BTreeSet<String>,
     owned: BTreeMap<String, String>,
     remaining: usize,
+    emitted: usize,
+    source_calls: Vec<crate::source_registry::SourceCall>,
 }
 // Capture referenced lexical bindings, including K82 implicit helper wires.
 // Keeping unrelated State/Frames/template lists here recursively duplicates
@@ -663,6 +701,7 @@ impl Compiler<'_> {
             }
             _ => {}
         }
+        self.emitted += 1;
         out.push(Leaf {
             ordinal: 0,
             calls: vec![],
@@ -695,6 +734,25 @@ impl Compiler<'_> {
             env.insert(name.into(), value);
         }
         Ok(env)
+    }
+    fn bind_resolved(
+        &mut self,
+        parameters: &[Value],
+        values: &[Binding],
+        controls: &[String],
+    ) -> Result<Env> {
+        if parameters.len() != values.len() {
+            return Err(Error::arg("linked call argument count mismatch"));
+        }
+        let caller = values
+            .iter()
+            .enumerate()
+            .map(|(i, b)| (format!("resolved{i}"), b.clone()))
+            .collect::<Env>();
+        let args = (0..values.len())
+            .map(|i| json!(format!("resolved{i}")))
+            .collect::<Vec<_>>();
+        self.bind(parameters, &args, &caller, controls, false)
     }
     fn actual(
         &mut self,
@@ -788,13 +846,19 @@ impl Compiler<'_> {
                 let Some(Binding::Symbol(symbol)) = earlier.get(text(&p["symbol"])?) else {
                     return Err(Error::arg("arguments formal has no earlier symbol"));
                 };
-                if let Some(Binding::Arguments { symbol: s, values }) = named {
+                if let Some(Binding::Arguments {
+                    symbol: s,
+                    values,
+                    oracle_invocation,
+                }) = named
+                {
                     if s != symbol {
                         return Err(Error::arg("arguments vector closure mismatch"));
                     }
                     Binding::Arguments {
                         symbol: s.clone(),
                         values: values.clone(),
+                        oracle_invocation: oracle_invocation.clone(),
                     }
                 } else {
                     let sig = &self.library.symbols[symbol].parameters;
@@ -813,6 +877,7 @@ impl Compiler<'_> {
                     Binding::Arguments {
                         symbol: symbol.clone(),
                         values,
+                        oracle_invocation: None,
                     }
                 }
             }
@@ -1089,8 +1154,20 @@ impl Compiler<'_> {
                 )?;
             } else if c.get("inverse").is_some() {
                 let before = self.live.clone();
+                let native_start = self.emitted;
+                let source_start = self.source_calls.len();
                 let leaves =
                     self.compile(array(&c["body"])?, &mut env.clone(), controls, frame, true)?;
+                let native_end = self.emitted;
+                for call in &mut self.source_calls[source_start..] {
+                    let (start, end) = (call.start, call.end);
+                    call.start = native_start + native_end - end;
+                    call.end = native_start + native_end - start;
+                    call.reverse = !call.reverse;
+                    for origin in &mut call.origin {
+                        origin.reverse = !origin.reverse;
+                    }
+                }
                 self.live = before;
                 for leaf in inverse(&leaves) {
                     match &leaf.op {
@@ -1220,6 +1297,7 @@ impl Compiler<'_> {
                 let mut eff = t.capture.controls.clone();
                 union(&mut eff, controls);
                 eff = environment_controls(&local, &eff);
+                let source_start = self.source_calls.len();
                 let mut leaves =
                     self.compile(&t.capture.body, &mut local, &eff, frame, inverse_scope)?;
                 for leaf in &mut leaves {
@@ -1228,6 +1306,16 @@ impl Compiler<'_> {
                         name: text(name)?.into(),
                         index,
                         reverse: false,
+                        source: None,
+                    });
+                }
+                for call in &mut self.source_calls[source_start..] {
+                    call.origin.push(Origin {
+                        constructor: "apply".into(),
+                        name: text(name)?.into(),
+                        index,
+                        reverse: false,
+                        source: None,
                     });
                 }
                 out.extend(leaves);
@@ -1238,6 +1326,7 @@ impl Compiler<'_> {
                 for (index, record) in records.into_iter().enumerate() {
                     let mut local = env.clone();
                     local.extend(record);
+                    let source_start = self.source_calls.len();
                     let mut leaves = self.compile(
                         array(&c["body"])?,
                         &mut local,
@@ -1251,6 +1340,16 @@ impl Compiler<'_> {
                             name: text(name)?.into(),
                             index,
                             reverse: false,
+                            source: None,
+                        });
+                    }
+                    for call in &mut self.source_calls[source_start..] {
+                        call.origin.push(Origin {
+                            constructor: "visit".into(),
+                            name: text(name)?.into(),
+                            index,
+                            reverse: false,
+                            source: None,
                         });
                     }
                     out.extend(leaves);
@@ -1393,37 +1492,108 @@ impl Compiler<'_> {
                     return Err(Error::arg("unbound semantic-call symbol"));
                 };
                 let s = &self.library.symbols[&symbol];
-                let mut local = if let Some(Binding::Arguments {
+                let (mut local, oracle_invocation) = if let Some(Binding::Arguments {
                     symbol: hash,
                     values,
-                }) = c["args"].as_str().and_then(|s| env.get(s))
+                    oracle_invocation,
+                }) =
+                    c["args"].as_str().and_then(|s| env.get(s))
                 {
                     if hash != &symbol {
                         return Err(Error::arg("call arguments closure mismatch"));
                     }
-                    let names = s.parameters.iter().map(|p| {
-                        if p.is_string() {
-                            p.as_str().unwrap()
-                        } else {
-                            p["name"].as_str().unwrap()
-                        }
-                    });
-                    names
-                        .zip(values.iter().cloned())
-                        .map(|(n, b)| (n.into(), b))
-                        .collect()
+                    (
+                        self.bind_resolved(&s.parameters, values, controls)?,
+                        oracle_invocation.clone(),
+                    )
                 } else {
-                    self.bind(&s.parameters, array(&c["args"])?, env, controls, false)?
+                    (
+                        self.bind(&s.parameters, array(&c["args"])?, env, controls, false)?,
+                        None,
+                    )
                 };
                 let index = frame.calls;
                 frame.calls += 1;
                 let effective = environment_controls(&local, controls);
+                let source_start = self.source_calls.len();
                 let mut child = Frame::default();
-                let mut leaves =
-                    self.compile(&s.body, &mut local, &effective, &mut child, inverse_scope)?;
+                let mut leaves = if let Some(source) = s.source.clone() {
+                    let values = s
+                        .parameters
+                        .iter()
+                        .map(|p| local[formal_name(p)].clone())
+                        .collect::<Vec<_>>();
+                    let identity = format!("source-call/{}", self.next);
+                    self.next += 1;
+                    let trace =
+                        source.build(&values, oracle_invocation.as_ref(), &effective, &identity)?;
+                    if self.source_calls.len() >= 65_536 {
+                        return Err(Error::new(
+                            crate::Status::NoMem,
+                            "source call metadata exhausts host workspace (bennett-sched-2u4)",
+                        ));
+                    }
+                    self.source_calls.try_reserve(1).map_err(|_| {
+                        Error::new(
+                            crate::Status::NoMem,
+                            "source call metadata exceeds host memory",
+                        )
+                    })?;
+                    self.source_calls.push(crate::source_registry::SourceCall {
+                        trace: trace.clone(),
+                        start: self.emitted,
+                        end: self.emitted + trace.events.len(),
+                        reverse: false,
+                        calls: vec![],
+                        origin: vec![],
+                    });
+                    let mut leaves = Vec::new();
+                    for (event, e) in trace.events.iter().enumerate() {
+                        if let Operation::Gate(g) = &e.leaf.op {
+                            g.validate()?;
+                            if g.all_wires().iter().any(|w| {
+                                self.owned.get(w).is_some_and(|id| !self.live.contains(id))
+                            }) {
+                                return Err(Error::arg("linked source uses inactive allocation"));
+                            }
+                        }
+                        self.emit(&mut leaves, e.leaf.op.clone())?;
+                        let leaf = leaves.last_mut().unwrap();
+                        leaf.ordinal = e.location.generated;
+                        leaf.calls = e.leaf.calls.clone();
+                        leaf.origin = e.leaf.origin.clone();
+                        leaf.origin.push(Origin {
+                            constructor: "source".into(),
+                            name: symbol.clone(),
+                            index: event,
+                            reverse: false,
+                            source: Some(crate::source_registry::SourceOrigin {
+                                trace: trace.clone(),
+                                event,
+                            }),
+                        });
+                    }
+                    leaves
+                } else {
+                    if oracle_invocation.is_some() {
+                        return Err(Error::arg(
+                            "oracle_invocation requires a linked source-body builder",
+                        ));
+                    }
+                    self.compile(&s.body, &mut local, &effective, &mut child, inverse_scope)?
+                };
                 number(&mut leaves);
                 for leaf in &mut leaves {
                     leaf.calls.insert(
+                        0,
+                        CallEdge {
+                            symbol: symbol.clone(),
+                            call_index: index,
+                        },
+                    );
+                }
+                for call in &mut self.source_calls[source_start..] {
+                    call.calls.insert(
                         0,
                         CallEdge {
                             symbol: symbol.clone(),

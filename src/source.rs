@@ -10,6 +10,7 @@ use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 mod call_graph;
 mod oracle_call;
+mod qinplace;
 #[derive(Clone, Debug)]
 pub struct Slot {
     pub id: String,
@@ -38,12 +39,14 @@ pub struct Invocation {
 }
 #[derive(Clone, Debug)]
 pub struct Trace {
+    pub(crate) object: std::sync::Arc<Object>,
     pub events: Vec<Event>,
     pub invocations: Vec<Invocation>,
     pub slots: Vec<Slot>,
     pub inherited: Vec<String>,
     pub borrow_proofs: Vec<crate::borrow::Proof>,
     pub cleanups: Vec<crate::cleanup::Pair>,
+    pub qinplaces: Vec<crate::qinplace::Proof>,
 }
 fn deferred(feature: &str) -> Error {
     Error::new(
@@ -158,6 +161,16 @@ impl Trace {
         params: &Value,
         budget: [u64; 4],
     ) -> Result<Self> {
+        Self::build_oriented(object, name, inherited, params, budget, false)
+    }
+    pub(crate) fn build_oriented(
+        object: &Object,
+        name: &str,
+        inherited: u32,
+        params: &Value,
+        budget: [u64; 4],
+        adjoint: bool,
+    ) -> Result<Self> {
         object.validate_params(name, params)?;
         object.validate_budget(budget)?;
         let f = object
@@ -229,12 +242,14 @@ impl Trace {
             .map(|i| format!("control:{i}"))
             .collect::<Vec<_>>();
         let mut trace = Self {
+            object: std::sync::Arc::new(object.clone()),
             events: vec![],
             invocations: vec![],
             slots: slots.clone(),
             inherited: inherited.clone(),
             borrow_proofs: vec![],
             cleanups: vec![],
+            qinplaces: vec![],
         };
         let lib = Library::published()?;
         let mut builder = Builder {
@@ -251,7 +266,7 @@ impl Trace {
             params.clone(),
             budget,
             &[],
-            false,
+            adjoint,
             None,
         )?;
         if f.kind=="perm_action"&&trace.events.iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !["x","cx","ccx","mcx","swap"].contains(&g.op.as_str()))){return Err(Error::arg("§5.3: permutation actions require permutation gates transitively"));}
@@ -672,6 +687,12 @@ impl Builder<'_> {
                 e.leaf = expansion::inverse(std::slice::from_ref(&e.leaf))
                     .pop()
                     .unwrap();
+                e.location.kind = match &e.leaf.op {
+                    Operation::Gate(_) => Kind::Gate,
+                    Operation::Alloc { .. } => Kind::Alloc,
+                    Operation::Release { .. } => Kind::Release,
+                    Operation::Classical { .. } => Kind::Classical,
+                };
                 // K83 source adjoints form fresh forward entry/exit support
                 // domains. Raw expansion::inverse retains its old addresses.
                 if self.object.functions[&self.trace.invocations[e.owner].name].kind != "oracle" {
@@ -689,6 +710,13 @@ impl Builder<'_> {
                 &mut self.trace.invocations[owner + 1..],
                 self.object,
                 chain.len(),
+            )?;
+            qinplace::form_adjoint(
+                &mut events,
+                &mut self.trace.invocations,
+                &self.trace.qinplaces,
+                owner,
+                &frozen,
             )?;
             form_while_adjoint(&mut events, &self.trace.invocations, &frozen)?;
             let mut ordinals = BTreeMap::new();
@@ -1511,14 +1539,16 @@ impl Builder<'_> {
                 }
                 "oracle_call" => {
                     self.oracle_call(
-                        f, node, &operands, env, &effective, &readonly, chain, iteration, owner,
+                        f, node, &operands, env, &effective, &readonly, chain, iteration, owner, 0,
                     )?;
                     continue;
                 }
                 "qinplace" => {
-                    return Err(deferred(
-                        "qinplace inverse-pair coverage and source transfer",
-                    ));
+                    self.qinplace(
+                        f, node, &operands, env, &effective, &readonly, chain, iteration, owner,
+                        adjoint,
+                    )?;
+                    continue;
                 }
                 "qregion" => continue,
                 "qload" | "qunload" | "qstore" | "qexchm" => {
@@ -1785,6 +1815,10 @@ fn gate_adjoint(g: &Gate) -> Gate {
         n.op = format!("$other/call-/{s}");
     } else if let Some(s) = g.op.strip_prefix("$other/call-/") {
         n.op = format!("$other/call+/{s}");
+    } else if let Some(s) = g.op.strip_prefix("$perm/qinplace+/") {
+        n.op = format!("$perm/qinplace-/{s}");
+    } else if let Some(s) = g.op.strip_prefix("$perm/qinplace-/") {
+        n.op = format!("$perm/qinplace+/{s}");
     }
     n
 }

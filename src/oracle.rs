@@ -10,12 +10,6 @@ use crate::{
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
-fn postponed(feature: &str) -> Error {
-    Error::new(
-        Status::GateUnsupported,
-        format!("§11: {feature} is postponed (bennett-sched-ark)"),
-    )
-}
 fn allocation(name: &str, width: u64) -> Result<Binding> {
     let identity = format!("oracle-state/{name}");
     let n = usize::try_from(width)
@@ -35,6 +29,9 @@ fn allocation(name: &str, width: u64) -> Result<Binding> {
 pub(crate) fn read(name: &str, env: &Env) -> Result<Vec<String>> {
     match env.get(name) {
         Some(Binding::Wires(w) | Binding::Allocation { wires: w, .. }) => Ok(w.clone()),
+        Some(Binding::Value { isa_type, .. }) if isa_type == "token" => {
+            Err(Error::arg("§4.7: a token is not a bit-readable location"))
+        }
         Some(Binding::Value { .. }) => Err(Error::new(
             Status::GateUnsupported,
             "§4.7/K25: classical pseudo-location wire initialization needs contract decision bennett-sched-r28; source adapter tracked by bennett-sched-ark",
@@ -108,6 +105,8 @@ fn row(
     locations: &BTreeMap<String, u64>,
     labels: &BTreeMap<String, u64>,
     source: &Source<'_>,
+    library: &mut Library,
+    bindings: &mut Env,
 ) -> Result<(Vec<Value>, Vec<Value>)> {
     let mut body = Vec::new();
     let operands = &node.operands;
@@ -579,7 +578,9 @@ fn row(
     } else if ["lift.oracle_call", "lift.oracle_uncall", "lift.perm_call"]
         .contains(&node.op.as_str())
     {
-        return Err(postponed(&format!("source row adapter for {}", node.op)));
+        body.push(crate::oracle_calls::row(
+            node, index, env, locations, source, library, bindings,
+        )?);
     } else {
         return Err(Error::arg(format!(
             "§4.2: unknown or misplaced oracle row {}",
@@ -663,7 +664,7 @@ pub fn build(
             "oracle construction exceeds 64 MiB host state workspace",
         ));
     }
-    let library = Library::published()?;
+    let mut library = Library::published()?;
     let mut env = Env::new();
     let mut slots = Vec::new();
     for (group, role) in [(0, "in"), (1, "tgt"), (2, "fault")] {
@@ -924,7 +925,8 @@ pub fn build(
     let mut next = Vec::new();
     let readable = f.groups[0]
         .iter()
-        .chain(f.groups[4].iter().filter(|p| p.ty != "token"))
+        .chain(&f.groups[4])
+        .chain(&f.groups[3])
         .chain(&f.regs)
         .map(|p| format!("source.{}", p.name))
         .collect::<std::collections::BTreeSet<_>>();
@@ -956,6 +958,8 @@ pub fn build(
                 budget,
                 first: 0,
             },
+            &mut library,
+            &mut env,
         )?;
         rows.push(json!({"parameters":[{"name":"frame","type":"wire","width":q}],"body":body}));
         next.push(json!({"parameters":[{"name":"frame","type":"wire","width":q},{"name":"next","type":"wire","width":p}],"body":successor}));
@@ -1027,6 +1031,12 @@ pub fn build(
                     .iter()
                     .map(|p| format!("{prefix}{}", p.name)),
             )
+            .chain(
+                function.groups[2]
+                    .iter()
+                    .chain(&function.groups[4])
+                    .map(|p| format!("{prefix}{}", p.name)),
+            )
             .collect::<std::collections::BTreeSet<_>>();
         let source_env = env
             .iter()
@@ -1072,6 +1082,8 @@ pub fn build(
                     budget,
                     first: instance.first,
                 },
+                &mut library,
+                &mut env,
             )?;
             rows.push(json!({"parameters":[{"name":"frame","type":"wire","width":q}],"body":body}));
             next.push(json!({"parameters":[{"name":"frame","type":"wire","width":q},{"name":"next","type":"wire","width":p}],"body":successor}));
@@ -1111,6 +1123,9 @@ pub fn build(
     )?;
     let mut counts = BTreeMap::<(u64, usize), u64>::new();
     for leaf in &leaves {
+        if leaf.origin.iter().any(|o| o.source.is_some()) {
+            continue;
+        }
         if let Some(frame) = leaf
             .origin
             .iter()
@@ -1129,14 +1144,21 @@ pub fn build(
     }
     let mut ordinals = BTreeMap::<(Option<u64>, bool, usize), u64>::new();
     let mut events = Vec::new();
+    let mut projection = crate::oracle_calls::Projection::default();
     for mut leaf in leaves {
-        let state = leaf
+        // Source callees carry their own State/Frames tags. Only constructors
+        // outside the linked source boundary address the containing oracle.
+        let boundary = leaf
             .origin
+            .iter()
+            .rposition(|o| o.source.is_some())
+            .map_or(0, |i| i + 1);
+        let provenance = &leaf.origin[boundary..];
+        let state = provenance
             .iter()
             .rev()
             .find(|o| o.constructor == "visit" && o.name == "State");
-        let frame = leaf
-            .origin
+        let frame = provenance
             .iter()
             .rev()
             .find(|o| o.constructor == "visit" && o.name == "Frames");
@@ -1153,8 +1175,7 @@ pub fn build(
                 row_points.len() + usize::from(state.reverse),
             )
         } else if let Some(frame) = frame {
-            let point = leaf
-                .origin
+            let point = provenance
                 .iter()
                 .rev()
                 .find(|o| o.constructor == "apply" && (o.name == "Rows" || o.name == "Next"))
@@ -1176,15 +1197,20 @@ pub fn build(
         } else {
             ("$commit".into(), None, None, row_points.len() + 2)
         };
+        let nested = leaf.origin.iter().any(|o| o.source.is_some());
         let counter = ordinals
             .entry((step, phase == Some(Phase::Rev), space))
             .or_default();
-        let ordinal = if phase == Some(Phase::Rev) {
+        let ordinal = if nested {
+            leaf.ordinal
+        } else if phase == Some(Phase::Rev) {
             counts[&(step.unwrap(), space)] - 1 - *counter
         } else {
             *counter
         };
-        *counter += 1;
+        if !nested {
+            *counter += 1;
+        }
         leaf.ordinal = ordinal;
         let kind = match &leaf.op {
             Operation::Gate(_) => Kind::Gate,
@@ -1194,7 +1220,7 @@ pub fn build(
                 return Err(Error::arg("classical event in oracle construction"));
             }
         };
-        events.push(Event {
+        let mut event = Event {
             owner: 0,
             leaf,
             location: Location {
@@ -1216,27 +1242,38 @@ pub fn build(
                 generated: ordinal,
                 kind,
             },
-        });
+        };
+        if let Some((location, owner)) =
+            projection.event(&event.leaf, &event.location, events.len())?
+        {
+            event.location = location;
+            event.owner = owner;
+        }
+        events.push(event);
     }
     let end = events.len();
+    let mut invocations = vec![Invocation {
+        name: name.into(),
+        hash: object.closure_hash(name)?.into(),
+        controls: inherited.clone(),
+        slots: slots.clone(),
+        params: params.clone(),
+        budget,
+        start: 0,
+        end,
+        parent: None,
+        adjoint: false,
+        path: vec![],
+    }];
+    invocations.extend(projection.invocations);
     Ok(Trace {
+        object: std::sync::Arc::new(object.clone()),
         events,
-        invocations: vec![Invocation {
-            name: name.into(),
-            hash: object.closure_hash(name)?.into(),
-            controls: inherited.clone(),
-            slots: slots.clone(),
-            params: params.clone(),
-            budget,
-            start: 0,
-            end,
-            parent: None,
-            adjoint: false,
-            path: vec![],
-        }],
+        invocations,
         slots,
         inherited,
-        borrow_proofs: vec![],
-        cleanups: vec![],
+        borrow_proofs: projection.borrow_proofs,
+        cleanups: projection.cleanups,
+        qinplaces: projection.qinplaces,
     })
 }

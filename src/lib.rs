@@ -13,14 +13,17 @@ pub mod lproc;
 pub mod object;
 pub mod oracle;
 mod oracle_activation;
+mod oracle_calls;
 mod oracle_memory;
 pub mod oracle_state;
+mod qinplace;
 pub mod ref_contract;
 pub mod request;
 pub mod resources;
 pub mod schedule;
 pub mod source;
 pub mod source_ir;
+pub mod source_registry;
 pub mod target;
 pub use request::{Outcome, Request, Response};
 
