@@ -1,4 +1,5 @@
 //! Typed §11.1 constructors with K82 explicit named wire interfaces.
+pub use crate::expansion_env::Env;
 use crate::{
     Error, Result, canonical,
     schedule::{EXPANSION_HASH, array, fields, text, uint},
@@ -8,7 +9,6 @@ use num_bigint::BigInt;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
-pub type Env = BTreeMap<String, Binding>;
 #[derive(Clone, Debug)]
 pub enum Binding {
     Integer(BigInt),
@@ -425,6 +425,17 @@ fn size(v: &Value, env: &Env) -> Result<usize> {
         .to_usize()
         .ok_or_else(|| Error::arg("§11.1: nonnegative size exceeds host usize"))
 }
+fn wire_binding<'a>(name: &str, env: &'a Env) -> Option<&'a [String]> {
+    match env.get(name) {
+        Some(
+            Binding::Wires(w)
+            | Binding::Environment(w)
+            | Binding::Region { wires: w, .. }
+            | Binding::Allocation { wires: w, .. },
+        ) => Some(w),
+        _ => None,
+    }
+}
 fn wire(v: &Value, env: &Env, host: bool) -> Result<Vec<String>> {
     if let Some(s) = v.as_str() {
         if let Some((base, index)) = s.split_once('[') {
@@ -432,7 +443,11 @@ fn wire(v: &Value, env: &Env, host: bool) -> Result<Vec<String>> {
                 return Err(Error::arg("malformed wire subscript"));
             }
             let index = canonical::parse(index[..index.len() - 1].as_bytes())?;
-            let wires = wire(&json!(base), env, host)?;
+            let wires = if let Some(w) = wire_binding(base, env) {
+                std::borrow::Cow::Borrowed(w)
+            } else {
+                std::borrow::Cow::Owned(wire(&json!(base), env, host)?)
+            };
             let i = size(&index, env)?;
             return wires
                 .get(i)
@@ -459,7 +474,15 @@ fn wire(v: &Value, env: &Env, host: bool) -> Result<Vec<String>> {
         return Ok(w);
     }
     fields(v, &["range", "from", "to"], &[])?;
-    let w = wire(&v["range"], env, host)?;
+    let w = if let Some(name) = v["range"].as_str().filter(|name| !name.contains('[')) {
+        if let Some(w) = wire_binding(name, env) {
+            std::borrow::Cow::Borrowed(w)
+        } else {
+            std::borrow::Cow::Owned(wire(&v["range"], env, host)?)
+        }
+    } else {
+        std::borrow::Cow::Owned(wire(&v["range"], env, host)?)
+    };
     let from = size(&v["from"], env)?;
     let to = size(&v["to"], env)?;
     if from > to || to > w.len() {
@@ -576,6 +599,42 @@ struct Compiler<'a> {
     owned: BTreeMap<String, String>,
     remaining: usize,
 }
+// Capture referenced lexical bindings, including K82 implicit helper wires.
+// Keeping unrelated State/Frames/template lists here recursively duplicates
+// entire enclosing constructions at each template application.
+fn capture_environment(library: &Library, body: &[Value], caller: &Env) -> Result<Env> {
+    let mut names = BTreeSet::new();
+    let mut pending = body.iter().collect::<Vec<_>>();
+    while let Some(value) = pending.pop() {
+        match value {
+            Value::String(s) => {
+                if caller.contains_key(s) {
+                    names.insert(s.clone());
+                }
+                if let Some((base, _)) = s.split_once('[') {
+                    if caller.contains_key(base) {
+                        names.insert(base.into());
+                    }
+                }
+            }
+            Value::Array(a) => pending.extend(a),
+            Value::Object(o) => {
+                if let Some(Value::String(name)) = o.get("invoke") {
+                    if library.recipes.contains_key(name) {
+                        names.extend(crate::ref_contract::interface(library, name)?);
+                    }
+                }
+                pending.extend(o.values());
+            }
+            _ => {}
+        }
+    }
+    Ok(caller
+        .iter()
+        .filter(|(name, b)| names.contains(*name) || matches!(b, Binding::Environment(_)))
+        .map(|(n, b)| (n.clone(), b.clone()))
+        .collect())
+}
 impl Compiler<'_> {
     fn emit(&mut self, out: &mut Vec<Leaf>, op: Operation) -> Result<()> {
         self.remaining = self.remaining.checked_sub(1).ok_or_else(|| {
@@ -680,8 +739,8 @@ impl Compiler<'_> {
                     let body = array(a)?.clone();
                     validate_body(&body)?;
                     Binding::Body(Capture {
+                        env: capture_environment(self.library, &body, caller)?,
                         body,
-                        env: caller.clone(),
                         controls: controls.to_vec(),
                     })
                 }
@@ -701,8 +760,8 @@ impl Compiler<'_> {
                             Ok(Template {
                                 parameters,
                                 capture: Capture {
+                                    env: capture_environment(self.library, &body, caller)?,
                                     body,
-                                    env: caller.clone(),
                                     controls: controls.to_vec(),
                                 },
                             })

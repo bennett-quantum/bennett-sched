@@ -278,6 +278,88 @@ pub fn run(request: &Request) -> Result<Response> {
         }
     }
 }
+// Every implicit State allocation and every interface is live together at
+// commit. These necessary bounds can reject an impossible target without
+// materializing the reference gate stream; they never accept a placement.
+fn oracle_capacity_preflight(
+    object: &crate::object::Object,
+    f: &crate::object::Function,
+    request: &Request,
+    target: &Target,
+    budget: [u64; 4],
+) -> Result<()> {
+    let plan = crate::oracle_state::Plan::form(object, &f.name, budget)?;
+    let topology = target
+        .value
+        .get("topology")
+        .map(|t| t["vertices"].as_array().expect("validated topology"));
+    let caps = target
+        .classes
+        .iter()
+        .map(|(name, class)| {
+            let capacity = match (class.capacity, request.capacities.get(name).copied()) {
+                (Some(a), Some(b)) => Some(a.min(b)),
+                (a, None) => a,
+                (None, b) => b,
+            };
+            if let Some(vertices) = topology {
+                let count = vertices
+                    .iter()
+                    .filter(|v| v["class"] == name.as_str())
+                    .count() as u64;
+                Some(capacity.map_or(count, |n| n.min(count)))
+            } else {
+                capacity
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut required = num_bigint::BigUint::from(request.inherited_controls);
+    let fits = |name: &str, width: u64| -> Result<()> {
+        if caps.iter().all(|cap| cap.is_some_and(|n| n < width)) {
+            return Err(Error::infeasible(format!(
+                "§8.3: implicit oracle state allocation {name} ({width} wires) exceeds every class capacity"
+            )));
+        }
+        Ok(())
+    };
+    for state in &plan.base {
+        fits(&state.name, state.width)?;
+        required += state.width;
+    }
+    if budget[0] > 0 {
+        fits("history", plan.frame_width)?;
+        required +=
+            num_bigint::BigUint::from(plan.frame_width) * num_bigint::BigUint::from(budget[0]);
+    }
+    for param in f.groups[..3].iter().flatten() {
+        let width = crate::object::wire_width(&param.ty)?;
+        fits(&param.name, width)?;
+        required += width;
+    }
+    for param in &f.groups[3] {
+        let (a, w) = crate::object::region_shape(&param.ty)?;
+        let width = 1u64
+            .checked_shl(a.try_into().map_err(|_| {
+                Error::new(crate::Status::NoMem, "region exponent exceeds host size")
+            })?)
+            .and_then(|n| n.checked_mul(w))
+            .ok_or_else(|| Error::new(crate::Status::NoMem, "region exceeds host size"))?;
+        fits(&param.name, width)?;
+        required += width;
+    }
+    if caps.iter().all(Option::is_some) {
+        let available = caps
+            .iter()
+            .map(|c| num_bigint::BigUint::from(c.unwrap()))
+            .sum::<num_bigint::BigUint>();
+        if required > available {
+            return Err(Error::infeasible(
+                "§8.3: simultaneous implicit oracle state and interfaces exceed total class capacity",
+            ));
+        }
+    }
+    Ok(())
+}
 fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
     let object = request
         .object
@@ -328,6 +410,9 @@ fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
             crate::Status::Budget,
             "§7.2: memoryless request requires zero heap/stack/depth",
         ));
+    }
+    if f.kind == "oracle" {
+        oracle_capacity_preflight(object, f, request, target, budget)?;
     }
     let trace = Trace::build(object, &f.name, request.inherited_controls, params, budget)?;
     let mut allocator = Allocator {

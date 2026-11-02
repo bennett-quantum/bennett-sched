@@ -112,7 +112,7 @@ fn exact_target_scheme_is_expanded_once_and_bound_in_schedule() {
 }
 
 #[test]
-fn postponed_lproc_oracle_has_a_specific_bead_reason_and_no_feasible_document() {
+fn mandatory_oracle_state_exceeding_target_capacity_is_infeasible_before_expansion() {
     let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
     let example = spec
         .split("**Example 2**")
@@ -134,13 +134,13 @@ fn postponed_lproc_oracle_has_a_specific_bead_reason_and_no_feasible_document() 
     r.set_region(&hash, "forward", 0).unwrap();
     r.budget = Some([3, 0, 0, 0]);
     let response = r.schedule().unwrap();
-    assert_eq!(response.outcome, Outcome::Unsupported);
+    assert_eq!(response.outcome, Outcome::Infeasible);
     assert!(
         response
             .reason
             .to_str()
             .unwrap()
-            .contains("bennett-sched-ark")
+            .contains("implicit oracle state")
     );
     assert!(response.schedule.is_empty());
     assert!(response.certificate.is_empty());

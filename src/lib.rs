@@ -6,6 +6,7 @@ pub mod cleanup;
 pub mod decimal;
 pub mod engine;
 pub mod expansion;
+mod expansion_env;
 pub mod ffi;
 pub mod layout;
 pub mod lproc;
