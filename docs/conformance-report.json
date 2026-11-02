@@ -5822,7 +5822,7 @@
           "interface_hash": "c6e53733d87782414d05720d444734d9335244155518db4f60916e3d4b06dd1d",
           "outcome": "UNSUPPORTED",
           "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
-          "reason": "layout state construction",
+          "reason": "classical pseudo-location wire binding",
           "beads": [
             "bennett-sched-ark"
           ]
@@ -5905,5 +5905,5 @@
     "stdout": "",
     "stderr": "§1: expected isa=0.8\n"
   },
-  "recorded_at_utc": "2026-11-02T00:49:27Z"
+  "recorded_at_utc": "2026-11-02T07:47:57Z"
 }

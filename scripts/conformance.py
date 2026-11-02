@@ -93,7 +93,7 @@ def main():
             if record["number"]==3: record.update(semantics="borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record (all 8 basis tuples and 16 inherited-control tuples)")
             symbols=json.loads(block.split("section symbols\n",1)[1].split("\n",1)[0])
             regions=[]
-            deferred={"sum_db":"layout/lproc construction", "through":"layout/lproc construction", "plus_db":"layout state construction", "g":"classical pseudo-location wire binding", "ginv":"classical pseudo-location wire binding", "addya":"qinplace inverse-pair construction"}
+            deferred={"sum_db":"layout/lproc construction", "through":"layout/lproc construction", "plus_db":"classical pseudo-location wire binding", "g":"classical pseudo-location wire binding", "ginv":"classical pseudo-location wire binding", "addya":"qinplace inverse-pair construction"}
             for symbol in symbols.values():
                 if symbol["kind"] in {"oracle","action","perm_action"}:
                     name=symbol["name"]

@@ -22,7 +22,7 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | Clause | Required behavior | Evidence / state |
 |---|---|---|
 | §11 C declarations | Opaque owned requests/responses, all setters, copied buffers, status and typed OK/INFEASIBLE/UNSUPPORTED, reasons, accessors and frees | Exported; Rust ownership/null tests and C11 cdylib consumer (`ffi`, `c_link`) |
-| ISA-11-P2 | Expand every row/instruction in specified source order; stable generated ordinals; removals only from library permission | Primitive action source expansion checked; memoryless oracle state/row/commit/history construction implemented; layout/lproc and nested-call builders remain ark |
+| ISA-11-P2 | Expand every row/instruction in specified source order; stable generated ordinals; removals only from library permission | Primitive action source expansion checked; memoryless oracle state/row/commit/history construction implemented; layout address/load/bounds-check root rows implemented; lproc and nested-call builders remain ark |
 | ISA-11-P3 | JCS schedule; exact bindings; cleanup/gate/alloc/start entries, selectors and defaults | Strict schema and output binding tests; generated action schedules (`selectors`, `pipeline`) |
 | ISA-11-P4, §8.3 | Interface/control placements, per-class vertices, lifetimes, adjacency, no routing | Default class/vertex placement, capacity and adjacency implemented; finite class/per-bit vertex search implemented; cost optimisation remains open (ark) |
 | ISA-11-P5 / K52 | Invocation-chain prefixes; source-loop iteration, nested budget/step/phase; no `lift.call` edge | Nested coordinate resolver tested; action call source paths tested; memoryless oracle step/phase/support coordinates and reverse ordinals checked; nested oracle calls remain ark |
@@ -224,3 +224,21 @@ failure but exhausted the 300-second execution budget on the shared runner.
 The test profile now uses opt-level=1 while retaining debug assertions and
 overflow checks. All exhaustive domains remain in the gate; latest verified
 command outcomes are recorded in the Resume block.
+
+## Layout root source expansion
+
+Roots without lproc instances now bind the full source-derived State list,
+table field views and ByteLayout descriptors to the published constructors.
+lift.addr, lift.load and lift.boundscheck rows use the catalog recipes, including
+inherent load bounds, explicit literal-length checks and generic fault successors.
+Mapped byte inputs retain their identities; ordinary memory receives global
+images and reverses them before release. Tests cover all 256 mapped byte values,
+first-fault/step-exhaustion/control paths, crossing an allocation boundary,
+global-image restoration, and an encoded request with an admitted schedule and
+bound certificate. Oracle producer domains now explicitly include all interface
+region cells, so they do not accidentally assert only the zero-region slice.
+A mixed-width constant assignment regression exposed an oversized displacement
+binding; constants now bind exactly their low-width frame slice.
+
+Focused layout milestone: lproc 6, oracle_state 7 and oracle_memory 6 pass.
+No complete lproc, allocator/store or nested-oracle scheduling claim follows.

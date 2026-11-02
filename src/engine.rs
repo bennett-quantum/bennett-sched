@@ -718,8 +718,12 @@ fn certificate(
                     - num_bigint::BigUint::from(1u8);
                 bundles.push(json!({"name":p.name,"width":width,"lo":0,"hi":high.to_string()}));
             }
+            let interface_regions = f.groups[3]
+                .iter()
+                .map(|p| json!({"name":p.name,"cells":"all"}))
+                .collect::<Vec<_>>();
             let index = record["claims"].as_array().unwrap().len();
-            record["claims"].as_array_mut().unwrap().push(json!({"kind":"exhaustive","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"expected":"oracle","domain":{"bundles":bundles,"borrowed":[],"regions":[]}}));
+            record["claims"].as_array_mut().unwrap().push(json!({"kind":"exhaustive","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"expected":"oracle","domain":{"bundles":bundles,"borrowed":[],"regions":interface_regions}}));
             record["verification"]["oracle"] = json!(index);
             // The rate domain is a stated finite witness: omitted interfaces
             // are held at zero (K72), with every inherited control fixed at zero.

@@ -12,7 +12,8 @@ freed. Accessor buffers remain valid after freeing the request. Declaration
 headers are in the published ISA repository and [data/bennett_sched.h](data/bennett_sched.h).
 `bennett_sched_version()` is an additional compatibility probe returning 9.
 
-The implemented path covers memoryless oracle construction and actions, plain/while loops and source adjoints,
+The implemented path covers memoryless oracles, layout-backed root oracles with
+address/load/bounds-check rows, and actions, plain/while loops and source adjoints,
 qif, copy/XOR/exchange, local regions and coherent memory, action calls and
 translation-lemma borrow frames. Native and approximate/exact target schemes
 use deterministic sequential timing, class capacity and topology placement,
@@ -23,7 +24,9 @@ It emits JCS schedules and bound certificates with exact resource fractions and
 Load-time layout checks validate ranges, images, exact interface mappings and
 pre-entry capacity. The state planner derives ordered byte/location descriptors,
 reference counters, activation/frame sizes and sparse initial images; layout/lproc
-gate emission is still pending.
+call/return gate emission is still pending. Root memory reads preserve mapped
+input identity, restore global images and include input regions in oracle claim
+domains.
 
 The complete published 219-recipe `ref@0.9` is vendored as specification data.
 Accepted K82 governs named helper wire interfaces; all 16 binding cases, 54

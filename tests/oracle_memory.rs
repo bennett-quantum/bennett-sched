@@ -2,9 +2,18 @@ use bennett_sched::{expansion::simulate_basis, object::Object, source::Trace};
 use serde_json::json;
 use std::collections::BTreeMap;
 fn mapped_reader() -> Object {
+    reader(false)
+}
+fn reader(check: bool) -> Object {
+    Object::parse(&encoded_reader(check)).unwrap()
+}
+fn encoded_reader(check: bool) -> Vec<u8> {
     let signature = json!({"abi":"0.9","tier":"q","kind":"oracle","in":[8],"tgt":8,"fault":4,"mem":[{"A":0,"W":8,"role":"in"}],"args":[]});
     let layout = json!({"ptr_width":3,"H":2,"A_tab":0,"S_cells":0,"null_size":1,"heap_base":3,"heap_limit_max":0,"globals":{},"interface_regions":{"read":{"db":{"base":2}}}});
-    let function = "oracle @read (x:wire[8] in) (t:wire[8]) (f:wire[4]) (db:region[0,8] in) ()\nregs { p:reg[3], r:reg[8] }\n^entry():\np = lift.addr @db\nr = lift.load.i8 p\nlift.retval r";
+    let check = if check { "lift.boundscheck p 1\n" } else { "" };
+    let function = format!(
+        "oracle @read (x:wire[8] in) (t:wire[8]) (f:wire[4]) (db:region[0,8] in) ()\nregs {{ p:reg[3], r:reg[8] }}\n^entry():\np = lift.addr @db\n{check}r = lift.load.i8 p\nlift.retval r"
+    );
     // Independently form the §9.2 oracle envelope, with exact key-component
     // layout leaves. This fixture passes the ordinary encoded-object loader.
     let mut leaves = layout
@@ -40,7 +49,7 @@ fn mapped_reader() -> Object {
         jcs(&symbols),
         jcs(&layout)
     );
-    Object::parse(bytes.as_bytes()).unwrap()
+    bytes.into_bytes()
 }
 fn put(bits: &mut BTreeMap<String, bool>, name: &str, width: u64, value: u64) {
     for i in 0..width {
@@ -114,4 +123,115 @@ fn inherent_memory_bounds_fault_and_budget_control_paths_restore_state() {
             assert_eq!(bits.len(), 29);
         }
     }
+}
+
+#[test]
+fn explicit_boundscheck_cleans_its_literal_and_faults_before_access_when_length_crosses_entry() {
+    for crossing in [false, true] {
+        let mut object = reader(true);
+        if crossing {
+            object.functions.get_mut("read").unwrap().body[1].operands[1] = "2".into();
+        }
+        let trace = Trace::build(&object, "read", 0, &json!([]), [4, 0, 0, 0]).unwrap();
+        let leaves = trace
+            .events
+            .iter()
+            .map(|e| e.leaf.clone())
+            .collect::<Vec<_>>();
+        for byte in [0, 1, 127, 255] {
+            let mut bits = BTreeMap::new();
+            put(&mut bits, "in:0", 8, 13);
+            put(&mut bits, "tgt:0", 8, 0xa5);
+            put(&mut bits, "fault:0", 4, 5);
+            put(&mut bits, "mem:0", 8, byte);
+            simulate_basis(&leaves, &mut bits).unwrap();
+            assert_eq!(
+                get(&bits, "tgt:0", 8),
+                0xa5 ^ if crossing { 0 } else { byte }
+            );
+            assert_eq!(get(&bits, "fault:0", 4), 5 ^ if crossing { 7 } else { 0 });
+            assert_eq!(get(&bits, "mem:0", 8), byte);
+            assert_eq!(bits.len(), 28);
+        }
+    }
+}
+
+#[test]
+fn oversized_interface_is_a_nomem_error_before_creating_any_wire_strings() {
+    let mut object = mapped_reader();
+    object.functions.get_mut("read").unwrap().groups[0][0].ty = format!("wire[{}]", u64::MAX);
+    let error = Trace::build(&object, "read", 0, &json!([]), [0, 0, 0, 0]).unwrap_err();
+    assert_eq!(error.status, bennett_sched::Status::NoMem);
+}
+
+#[test]
+fn ordinary_global_image_is_initialized_and_reversed_without_touching_mapped_input() {
+    let mut object = mapped_reader();
+    let mut symbol = object.symbols["read"].clone();
+    symbol.name = "image".into();
+    symbol.kind = "data".into();
+    symbol.signature = json!({"abi":"0.9","kind":"data","tier":"-","size":1});
+    object.symbols.insert("image".into(), symbol);
+    object.data.insert("image".into(), "a5".into());
+    let layout = object.metadata.get_mut("layout").unwrap();
+    layout["A_tab"] = json!(1);
+    layout["globals"] = json!({"image":{"base":1,"size":1,"image":"image"}});
+    object.functions.get_mut("read").unwrap().body[0].operands[0] = "@image".into();
+    let trace = Trace::build(&object, "read", 1, &json!([]), [3, 0, 0, 0]).unwrap();
+    let leaves = trace
+        .events
+        .iter()
+        .map(|e| e.leaf.clone())
+        .collect::<Vec<_>>();
+    for control in [false, true] {
+        for byte in [0, 0xff] {
+            let mut bits = BTreeMap::new();
+            put(&mut bits, "in:0", 8, 0x13);
+            put(&mut bits, "tgt:0", 8, 0x53);
+            put(&mut bits, "fault:0", 4, 9);
+            put(&mut bits, "mem:0", 8, byte);
+            bits.insert("control:0".into(), control);
+            simulate_basis(&leaves, &mut bits).unwrap();
+            assert_eq!(
+                get(&bits, "tgt:0", 8),
+                0x53 ^ if control { 0xa5 } else { 0 }
+            );
+            assert_eq!(get(&bits, "fault:0", 4), 9);
+            assert_eq!(get(&bits, "mem:0", 8), byte);
+            assert_eq!(bits.len(), 29);
+        }
+    }
+}
+
+#[test]
+fn encoded_layout_request_emits_an_admitted_schedule_and_bound_frame_certificate() {
+    use bennett_sched::{Outcome, Request, canonical, schedule::Document};
+    let bytes = encoded_reader(false);
+    let object = Object::parse(&bytes).unwrap();
+    let gates=["x","cx","ccx","mcx","swap"].iter().map(|op|json!({"op":op,"classes":["fast"],"controls":{"min":0,"max":"unbounded"},"epsilon":0,"cost":{"time":1}})).collect::<Vec<_>>();
+    let target = json!({"ptr_widths_supported":[3],"resources":{"time":{"kind":"time","unit":"second"},"qubit_second":{"kind":"occupancy","unit":"qubit_second"},"peak_qubits":{"kind":"peak","unit":"qubit"}},"classes":{"fast":{"capacity":"unbounded","qubit_second":1,"dirty_rate":1}},"gates":gates,"schemes":[],"qram":null,"capabilities":{"measurement":{"mid_circuit":false,"feedforward_latency":0},"mbu":false,"max_parallel":"unbounded","max_predicate_depth":"unbounded","classical_step_time":0},"objective":{"weighted":{"time":1}},"tables":{},"imports":{}});
+    let mut request = Request::default();
+    request.set_object(&bytes).unwrap();
+    request
+        .set_target(&canonical::to_vec(&target).unwrap())
+        .unwrap();
+    request
+        .set_region(object.closure_hash("read").unwrap(), "forward", 0)
+        .unwrap();
+    request.budget = Some([3, 0, 0, 0]);
+    request.set_params(b"[]").unwrap();
+    request.set_accuracy("0").unwrap();
+    let response = request.schedule().unwrap();
+    assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+    let schedule = Document::parse(canonical::require_jcs(&response.schedule).unwrap()).unwrap();
+    schedule.validate_request(&request).unwrap();
+    let certificate = canonical::require_jcs(&response.certificate).unwrap();
+    assert_eq!(certificate["bindings"]["object_hash"], object.object_hash);
+    let region = &certificate["regions"][object.closure_hash("read").unwrap()];
+    let claim = region["verification"]["oracle"].as_u64().unwrap() as usize;
+    assert_eq!(
+        region["claims"][claim]["domain"]["regions"],
+        json!([{"name":"db","cells":"all"}])
+    );
+    assert!(!response.schedule.is_empty() && !response.certificate.is_empty());
 }

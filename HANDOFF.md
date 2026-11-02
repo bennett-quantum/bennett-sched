@@ -42,3 +42,13 @@ NoMem. The memoryless adapter consumes the shared plan. Full layout/lproc row
 emission and capture/activation forwarding remain required. The observed ISA
 commit advanced to ecaaac060c44e317d1181345fa6b8e38c096c099 with unchanged spec and
 catalog hashes.
+
+Layout-backed roots without lproc instances now use published address/load/
+bounds-check recipes, full State initialization, table field views and byte
+layout records. oracle_memory has six passing tests, including all 256 mapped
+bytes, global-image restoration, fault/budget/control paths, explicit crossing
+bounds and encoded request/schedule/certificate admission. Producer oracle
+domains include every interface region cell. Constants bind only their declared
+low-width displacement slice. Host workspace checks run before interface wire
+allocation and return NoMem on oversized input bundles. Allocator/store rows,
+lproc call/return emission and nested semantic calls remain open.

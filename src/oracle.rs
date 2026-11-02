@@ -85,6 +85,11 @@ fn widths(node: &Node, env: &Env, locations: &BTreeMap<String, u64>) -> Result<V
         Ok(vec![])
     }
 }
+struct Source<'a> {
+    object: &'a Object,
+    name: &'a str,
+    layout: Option<&'a crate::layout::Layout>,
+}
 fn row(
     node: &Node,
     index: u64,
@@ -96,6 +101,7 @@ fn row(
     env: &Env,
     locations: &BTreeMap<String, u64>,
     labels: &BTreeMap<String, u64>,
+    source: &Source<'_>,
 ) -> Result<(Vec<Value>, Vec<Value>)> {
     let mut body = Vec::new();
     let operands = &node.operands;
@@ -104,7 +110,6 @@ fn row(
     let mut successor = index + 1;
     let flag = slice(p + slots.iter().sum::<u64>(), 1);
     let succ = slice(p + slots.iter().sum::<u64>() + 1, p);
-    let slot = slice(p, slots.first().copied().unwrap_or(0));
     let mut flagged = false;
     let mut dynamic = false;
     let arity = |count: usize| {
@@ -154,7 +159,7 @@ fn row(
             vec![
                 json!(w),
                 serde_json::from_str(&constant.to_string())?,
-                slot,
+                slice(p, w),
                 json!(dest()?),
             ],
         ));
@@ -311,6 +316,157 @@ fn row(
                 json!(dest()?),
             ],
         ));
+    } else if node.op == "lift.addr" {
+        arity(1)?;
+        let w = written_width()?;
+        if w != source.object.ptr_width {
+            return Err(Error::arg("lift.addr destination must have pointer width"));
+        }
+        let name = operands[0]
+            .strip_prefix('@')
+            .ok_or_else(|| Error::arg("lift.addr requires @name"))?;
+        let layout = source
+            .layout
+            .ok_or_else(|| Error::arg("lift.addr requires layout"))?;
+        let base = layout
+            .globals
+            .iter()
+            .find(|g| g.name == name)
+            .map(|g| &g.base)
+            .or_else(|| {
+                layout.interface_regions[source.name]
+                    .iter()
+                    .find(|m| m.name == name)
+                    .map(|m| &m.base)
+            })
+            .ok_or_else(|| {
+                Error::arg("lift.addr must name a global or this oracle's mapped region")
+            })?;
+        body.push(invoke(
+            "lift.addr",
+            vec![
+                json!(w),
+                serde_json::from_str(&base.to_string())?,
+                slice(p, w),
+                json!(dest()?),
+            ],
+        ));
+    } else if node.op == "lift.boundscheck" {
+        arity(2)?;
+        let layout = source
+            .layout
+            .ok_or_else(|| Error::arg("lift.boundscheck requires layout"))?;
+        let ptr = source.object.ptr_width;
+        if width(&operands[0])? != ptr {
+            return Err(Error::arg("boundscheck address requires pointer width"));
+        }
+        let mut literal = None;
+        let (length, argument) = if env.contains_key(&operands[1]) {
+            (width(&operands[1])?, json!(operands[1]))
+        } else {
+            let value = crate::layout::integer(&json!(operands[1]))?;
+            let length = value.bits().max(1);
+            let value: Value = serde_json::from_str(&value.to_string())?;
+            body.push(
+                json!({"alloc":"bounds.length","width":length,"class":"any","state":"clean"}),
+            );
+            let initialization = invoke(
+                "value.literal",
+                vec![json!(length), value, json!("bounds.length")],
+            );
+            body.push(initialization.clone());
+            literal = Some(initialization);
+            (length, json!("bounds.length"))
+        };
+        let extended = ptr
+            .max(length)
+            .checked_add(1)
+            .ok_or_else(|| Error::new(Status::NoMem, "bounds comparison exceeds host width"))?;
+        let count = 1u64
+            .checked_shl(
+                u32::try_from(layout.a_tab)
+                    .map_err(|_| Error::new(Status::NoMem, "table exponent exceeds host size"))?,
+            )
+            .ok_or_else(|| Error::new(Status::NoMem, "table exceeds host size"))?;
+        body.push(invoke(
+            "lift.boundscheck",
+            vec![
+                json!(ptr),
+                json!(length),
+                json!(extended),
+                json!(count),
+                json!(layout.a_tab + 1),
+                json!(f),
+                json!(operands[0]),
+                argument,
+                json!("table.base"),
+                json!("table.size"),
+                json!("table.live"),
+                json!("table.pinned"),
+                json!("atop"),
+                flag.clone(),
+                json!("faulted"),
+                json!("code"),
+            ],
+        ));
+        if let Some(initialization) = literal {
+            body.push(json!({"inverse":true,"body":[initialization]}));
+            body.push(json!({"release":"bounds.length"}));
+        }
+        flagged = true;
+    } else if let Some(suffix) = node.op.strip_prefix("lift.load.i") {
+        arity(1)?;
+        let w = crate::schedule::uint(&json!(suffix))?;
+        if w == 0
+            || w % 8 != 0
+            || written_width()? != w
+            || width(&operands[0])? != source.object.ptr_width
+        {
+            return Err(Error::arg(
+                "lift.load requires a pointer and matching whole-byte result",
+            ));
+        }
+        let layout = source
+            .layout
+            .ok_or_else(|| Error::arg("lift.load requires layout"))?;
+        let ptr = source.object.ptr_width;
+        let bytes = w / 8;
+        let length = 64 - bytes.leading_zeros() as u64;
+        let extended = ptr.max(length).checked_add(1).ok_or_else(|| {
+            Error::new(Status::NoMem, "memory comparison width exceeds host size")
+        })?;
+        let count = 1u64
+            .checked_shl(
+                u32::try_from(layout.a_tab)
+                    .map_err(|_| Error::new(Status::NoMem, "table exponent exceeds host size"))?,
+            )
+            .ok_or_else(|| Error::new(Status::NoMem, "table exceeds host size"))?;
+        body.push(invoke(
+            "lift.load",
+            vec![
+                json!(ptr),
+                json!(length),
+                json!(extended),
+                json!(count),
+                json!(layout.a_tab + 1),
+                json!(f),
+                json!(w),
+                json!(bytes),
+                json!(operands[0]),
+                json!("table.base"),
+                json!("table.size"),
+                json!("table.live"),
+                json!("table.pinned"),
+                json!("atop"),
+                flag.clone(),
+                json!("faulted"),
+                json!("code"),
+                json!(dest()?),
+                slice(p, w),
+                json!("ByteLayout"),
+            ],
+        ));
+        flagged = true;
     } else if node.op == "lift.retval" {
         arity(1)?;
         if width(&operands[0])? != t {
@@ -433,20 +589,52 @@ pub fn build(
 ) -> Result<Trace> {
     let f = &object.functions[name];
     let plan = crate::oracle_state::Plan::form(object, name, budget)?;
-    if object.metadata.contains_key("layout") {
-        return Err(postponed(
-            "layout state and fixed-binding lproc oracle construction",
-        ));
+    let layout = crate::layout::Layout::from_object(object)?;
+    if !plan.index.instances.is_empty() {
+        return Err(postponed("fixed-binding lproc oracle row construction"));
     }
-    if !f.groups[3].is_empty() {
+    if layout.is_none() && !f.groups[3].is_empty() {
         return Err(Error::arg(
             "memoryless oracle cannot declare interface memory",
         ));
     }
-    if budget[1..].iter().any(|n| *n != 0) {
+    if layout.is_none() && budget[1..].iter().any(|n| *n != 0) {
         return Err(Error::new(
             Status::Budget,
             "memoryless oracle requires zero memory/stack/depth limits",
+        ));
+    }
+    // Account for all interface and private wire strings before allocating any.
+    // The symbolic plan is available independently of this host workspace.
+    const HOST_STATE_BYTES: u64 = 64 * 1024 * 1024;
+    let mut wires = plan
+        .base
+        .iter()
+        .try_fold(u64::from(inherited), |a, r| a.checked_add(r.width))
+        .and_then(|a| {
+            plan.frame_width
+                .checked_mul(budget[0])
+                .and_then(|b| a.checked_add(b))
+        });
+    for param in f.groups[..3].iter().flatten() {
+        let width = object::wire_width(&param.ty)?;
+        wires = wires.and_then(|n| n.checked_add(width));
+    }
+    for param in &f.groups[3] {
+        let (address, cell) = object::region_shape(&param.ty)?;
+        let width = u32::try_from(address)
+            .ok()
+            .and_then(|a| 1u64.checked_shl(a))
+            .and_then(|n| n.checked_mul(cell));
+        wires = wires.and_then(|n| width.and_then(|w| n.checked_add(w)));
+    }
+    let estimate = wires
+        .and_then(|w| w.checked_mul(128))
+        .and_then(|w| budget[0].checked_mul(1024).and_then(|b| w.checked_add(b)));
+    if estimate.is_none_or(|n| n > HOST_STATE_BYTES) {
+        return Err(Error::new(
+            Status::NoMem,
+            "oracle construction exceeds 64 MiB host state workspace",
         ));
     }
     let library = Library::published()?;
@@ -467,6 +655,45 @@ pub fn build(
                 wires,
             });
         }
+    }
+    for (index, param) in f.groups[3].iter().enumerate() {
+        let (address, cell) = object::region_shape(&param.ty)?;
+        let width = 1u64
+            .checked_shl(
+                u32::try_from(address)
+                    .map_err(|_| Error::new(Status::NoMem, "region exponent exceeds host size"))?,
+            )
+            .and_then(|n| n.checked_mul(cell))
+            .ok_or_else(|| Error::new(Status::NoMem, "region exceeds host size"))?;
+        if param.role.as_deref() != Some("in") {
+            return Err(Error::arg(
+                "§5.1: oracle interface regions must have in role",
+            ));
+        }
+        let id = format!("mem:{index}");
+        let mut wires = Vec::new();
+        wires
+            .try_reserve_exact(
+                usize::try_from(width)
+                    .map_err(|_| Error::new(Status::NoMem, "region exceeds host size"))?,
+            )
+            .map_err(|_| Error::new(Status::NoMem, "region exceeds host memory"))?;
+        wires.extend((0..width).map(|i| format!("{id}[{i}]")));
+        env.insert(
+            format!("source.{}", param.name),
+            Binding::Region {
+                address,
+                cell,
+                role: "in".into(),
+                origin: format!("interface:{}", param.name),
+                wires: wires.clone(),
+            },
+        );
+        slots.push(Slot {
+            id,
+            role: "mem_in".into(),
+            wires,
+        });
     }
     for (p, value) in f.groups[4].iter().zip(params.as_array().unwrap()) {
         env.insert(
@@ -531,23 +758,6 @@ pub fn build(
     let q = plan.frame_width;
     let state_schema = library.recipes["oracle.construct"]["parameters"][13].clone();
     let frames_schema = library.recipes["oracle.construct"]["parameters"][14].clone();
-    // This materialized adapter has a finite host workspace. State shape remains
-    // available symbolically through Plan even when this invocation cannot fit.
-    const HOST_STATE_BYTES: u64 = 64 * 1024 * 1024;
-    let wires = plan
-        .base
-        .iter()
-        .try_fold(0u64, |a, r| a.checked_add(r.width))
-        .and_then(|a| q.checked_mul(budget[0]).and_then(|b| a.checked_add(b)));
-    let estimate = wires
-        .and_then(|w| w.checked_mul(128))
-        .and_then(|w| budget[0].checked_mul(1024).and_then(|b| w.checked_add(b)));
-    if estimate.is_none_or(|n| n > HOST_STATE_BYTES) {
-        return Err(Error::new(
-            Status::NoMem,
-            "oracle construction exceeds 64 MiB host state workspace",
-        ));
-    }
     let mut state = Vec::new();
     let mut frames = Vec::new();
     let frame_count = usize::try_from(budget[0])
@@ -583,6 +793,70 @@ pub fn build(
                 ("frame".into(), storage),
             ]));
         }
+    }
+    if layout.is_some() {
+        let table = read("alloctab", &env)?;
+        let ptr = usize::try_from(object.ptr_width)
+            .map_err(|_| Error::new(Status::NoMem, "pointer exceeds host size"))?;
+        let entry = ptr
+            .checked_mul(2)
+            .and_then(|n| n.checked_add(2))
+            .ok_or_else(|| Error::new(Status::NoMem, "table entry exceeds host size"))?;
+        let mut base = Vec::new();
+        let mut size = Vec::new();
+        let mut live = Vec::new();
+        let mut pinned = Vec::new();
+        for cell in table.chunks_exact(entry) {
+            base.extend_from_slice(&cell[..ptr]);
+            size.extend_from_slice(&cell[ptr..2 * ptr]);
+            live.push(cell[2 * ptr].clone());
+            pinned.push(cell[2 * ptr + 1].clone());
+        }
+        for (name, wires) in [
+            ("table.base", base),
+            ("table.size", size),
+            ("table.live", live),
+            ("table.pinned", pinned),
+        ] {
+            env.insert(name.into(), Binding::Wires(wires));
+        }
+        let mut records = Vec::new();
+        for span in &plan.bytes {
+            let (wires, offset) = match span.storage {
+                crate::oracle_state::ByteStorage::Ordinary { offset } => {
+                    (read("mem", &env)?, offset)
+                }
+                crate::oracle_state::ByteStorage::Interface { position, offset } => {
+                    let Some(Binding::Region { wires, .. }) =
+                        env.get(&format!("source.{}", f.groups[3][position].name))
+                    else {
+                        return Err(Error::arg("missing mapped region binding"));
+                    };
+                    (wires.clone(), offset)
+                }
+            };
+            let first = usize::try_from(offset * 8)
+                .map_err(|_| Error::new(Status::NoMem, "byte slice exceeds host size"))?;
+            let last = usize::try_from((offset + span.extent) * 8)
+                .map_err(|_| Error::new(Status::NoMem, "byte slice exceeds host size"))?;
+            let cells = wires
+                .get(first..last)
+                .ok_or_else(|| Error::arg("byte layout does not match source storage"))?
+                .to_vec();
+            records.push(Env::from([
+                ("base".into(), Binding::Integer(span.base.into())),
+                ("extent".into(), Binding::Integer(span.extent.into())),
+                ("cells".into(), Binding::Wires(cells)),
+            ]));
+        }
+        let schema = library.recipes["lift.load"]["parameters"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["name"] == "Layout")
+            .unwrap()
+            .clone();
+        env.insert("ByteLayout".into(), Binding::Records { schema, records });
     }
     env.insert(
         "State".into(),
@@ -637,6 +911,11 @@ pub fn build(
             &source_env,
             &locations,
             &labels,
+            &Source {
+                object,
+                name,
+                layout: layout.as_ref(),
+            },
         )?;
         rows.push(json!({"parameters":[{"name":"frame","type":"wire","width":q}],"body":body}));
         next.push(json!({"parameters":[{"name":"frame","type":"wire","width":q},{"name":"next","type":"wire","width":p}],"body":successor}));
