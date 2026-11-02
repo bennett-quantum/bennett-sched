@@ -13,7 +13,7 @@ headers are in the published ISA repository and [data/bennett_sched.h](data/benn
 `bennett_sched_version()` is an additional compatibility probe returning 9.
 
 The implemented path covers memoryless oracles, layout-backed root oracles with
-address/load/bounds-check rows, and actions, plain/while loops and source adjoints,
+address/load/bounds-check rows and lproc call/return rows, and actions, plain/while loops and source adjoints,
 qif, copy/XOR/exchange, local regions and coherent memory, action calls and
 translation-lemma borrow frames. Native and approximate/exact target schemes
 use deterministic sequential timing, class capacity and topology placement,
@@ -23,8 +23,8 @@ It emits JCS schedules and bound certificates with exact resource fractions and
 
 Load-time layout checks validate ranges, images, exact interface mappings and
 pre-entry capacity. The state planner derives ordered byte/location descriptors,
-reference counters, activation/frame sizes and sparse initial images; layout/lproc
-call/return gate emission is still pending. Root memory reads preserve mapped
+reference counters, activation/frame sizes and sparse initial images. Lproc call/return
+expansion preserves positional binding keys and uses the published activation recipes. Root memory reads preserve mapped
 input identity, restore global images and include input regions in oracle claim
 domains.
 
@@ -38,13 +38,20 @@ respect intrinsic boundaries and joint inverse ownership; primitive/intrinsic
 recompute preserves carrier coordinates. Finite class/vertex search finds a
 feasible assignment when an earlier assignment fails.
 
-Layout/lproc construction, nested calls/domain checks, fresh semantic-call
+Store/allocator row adapters, nested semantic calls/domain checks, fresh semantic-call
 recompute and input-history replay, qinplace, general cleanup and borrow proofs,
-nested region coordinates, and objective optimisation remain `bennett-sched-ark`.
+and objective optimisation remain `bennett-sched-ark`. Accepted K83 action-region
+support coordinates and recursive declaration collection are implemented and
+verified under `bennett-sched-ecz` by the full 129-test working-tree gate. Bounded-memory
+streaming remains `bennett-sched-2u4`: normative sum_db at B=3 currently exhausts
+the explicit materialized leaf workspace and reports `BENNETT_E_NOMEM`.
 Varying invocation frame descriptors require the `bennett-sched-lzv` contract
 decision; restricted T3 borrow certificates require the `bennett-sched-awo`
 frame-domain decision. Classical pseudo-location initialization requires
-`bennett-sched-r28`; its exact state/cost proposal is queued upstream. Encountered
+`bennett-sched-r28`; its exact state/cost proposal is queued upstream. Borrow-owner
+designation (`qm2`), explicit interface class choices (`4tj`) and differing
+per-context resource reports (`1na`) also have queued contract proposals. Uniform
+repeated contexts work; differing reports are never silently overwritten. Encountered
 postponed features return `UNSUPPORTED` with a specific
 reason and issue; constraint failures return `INFEASIBLE`; malformed requests
 return a `bennett_status` error. The deterministic candidate is not claimed optimal.

@@ -1,6 +1,8 @@
 use bennett_sched::{expansion::simulate_basis, object::Object, source::Trace};
 use serde_json::json;
 use std::collections::BTreeMap;
+#[path = "common/basis.rs"]
+mod basis;
 fn mapped_reader() -> Object {
     reader(false)
 }
@@ -234,4 +236,123 @@ fn encoded_layout_request_emits_an_admitted_schedule_and_bound_frame_certificate
         json!([{"name":"db","cells":"all"}])
     );
     assert!(!response.schedule.is_empty() && !response.certificate.is_empty());
+}
+
+#[test]
+fn store_then_load_covers_every_input_old_byte_pair_and_restores_mapped_memory() {
+    let mut object = mapped_reader();
+    let f = object.functions.get_mut("read").unwrap();
+    let mut store = f.body[1].clone();
+    store.point = "entry:1".into();
+    store.lhs = None;
+    store.op = "lift.store.i8".into();
+    store.operands = vec!["p".into(), "x".into()];
+    f.body.insert(1, store);
+    for (i, node) in f.body.iter_mut().enumerate() {
+        node.point = format!("entry:{i}");
+    }
+    let trace = Trace::build(&object, "read", 1, &json!([]), [4, 0, 0, 0]).unwrap();
+    let leaves = trace
+        .events
+        .iter()
+        .map(|e| e.leaf.clone())
+        .collect::<Vec<_>>();
+    let program = basis::Program::compile(&leaves).unwrap();
+    // Exhaust the two byte inputs and both controls. Target/fault values vary
+    // across this witness; their independent XOR behavior is checked below.
+    for input in 0..256 {
+        let mut cases = Vec::new();
+        let mut expected = Vec::new();
+        for old in 0..256 {
+            for control in [false, true] {
+                let target = input ^ old ^ 0xa5;
+                let fault = old & 15;
+                let mut bits = BTreeMap::new();
+                put(&mut bits, "in:0", 8, input);
+                put(&mut bits, "tgt:0", 8, target);
+                put(&mut bits, "fault:0", 4, fault);
+                put(&mut bits, "mem:0", 8, old);
+                bits.insert("control:0".into(), control);
+                cases.push(bits);
+                expected.push((old, target, fault, control));
+            }
+        }
+        program.run_many(&mut cases).unwrap();
+        for (bits, (old, target, fault, control)) in cases.iter().zip(expected) {
+            assert_eq!(get(bits, "in:0", 8), input);
+            assert_eq!(get(bits, "mem:0", 8), old);
+            assert_eq!(
+                get(bits, "tgt:0", 8),
+                target ^ if control { input } else { 0 }
+            );
+            assert_eq!(get(bits, "fault:0", 4), fault);
+            assert_eq!(bits.len(), 29);
+        }
+    }
+}
+
+#[test]
+fn store_bounds_faults_and_step_cuts_preserve_arbitrary_target_fault_and_memory() {
+    for bad_address in [false, true] {
+        let mut object = mapped_reader();
+        let f = object.functions.get_mut("read").unwrap();
+        f.body[1].lhs = None;
+        f.body[1].op = "lift.store.i8".into();
+        f.body[1].operands = vec!["p".into(), "x".into()];
+        f.body[2].operands = vec!["x".into()];
+        if bad_address {
+            f.body[0].op = "lift.const.i3".into();
+            f.body[0].operands = vec!["3".into()];
+        }
+        for b in 0..=3 {
+            let trace = Trace::build(&object, "read", 1, &json!([]), [b, 0, 0, 0]).unwrap();
+            let leaves = trace
+                .events
+                .iter()
+                .map(|e| e.leaf.clone())
+                .collect::<Vec<_>>();
+            let program = basis::Program::compile(&leaves).unwrap();
+            let mut cases = Vec::new();
+            let mut expected = Vec::new();
+            for target in 0..256 {
+                for fault in 0..16 {
+                    for control in [false, true] {
+                        let mut bits = BTreeMap::new();
+                        put(&mut bits, "in:0", 8, 0xa5);
+                        put(&mut bits, "tgt:0", 8, target);
+                        put(&mut bits, "fault:0", 4, fault);
+                        put(&mut bits, "mem:0", 8, 0x53);
+                        bits.insert("control:0".into(), control);
+                        cases.push(bits);
+                        expected.push((target, fault, control));
+                    }
+                }
+            }
+            program.run_many(&mut cases).unwrap();
+            for (bits, (target, fault, control)) in cases.iter().zip(expected) {
+                let cause = if !control {
+                    0
+                } else if bad_address && b >= 2 {
+                    7
+                } else if b < 3 {
+                    1
+                } else {
+                    0
+                };
+                assert_eq!(get(bits, "fault:0", 4), fault ^ cause);
+                assert_eq!(
+                    get(bits, "tgt:0", 8),
+                    target
+                        ^ if control && !bad_address && b == 3 {
+                            0xa5
+                        } else {
+                            0
+                        }
+                );
+                assert_eq!(get(bits, "in:0", 8), 0xa5);
+                assert_eq!(get(bits, "mem:0", 8), 0x53);
+                assert_eq!(bits.len(), 29);
+            }
+        }
+    }
 }

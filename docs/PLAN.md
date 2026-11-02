@@ -1,7 +1,7 @@
 # ISA 0.9 scheduler implementation and evidence
 
 Contract: `bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md`, §11 and its
-dependencies. Source checkout observed at `ecaaac060c44e317d1181345fa6b8e38c096c099`; specification and catalog bytes are unchanged from the accepted K82 pin.
+dependencies. Source checkout observed at `d2602c4efec21f92221c6e752cfd73f03fdf83ad`; K83 is now accepted. The catalog bytes/hash remain unchanged. SPEC_VERSIONS.toml records the observed specification digest.
 The published `ref` JSON is specification data, vendored in `data/`; no sibling
 implementation code is linked or copied. Beads issue `bennett-sched-akl` owns
 implementation tracking. This document maps requirements and records evidence;
@@ -11,7 +11,7 @@ it does not replace Beads.
 
 1. Implemented and focused-tested: binary ABI, exact decimals and canonical document identity.
 2. Partial: schema/selectors/binding and closed constructors implemented; K82 binding and all published binding witnesses implemented; full functional family replay remains qnl.
-3. Partial: memoryless oracle construction, source cleanup carriers/recompute and supported action traces, native/exact/approximate schemes and bound resource certificates implemented; ark tracks the remaining algorithms.
+3. Partial: memoryless/layout oracle construction, lproc call/return rows, source cleanup carriers/recompute and supported action traces, native/exact/approximate schemes and bound resource certificates implemented; ark/2u4 track remaining algorithms.
 4. Audit performed: all ten object identities and the full controlled-action basis domain checked; every published case/manifest inventoried, remaining conformance tracked in qnl. Push protocol has a mock isolation test; the runner must verify the committed SHA.
 
 ## Requirement inventory
@@ -22,14 +22,15 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | Clause | Required behavior | Evidence / state |
 |---|---|---|
 | §11 C declarations | Opaque owned requests/responses, all setters, copied buffers, status and typed OK/INFEASIBLE/UNSUPPORTED, reasons, accessors and frees | Exported; Rust ownership/null tests and C11 cdylib consumer (`ffi`, `c_link`) |
-| ISA-11-P2 | Expand every row/instruction in specified source order; stable generated ordinals; removals only from library permission | Primitive action source expansion checked; memoryless oracle state/row/commit/history construction implemented; layout address/load/bounds-check root rows implemented; lproc and nested-call builders remain ark |
+| ISA-11-P2 | Expand every row/instruction in specified source order; stable generated ordinals; removals only from library permission | Primitive action source expansion checked; memoryless oracle state/row/commit/history construction implemented; layout address/load/bounds-check root rows implemented; lproc call/return rows implemented; nested semantic calls and store/allocator row adapters remain ark |
 | ISA-11-P3 | JCS schedule; exact bindings; cleanup/gate/alloc/start entries, selectors and defaults | Strict schema and output binding tests; generated action schedules (`selectors`, `pipeline`) |
 | ISA-11-P4, §8.3 | Interface/control placements, per-class vertices, lifetimes, adjacency, no routing | Default class/vertex placement, capacity and adjacency implemented; finite class/per-bit vertex search implemented; cost optimisation remains open (ark) |
 | ISA-11-P5 / K52 | Invocation-chain prefixes; source-loop iteration, nested budget/step/phase; no `lift.call` edge | Nested coordinate resolver tested; action call source paths tested; memoryless oracle step/phase/support coordinates and reverse ordinals checked; nested oracle calls remain ark |
 | ISA-11-P6 | Lexicographic specificity, maximal ties independent of document order and entry kind; defaults replace rather than inherit fields | Per-operation maximal ties and independent kinds tested, including K63 specificity neutrality |
-| ISA-11-P7 / K55 | Admission/concrete validation stages, literal-only nested-budget derivation; exact rational decimal equivalence | Exact decimals implemented; linked source-path/request admission implemented; lproc concrete instance admission implemented; nested-budget/complete generated domains remain ark |
-| K63 | Fixed-instance and semantic-call-occurrence identity and selectors, without extra specificity | Selectors and typed semantic-call occurrence spaces implemented; Finite positional lproc closure, row ranges, location IDs and activations formed; concrete selector keys validated; row emission remains ark |
+| ISA-11-P7 / K55 | Admission/concrete validation stages, literal-only nested-budget derivation; exact rational decimal equivalence | Exact decimals implemented; linked source-path/request admission implemented; lproc concrete instance admission implemented; known generated domains checked; unresolved nested-budget domains remain ark |
+| K63 | Fixed-instance and semantic-call-occurrence identity and selectors, without extra specificity | Selectors and typed semantic-call occurrence spaces implemented; Finite positional lproc closure, row ranges, location IDs and activations formed; concrete selector keys and published call/return row emission tested |
 | K64 | `$construct/$step/$commit/$release`, separate support ordinal spaces, B=0 construction/commit/release | All four support points emitted for memoryless oracles, including B=0; forward/reverse step coordinates and shared Rows/Next ordinals checked (`oracle`) |
+| K83 | Action-local recursive declaration collection, unconditional entry/exit support, contiguous ordinals and adjoints | `regions` checks zero-trip loops, both qif arms, images, multiple declarations, source adjoints, calls, exact/empty selector domains and certificates; full 129-test gate passed |
 | K65 | Non-emitting ordinal-0 whole-cleanup carriers, reverse/recompute selection before leaf expansion | Carriers formed from source version matches; all selections stage before mutation; reverse and primitive/intrinsic recompute checked (`cleanup`) |
 | K81 | Source occurrence/version cleanup partition, indivisible joint inverses, intrinsic boundaries, first-release ownership | Semantic calls remain atomic; intrinsic boundaries and first-release ownership of joint inverses checked; broader source forms remain ark |
 | K80 | Reverse retains written points; recompute replacement owns carrier-point contiguous ordinals and fresh semantic-call occurrences | Primitive/intrinsic recompute owns contiguous carrier ordinals and omits original loop coordinates; fresh semantic-call contexts/history replay remain ark |
@@ -41,19 +42,19 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | K22 | Indexed captured typed templates, apply-site controls, source row ordinals | Constructor support present; complete published template families remain unexercised (qnl) |
 | K24 | Closure-bound argument vectors, exact iN/f64/token encodings, no implicit conversions | Value encodings/hash witness checked; finite lproc keys and resolved token/classical/region forwarding checked independently of runtime values; nested constructor calls remain ark; pseudo-location storage requires r28 |
 | K77 | Explicit per-call oracle token context, captured across adapters, distinct from positional arguments | Deferred source-binding channel (ark); no root budget substituted for nested token parameters |
-| K25 | Ordered source-validated byte/activation/capture/state/frame descriptors | Generic typed records implemented; source-derived State/frame sizing and ordered byte/location maps implemented, including layout counters, sparse images and pinned table initialization; memoryless adapter consumes this plan; activation/capture metadata and concrete call targets implemented; lproc row emission remains ark |
+| K25 | Ordered source-validated byte/activation/capture/state/frame descriptors | Generic typed records implemented; source-derived State/frame sizing and ordered byte/location maps implemented, including layout counters, sparse images and pinned table initialization; memoryless adapter consumes this plan; activation/capture metadata, concrete call targets and lproc call/return row emission implemented |
 | K26 | Region shape, role, origin and ordered cells; reject same-width shape substitutions | Generic and source shape/role/origin forwarding implemented; all K79 address cases and 128 complete forward/inverse tuples checked |
 | K27 | Class and allocation declarations, unconditional acquire/relinquish, shared lifetime state, fresh reacquisition | Acquire/relinquish, fresh reacquisition and inactive scope exit tests; translation-lemma source borrow frames and separate certificate records implemented; other T3 frame proofs remain open (ark) |
 | K28 / K62 | qinplace t/f release sequence and source action adjoint before expansion | Primitive action-call adjoint path present; qinplace and complete source replacements deferred (ark) |
 | ISA-11.1-P29 | Forward leaf ordinals before transforms/schemes, callee spaces, inverse retains identity, all ref removable sets empty | Bound qxor ordinals, inverse retention and empty removable sets tested; full source spaces deferred (ark) |
 | §11 obligations / §6 | Cleanup windows, exact source versions/control sets, no measurement cleanup | Source semantic-call/intrinsic version matching, matched dependency windows and sufficient composed-use factorisation implemented; general factorisation and fresh-call/history recompute remain open (ark) |
 | §8.1 / K9 | Closed cost AST, exact rationals, epsilon decade/log2, context variable rules | Exact AST/context/decade/log2 evaluation tested against published E vectors; imported model/version/resource quantity mapping checked directly against E-imports |
-| §8.2 / K12 | Count once per native leaf, makespan, per-class occupancy/peak, borrowed rate replacement, exact rows and upward 34-digit displays | `tests/canonical_cost.rs` decimal witnesses |
+| §8.2 / K12 | Count once per native leaf, makespan, per-class occupancy/peak, borrowed rate replacement, exact rows and upward 34-digit displays | `tests/canonical_cost.rs` decimal witnesses; designated owner alias/accounting needs qm2 |
 | §8.3–8.4 | First matching native entry/scheme, own+effective controls, ancillae, capacity, accuracy and topology | Native matching, exact/approximate scheme error composition, capacity, adjacency and sequential timing tested; finite class/per-bit vertex search implemented; cost optimisation remains open (ark) |
 | §9.1–9.2 | Canonical object parsing, signatures, semantic envelopes/SCC hashes and object/params/schedule identities | All ten normative object interface hashes, SCC envelopes and controlled fixture object hash checked; strict layout schema/ranges/images/mappings checked at load; complete source semantic admission remains partial |
 | §9.4 | Complete typed frame descriptor: slots/scratch/history/borrow/ancillae and live ranges | Supported action slot/scratch/borrow/ancilla records emitted; memoryless oracle history records emitted separately; varying context frames require lzv contract decision |
-| §12.1–12.3 | Bound certificate, realised multiplicities, claims with honest evidence, local/inclusive errors and diamond composition | Binding/resources/numerical claim emission tested for supported traces; rigorous checker replay and general composition proof remain open (ark/qnl) |
-| §17 items 7–9, 15, 18 | Published default ref library, cleanup defaults, accuracy defaults, placement, full history | Ref identity, exact finite shares and placement checked; memoryless oracle full-history expansion checked; layout/lproc full history remains ark |
+| §12.1–12.3 | Bound certificate, realised multiplicities, claims with honest evidence, local/inclusive errors and diamond composition | Binding/resources/numerical claim emission tested for supported traces; differing context resource/gate maps need1na; rigorous checker replay and general composition proof remain open (ark/qnl) |
+| §17 items 7–9, 15, 18 | Published default ref library, cleanup defaults, accuracy defaults, placement, full history | Ref identity, exact finite shares and placement checked; memoryless oracle full-history expansion checked; layout/lproc call/return history checked on small full domains; materialized large sum_db requires2u4 |
 
 ## Gaps and evidence limits
 
@@ -87,10 +88,10 @@ No unratified certificate field is emitted. Independent work continues.
 
 ## Postponed mechanics and conformance limits
 
-`bennett-sched-ark` tracks oracle/lproc source state and fixed-instance
-builders, nested-budget concrete validation, fresh semantic-call recompute and
+`bennett-sched-ark` tracks store/allocator row adapters, nested semantic
+call construction and budget validation, fresh semantic-call recompute and
 nonzero target history replay, qinplace coverage, general factorisation and non-translation
-borrow T3 proofs, nested local-region declaration coordinates and objective
+borrow T3 proofs and objective
 optimisation. These are postponed algorithms with specific
 UNSUPPORTED reasons, not permanently excluded capabilities. Malformed source
 and target inputs produce argument/target errors. Ordinary supported actions
@@ -168,8 +169,9 @@ return NoMem, and constructor execution uses an explicit bounded worker stack.
 The oracle fault-rate field replays only its declared zero-input witness, with
 inherited controls fixed at zero; no full-distribution assertion is inferred.
 All 13 quantum regions in the ten normative objects are audited with a universal
-exact target: seven OK and six explicitly postponed outcomes (layout/lproc,
-classical pseudo-location and qinplace paths). This audits producer behavior,
+exact target: seven OK, five explicit UNSUPPORTED outcomes (nested calls, classical pseudo-
+location and qinplace paths), and one BENNETT_E_NOMEM outcome (sum_db B=3).
+Sum_db also has a successful B=0 construction/commit/release witness. This audits producer behavior,
 not independent 0.9 checker success.
 
 ## Classical pseudo-location binding gap — bennett-sched-r28
@@ -201,9 +203,9 @@ widths, sparse ordinary-memory images, pinned alloctab bits and ordered byte
 partitions. Mapped cells retain input identity; hidden ordinary bytes remain
 zero. B frames are lazy metadata. Normative through has W_cell=5 and Q=25 at
 depth_limit=1; sum_db has W_cell=32 and Q=106 at depth_limit=0. The existing
-memoryless oracle adapter now consumes this shared plan. Layout/lproc gate
-emission is still an explicit ark deferral, so descriptor tests do not claim
-those complete schedules.
+memoryless oracle adapter now consumes this shared plan. Address/load/boundscheck and lproc call/return rows now have source expansion
+tests. Store/allocator and nested semantic-call adapters remain explicit ark
+deferrals, so descriptor tests alone do not claim their complete schedules.
 
 Host limits return NoMem rather than UNSUPPORTED: extent integers use an 8 MiB
 host workspace, the materialized oracle state adapter budgets 64 MiB, and image
@@ -216,8 +218,9 @@ instance, including recursive aliases. Activation records use exact global ids
 and declaration slots. Captures preserve source/parameter identities and use
 offsets computed from the complete frame slot widths. Return delivery sizes
 include every closure location visited by R4, including unused wider locations;
-a regression checks that case. The record-level tests pass; complete call/return
-gate construction is still pending.
+a regression checks that case. Call/return gate construction now invokes the published activation recipes;
+full small input/target/fault/control domains at B=0..5 pass using a64-lane
+basis interpreter checked against the ordinary map interpreter.
 
 The first new full checkpoint reached pipeline tests without an assertion
 failure but exhausted the 300-second execution budget on the shared runner.
@@ -241,7 +244,8 @@ A mixed-width constant assignment regression exposed an oversized displacement
 binding; constants now bind exactly their low-width frame slice.
 
 Focused layout milestone: lproc 6, oracle_state 7 and oracle_memory 6 pass.
-No complete lproc, allocator/store or nested-oracle scheduling claim follows.
+Lproc call/return source expansion now has full small-domain tests. Allocator/store
+and nested semantic-call schedules remain required.
 
 ## Design-review fixes and remaining contract decisions
 
@@ -277,7 +281,9 @@ charging proposal is queued upstream; no unrelated owner's charge is silently
 subtracted. Dirty borrowing remains required scope.
 
 The gate now reads free -g and uptime and selects two build/test threads when
-MemAvailable is below6GiB, otherwise at most four. The last complete full checkpoint passed123 tests before admission and resource-context changes. The first admission gate encountered the newly added red resource-context regression. The next gate found that upstream had accepted K83 and changed the spec hash; the inventory and pin were refreshed. A stable-tree gate is required after those updates.
+MemAvailable is below6GiB, otherwise at most four. The last complete full checkpoint passed 129 tests after admission, resource-
+context guards, K83 support and the inventory/pin refresh. The exact command was
+`timeout 660 scripts/pre-push --working-tree` (exit 0).
 
 
 Review760 admission now checks declared allocation classes and gate schemes,
@@ -297,8 +303,11 @@ resources and gates_used need a contract decision distinct from error bounds.
 Accepted K83 adds action-local $construct/$release support domains, recursive
 once-per-invocation qregion collection even in zero-trip loops and both qif
 arms, unconditional preparation/restoration and contiguous support ordinals.
-This is newly required mechanics tracked by bennett-sched-ecz. The previous
-nested-declaration address deferral must be replaced by that published rule;
-current ordinary declaration support coordinates are not claimed K83 compliant.
+Implemented under bennett-sched-ecz: recursive collection in canonical text
+order, distinct forward entry/exit domains, source-adjoint support renaming and
+reserved action path admission. Source version and borrow-scope adapters now
+handle support leaves without treating them as explicit cleanup instructions.
+Focused region/structure/admission/borrow tests pass (17 tests), followed by
+full gate success (129 tests). Ecz is closed.
 Observed ISA main is d2602c4efec21f92221c6e752cfd73f03fdf83ad with spec hash
 7458b362d22d2b89912331da8866e334385686faf8e2b51d8d49684e522c3034.

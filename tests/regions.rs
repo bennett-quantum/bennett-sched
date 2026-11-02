@@ -245,7 +245,7 @@ fn k83_source_adjoints_have_forward_support_domains_and_raw_inverse_retains_addr
 fn k83_request_support_selectors_check_exact_generated_domains_and_empty_points() {
     use bennett_sched::{Outcome, Request, Status, schedule::Document};
     let gates = ["x","cx","ccx","mcx","swap"].map(|op|json!({"op":op,"classes":["fast"],"controls":{"min":0,"max":"unbounded"},"epsilon":0,"cost":{"time":1}}));
-    let target = json!({"ptr_widths_supported":[32],"classes":{"fast":{"capacity":"unbounded","qubit_second":1,"dirty_rate":1}},"resources":{"time":{"kind":"time","unit":"second"},"peak_qubits":{"kind":"peak","unit":"qubit"}},"gates":gates,"schemes":[],"qram":null,"tables":{},"imports":{},"capabilities":{"measurement":{"mid_circuit":false,"feedforward_latency":0},"mbu":false,"max_parallel":"unbounded","max_predicate_depth":"unbounded","classical_step_time":1},"objective":{"weighted":{"time":1}}});
+    let target = json!({"ptr_widths_supported":[32],"classes":{"fast":{"capacity":"unbounded","qubit_second":1,"dirty_rate":1}},"resources":{"time":{"kind":"time","unit":"second"},"qubit_second":{"kind":"occupancy","unit":"qubit_second"},"peak_qubits":{"kind":"peak","unit":"qubit"}},"gates":gates,"schemes":[],"qram":null,"tables":{},"imports":{},"capabilities":{"measurement":{"mid_circuit":false,"feedforward_latency":0},"mbu":false,"max_parallel":"unbounded","max_predicate_depth":"unbounded","classical_step_time":1},"objective":{"weighted":{"time":1}}});
     for has_region in [false, true] {
         let bytes = if has_region {
             region_program("qloop 0 {\nqregion r 0 8 @image\n}", &[0], Some("81"))

@@ -370,7 +370,7 @@ fn row(
         let (length, argument) = if env.contains_key(&operands[1]) {
             (width(&operands[1])?, json!(operands[1]))
         } else {
-            let value = crate::layout::integer(&json!(operands[1]))?;
+            let value = crate::oracle_memory::literal_length(&operands[1], ptr)?;
             let length = value.bits().max(1);
             let value: Value = serde_json::from_str(&value.to_string())?;
             body.push(
@@ -424,6 +424,7 @@ fn row(
         arity(1)?;
         let w = crate::schedule::uint(&json!(suffix))?;
         if w == 0
+            || w > 128
             || w % 8 != 0
             || written_width()? != w
             || width(&operands[0])? != source.object.ptr_width
@@ -472,6 +473,11 @@ fn row(
                 json!("ByteLayout"),
             ],
         ));
+        flagged = true;
+    } else if ["lift.alloc", "lift.free"].contains(&node.op.as_str())
+        || node.op.starts_with("lift.store.i")
+    {
+        body.extend(crate::oracle_memory::row(node, source, p, f, slots, env)?);
         flagged = true;
     } else if node.op == "lift.call" || node.op == "lift.ret" {
         let (operation, target, is_dynamic) =

@@ -2,7 +2,7 @@
 //! calls remain atomic; instruction-private constructor scratch is not source
 //! workspace. The emitted schedule still contains every prescribed leaf.
 use crate::{
-    Result, canonical,
+    Error, Result, canonical,
     expansion::{Leaf, Operation},
     object::{Object, flattened},
     schedule::Kind,
@@ -139,7 +139,22 @@ pub fn events(object: &Object, trace: &Trace, owner: usize) -> Result<Vec<Event>
             "source event outside its direct invocation"
         );
         let point = &event.location.path.last().unwrap().point;
-        let node = points[point];
+        // K83 image preparation/restoration is source lifetime support, not
+        // an explicit computing/cleanup instruction. Keep every leaf for
+        // version/lifetime verification without looking up a source row.
+        if ["action", "perm_action"].contains(&function.kind.as_str())
+            && ["$construct", "$release"].contains(&point.as_str())
+        {
+            result.push(event.clone());
+            index += 1;
+            continue;
+        }
+        let node = points.get(point).ok_or_else(|| {
+            Error::arg(format!(
+                "source event point {point} is not in {}",
+                function.name
+            ))
+        })?;
         let op = node.op.as_str();
         if [
             "qcopy", "quncopy", "qload", "qunload", "qxor", "qexch", "qstore", "qexchm",

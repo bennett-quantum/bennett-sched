@@ -13,6 +13,7 @@ pub mod lproc;
 pub mod object;
 pub mod oracle;
 mod oracle_activation;
+mod oracle_memory;
 pub mod oracle_state;
 pub mod ref_contract;
 pub mod request;

@@ -110,6 +110,11 @@ pub fn prove(object: &Object, trace: &Trace) -> Result<Vec<Proof>> {
     for f in object.functions.values() {
         let mut map = BTreeMap::new();
         scopes(&f.body, "root", &mut map);
+        if ["action", "perm_action"].contains(&f.kind.as_str()) {
+            for point in ["$construct", "$release"] {
+                map.insert(point.into(), format!("support:{point}"));
+            }
+        }
         maps.insert(object.symbols[&f.name].interface_hash.clone(), map);
     }
     let mut proofs = Vec::new();
