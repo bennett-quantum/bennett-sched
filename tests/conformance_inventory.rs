@@ -67,6 +67,9 @@ fn conformance_inventory_records_every_case_and_portable_manifest_without_stale_
                 assert_eq!(manifest["admitted"], 4);
                 assert_eq!(manifest["rejected"], 8);
             }
+            "k80.json" | "k81.json" => {
+                assert_eq!(manifest["coverage"], "partial-equivalent-witness")
+            }
             _ => assert_eq!(manifest["coverage"], "not-exercised"),
         }
     }

@@ -89,12 +89,17 @@ pub struct CallEdge {
     pub call_index: u64,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Origin {pub constructor:String,pub name:String,pub index:usize,pub reverse:bool}
+pub struct Origin {
+    pub constructor: String,
+    pub name: String,
+    pub index: usize,
+    pub reverse: bool,
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Leaf {
     pub ordinal: u64,
     pub calls: Vec<CallEdge>,
-    pub origin:Vec<Origin>,
+    pub origin: Vec<Origin>,
     pub op: Operation,
 }
 impl Leaf {
@@ -112,7 +117,9 @@ pub fn inverse(leaves: &[Leaf]) -> Vec<Leaf> {
         .rev()
         .map(|l| {
             let mut l = l.clone();
-            for origin in &mut l.origin{origin.reverse=!origin.reverse;}
+            for origin in &mut l.origin {
+                origin.reverse = !origin.reverse;
+            }
             l.op = match l.op {
                 Operation::Gate(g) => Operation::Gate(g.adjoint()),
                 Operation::Alloc {
@@ -538,7 +545,8 @@ impl Compiler<'_> {
         }
         out.push(Leaf {
             ordinal: 0,
-            calls: vec![], origin:vec![],
+            calls: vec![],
+            origin: vec![],
             op,
         });
     }
@@ -1088,15 +1096,40 @@ impl Compiler<'_> {
                 let mut eff = t.capture.controls.clone();
                 union(&mut eff, controls);
                 eff = environment_controls(&local, &eff);
-                let mut leaves=self.compile(&t.capture.body,&mut local,&eff,frame,inverse_scope)?;
-                for leaf in &mut leaves{leaf.origin.push(Origin{constructor:"apply".into(),name:text(name)?.into(),index,reverse:false});}
+                let mut leaves =
+                    self.compile(&t.capture.body, &mut local, &eff, frame, inverse_scope)?;
+                for leaf in &mut leaves {
+                    leaf.origin.push(Origin {
+                        constructor: "apply".into(),
+                        name: text(name)?.into(),
+                        index,
+                        reverse: false,
+                    });
+                }
                 out.extend(leaves);
             } else if let Some(name) = c.get("visit") {
-                let Some(Binding::Records { records, .. }) = env.get(text(name)?).cloned() else {return Err(Error::arg("unbound descriptor records"));};
-                for (index,record) in records.into_iter().enumerate(){
-                    let mut local=env.clone();local.extend(record);
-                    let mut leaves=self.compile(array(&c["body"])?,&mut local,controls,frame,inverse_scope)?;
-                    for leaf in &mut leaves{leaf.origin.push(Origin{constructor:"visit".into(),name:text(name)?.into(),index,reverse:false});}out.extend(leaves);
+                let Some(Binding::Records { records, .. }) = env.get(text(name)?).cloned() else {
+                    return Err(Error::arg("unbound descriptor records"));
+                };
+                for (index, record) in records.into_iter().enumerate() {
+                    let mut local = env.clone();
+                    local.extend(record);
+                    let mut leaves = self.compile(
+                        array(&c["body"])?,
+                        &mut local,
+                        controls,
+                        frame,
+                        inverse_scope,
+                    )?;
+                    for leaf in &mut leaves {
+                        leaf.origin.push(Origin {
+                            constructor: "visit".into(),
+                            name: text(name)?.into(),
+                            index,
+                            reverse: false,
+                        });
+                    }
+                    out.extend(leaves);
                 }
             } else if let Some(name) = c.get("declare") {
                 let name = text(name)?;

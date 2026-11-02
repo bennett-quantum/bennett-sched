@@ -41,14 +41,12 @@ pub struct Trace {
     pub slots: Vec<Slot>,
     pub inherited: Vec<String>,
     pub borrow_proofs: Vec<crate::borrow::Proof>,
-    pub cleanups:Vec<crate::cleanup::Pair>,
+    pub cleanups: Vec<crate::cleanup::Pair>,
 }
 fn deferred(feature: &str) -> Error {
     Error::new(
         Status::GateUnsupported,
-        format!(
-            "§11: source binding for {feature} is postponed (bennett-sched-ark)"
-        ),
+        format!("§11: source binding for {feature} is postponed (bennett-sched-ark)"),
     )
 }
 fn union(a: &mut Vec<String>, b: &[String]) {
@@ -164,9 +162,7 @@ impl Trace {
             .get(name)
             .ok_or_else(|| Error::arg("unknown source region"))?;
         if f.kind == "oracle" {
-            return Err(deferred(
-                "oracle construction, padded dispatch, fixed-binding lproc instances and support points",
-            ));
+            return crate::oracle::build(object, name, inherited, params, budget);
         }
         if !["action", "perm_action"].contains(&f.kind.as_str()) {
             return Err(Error::arg("§11: root must be an oracle or action"));
@@ -234,7 +230,7 @@ impl Trace {
             slots: slots.clone(),
             inherited: inherited.clone(),
             borrow_proofs: vec![],
-            cleanups:vec![],
+            cleanups: vec![],
         };
         let lib = Library::published()?;
         let mut builder = Builder {
@@ -257,9 +253,14 @@ impl Trace {
         if f.kind=="perm_action"&&trace.events.iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !["x","cx","ccx","mcx","swap"].contains(&g.op.as_str()))){return Err(Error::arg("§5.3: permutation actions require permutation gates transitively"));}
         trace.borrow_proofs = crate::borrow::prove(object, &trace)?;
         for owner in 0..trace.invocations.len() {
-            let events=crate::source_ir::events(object,&trace,owner)?;
-            let (matching,permutation)=verify_clean_lifetimes(&events)?;
-            trace.cleanups.extend(crate::cleanup::partition(owner,&events,&matching,&permutation));
+            let events = crate::source_ir::events(object, &trace, owner)?;
+            let (matching, permutation) = verify_clean_lifetimes(&events)?;
+            trace.cleanups.extend(crate::cleanup::partition(
+                owner,
+                &events,
+                &matching,
+                &permutation,
+            ));
         }
         Ok(trace)
     }
@@ -572,14 +573,16 @@ impl Builder<'_> {
             for gate in region.image.into_iter().rev() {
                 leaves.push(Leaf {
                     ordinal,
-                    calls: vec![], origin:vec![],
+                    calls: vec![],
+                    origin: vec![],
                     op: Operation::Gate(gate),
                 });
                 ordinal += 1;
             }
             leaves.push(Leaf {
                 ordinal,
-                calls: vec![], origin:vec![],
+                calls: vec![],
+                origin: vec![],
                 op: Operation::Release {
                     identity: region.identity,
                     wires: region.wires,
@@ -794,7 +797,8 @@ impl Builder<'_> {
             }
             let mut leaves = vec![Leaf {
                 ordinal: 0,
-                calls: vec![], origin:vec![],
+                calls: vec![],
+                origin: vec![],
                 op: Operation::Alloc {
                     identity: identity.clone(),
                     wires: w.clone(),
@@ -804,7 +808,8 @@ impl Builder<'_> {
             }];
             leaves.extend(gates.iter().enumerate().map(|(i, g)| Leaf {
                 ordinal: i as u64 + 1,
-                calls: vec![], origin:vec![],
+                calls: vec![],
+                origin: vec![],
                 op: Operation::Gate(g.clone()),
             }));
             self.emit(f, node, &[], chain, owner, leaves)?;
@@ -947,7 +952,8 @@ impl Builder<'_> {
                             owner,
                             vec![Leaf {
                                 ordinal,
-                                calls: vec![], origin:vec![],
+                                calls: vec![],
+                                origin: vec![],
                                 op: Operation::Alloc {
                                     identity: identity.clone(),
                                     wires: flags.clone(),
@@ -966,7 +972,8 @@ impl Builder<'_> {
                                 owner,
                                 vec![Leaf {
                                     ordinal,
-                                    calls: vec![], origin:vec![],
+                                    calls: vec![],
+                                    origin: vec![],
                                     op: Operation::Gate(Gate {
                                         op: "cx".into(),
                                         wires: vec![condition[0].clone(), flags[0].clone()],
@@ -1004,7 +1011,8 @@ impl Builder<'_> {
                                     owner,
                                     vec![Leaf {
                                         ordinal,
-                                        calls: vec![], origin:vec![],
+                                        calls: vec![],
+                                        origin: vec![],
                                         op: Operation::Gate(Gate {
                                             op: "ccx".into(),
                                             wires: vec![
@@ -1031,7 +1039,8 @@ impl Builder<'_> {
                                 owner,
                                 vec![Leaf {
                                     ordinal,
-                                    calls: vec![], origin:vec![],
+                                    calls: vec![],
+                                    origin: vec![],
                                     op: Operation::Gate(Gate {
                                         op: "ccx".into(),
                                         wires: vec![
@@ -1055,7 +1064,8 @@ impl Builder<'_> {
                                 owner,
                                 vec![Leaf {
                                     ordinal,
-                                    calls: vec![], origin:vec![],
+                                    calls: vec![],
+                                    origin: vec![],
                                     op: Operation::Gate(Gate {
                                         op: "cx".into(),
                                         wires: vec![condition[0].clone(), flags[0].clone()],
@@ -1074,7 +1084,8 @@ impl Builder<'_> {
                             owner,
                             vec![Leaf {
                                 ordinal,
-                                calls: vec![], origin:vec![],
+                                calls: vec![],
+                                origin: vec![],
                                 op: Operation::Release {
                                     identity,
                                     wires: flags,
@@ -1111,7 +1122,8 @@ impl Builder<'_> {
                         owner,
                         vec![Leaf {
                             ordinal: 0,
-                            calls: vec![], origin:vec![],
+                            calls: vec![],
+                            origin: vec![],
                             op: Operation::Gate(g.clone()),
                         }],
                     )?;
@@ -1124,7 +1136,8 @@ impl Builder<'_> {
                         owner,
                         vec![Leaf {
                             ordinal: 1,
-                            calls: vec![], origin:vec![],
+                            calls: vec![],
+                            origin: vec![],
                             op: Operation::Gate(g),
                         }],
                     )?;
@@ -1169,7 +1182,8 @@ impl Builder<'_> {
                     );
                     leaves.push(Leaf {
                         ordinal: 0,
-                        calls: vec![], origin:vec![],
+                        calls: vec![],
+                        origin: vec![],
                         op: Operation::Alloc {
                             identity,
                             wires: w,
@@ -1198,7 +1212,8 @@ impl Builder<'_> {
                     }
                     leaves.push(Leaf {
                         ordinal: 0,
-                        calls: vec![], origin:vec![],
+                        calls: vec![],
+                        origin: vec![],
                         op: Operation::Release {
                             identity,
                             wires,
@@ -1487,7 +1502,8 @@ impl Builder<'_> {
                     }
                     leaves.push(Leaf {
                         ordinal: 0,
-                        calls: vec![], origin:vec![],
+                        calls: vec![],
+                        origin: vec![],
                         op: Operation::Gate(g),
                     });
                 }
@@ -1733,7 +1749,7 @@ fn independent(events: &[Event], protected: &[String]) -> bool {
         .any(|(g, live)| *live && g.all_wires().iter().any(|w| protected.contains(w)))
 }
 /// Source occurrence/version restoration, independent of basis values.
-fn verify_clean_lifetimes(events: &[Event]) -> Result<(BTreeMap<usize,usize>,BTreeSet<usize>)> {
+fn verify_clean_lifetimes(events: &[Event]) -> Result<(BTreeMap<usize, usize>, BTreeSet<usize>)> {
     #[derive(Clone)]
     struct Change {
         gate: Gate,
@@ -1747,7 +1763,7 @@ fn verify_clean_lifetimes(events: &[Event]) -> Result<(BTreeMap<usize,usize>,BTr
     }
     let mut provenance: BTreeMap<String, bool> = BTreeMap::new();
     let mut matches: BTreeMap<usize, usize> = BTreeMap::new();
-    let mut perm_pairs=BTreeSet::new();
+    let mut perm_pairs = BTreeSet::new();
     let mut windows = Vec::new();
     let mut versions: BTreeMap<String, u64> = BTreeMap::new();
     let mut latest: BTreeMap<String, usize> = BTreeMap::new();
@@ -1810,7 +1826,9 @@ fn verify_clean_lifetimes(events: &[Event]) -> Result<(BTreeMap<usize,usize>,BTr
                     });
                 if let Some(i) = matched {
                     let c = &changes[i];
-                    if c.post_perm{perm_pairs.insert(c.at);}
+                    if c.post_perm {
+                        perm_pairs.insert(c.at);
+                    }
                     matches.insert(c.at, at);
                     matches.insert(at, c.at);
                     if c.workspace && c.post_perm {
@@ -1927,5 +1945,5 @@ fn verify_clean_lifetimes(events: &[Event]) -> Result<(BTreeMap<usize,usize>,BTr
     if !live.is_empty() {
         return Err(Error::arg("§6: source exits with live workspace"));
     }
-    Ok((matches,perm_pairs))
+    Ok((matches, perm_pairs))
 }

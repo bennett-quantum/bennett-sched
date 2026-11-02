@@ -8,6 +8,7 @@ pub mod engine;
 pub mod expansion;
 pub mod ffi;
 pub mod object;
+pub mod oracle;
 pub mod ref_contract;
 pub mod request;
 pub mod resources;

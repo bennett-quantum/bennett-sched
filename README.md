@@ -12,7 +12,7 @@ freed. Accessor buffers remain valid after freeing the request. Declaration
 headers are in the published ISA repository and [data/bennett_sched.h](data/bennett_sched.h).
 `bennett_sched_version()` is an additional compatibility probe returning 9.
 
-The implemented path covers actions, plain/while loops and source adjoints,
+The implemented path covers memoryless oracle construction and actions, plain/while loops and source adjoints,
 qif, copy/XOR/exchange, local regions and coherent memory, action calls and
 translation-lemma borrow frames. Native and approximate/exact target schemes
 use deterministic sequential timing, class capacity and topology placement,
@@ -25,13 +25,17 @@ Accepted K82 governs named helper wire interfaces; all 16 binding cases, 54
 interfaces and 86 published expansion digests pass without changing its hash.
 Typed recipes/templates remain closed. Source version checking treats semantic
 calls and intrinsic copy/load pairs atomically, checks dependency windows and
-uses a sufficient causal factorisation proof for other workspace.
+uses a sufficient causal factorisation proof for other workspace. Cleanup carriers
+respect intrinsic boundaries and joint inverse ownership; primitive/intrinsic
+recompute preserves carrier coordinates. Finite class/vertex search finds a
+feasible assignment when an earlier assignment fails.
 
-Oracle/lproc construction, staged nested-domain checks, whole-cleanup carriers
-and recompute, qinplace, general cleanup and borrow proofs, nested region
-coordinates, and global placement/objective search remain `bennett-sched-ark`.
+Layout/lproc construction, nested calls/domain checks, fresh semantic-call
+recompute and input-history replay, qinplace, general cleanup and borrow proofs,
+nested region coordinates, and objective optimisation remain `bennett-sched-ark`.
 Varying invocation frame descriptors require the `bennett-sched-lzv` contract
-decision. Encountered postponed features return `UNSUPPORTED` with a specific
+decision; restricted T3 borrow certificates require the `bennett-sched-awo`
+frame-domain decision. Encountered postponed features return `UNSUPPORTED` with a specific
 reason and issue; constraint failures return `INFEASIBLE`; malformed requests
 return a `bennett_status` error. The deterministic candidate is not claimed optimal.
 

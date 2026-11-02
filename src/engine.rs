@@ -29,14 +29,38 @@ struct Allocation {
     release_order: Option<u64>,
 }
 #[derive(Default)]
-struct Search {plan:Vec<usize>,domains:Vec<usize>}
+struct Search {
+    plan: Vec<usize>,
+    domains: Vec<usize>,
+    epsilon_divisor: u64,
+    required_divisor: u64,
+}
 impl Search {
-    fn choose(&mut self,count:usize)->Result<usize>{
-        if count==0{return Err(Error::infeasible("allocation has no feasible choice"));}
-        let index=self.domains.len();self.domains.push(count);let choice=self.plan.get(index).copied().unwrap_or(0);
-        if choice>=count{return Err(Error::infeasible("allocation choice is outside its current domain"));}Ok(choice)
+    fn choose(&mut self, count: usize) -> Result<usize> {
+        if count == 0 {
+            return Err(Error::infeasible("allocation has no feasible choice"));
+        }
+        let index = self.domains.len();
+        self.domains.push(count);
+        let choice = self.plan.get(index).copied().unwrap_or(0);
+        if choice >= count {
+            return Err(Error::infeasible(
+                "allocation choice is outside its current domain",
+            ));
+        }
+        Ok(choice)
     }
-    fn advance(&mut self)->bool{for i in (0..self.domains.len()).rev(){let current=self.plan.get(i).copied().unwrap_or(0);if current+1<self.domains[i]{self.plan.resize(i+1,0);self.plan[i]=current+1;return true;}}false}
+    fn advance(&mut self) -> bool {
+        for i in (0..self.domains.len()).rev() {
+            let current = self.plan.get(i).copied().unwrap_or(0);
+            if current + 1 < self.domains[i] {
+                self.plan.resize(i + 1, 0);
+                self.plan[i] = current + 1;
+                return true;
+            }
+        }
+        false
+    }
 }
 struct Allocator<'a> {
     target: &'a Target,
@@ -46,7 +70,7 @@ struct Allocator<'a> {
     active: BTreeMap<String, usize>,
     counts: BTreeMap<String, u64>,
     order: u64,
-    search:&'a mut Search,
+    search: &'a mut Search,
 }
 impl Allocator<'_> {
     fn capacity(&self, class: &str) -> Option<u64> {
@@ -100,9 +124,17 @@ impl Allocator<'_> {
         let class = if source_class == "any" {
             let mut names: Vec<_> = self.target.classes.keys().collect();
             names.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
-            let names=names.into_iter().filter(|c|self.fits(c,n)).cloned().collect::<Vec<_>>();
-            if names.is_empty(){return Err(Error::infeasible(format!("§8.4: capacity exhausted for allocation {identity} ({n} wires)")));}
-            let choice=self.search.choose(if n==0{1}else{names.len()})?;
+            let names = names
+                .into_iter()
+                .filter(|c| self.fits(c, n))
+                .cloned()
+                .collect::<Vec<_>>();
+            if names.is_empty() {
+                return Err(Error::infeasible(format!(
+                    "§8.4: capacity exhausted for allocation {identity} ({n} wires)"
+                )));
+            }
+            let choice = self.search.choose(if n == 0 { 1 } else { names.len() })?;
             names[choice].clone()
         } else {
             if !self.target.classes.contains_key(source_class) {
@@ -121,9 +153,13 @@ impl Allocator<'_> {
             return Err(Error::infeasible("allocation aliases live wires"));
         }
         for w in &wires {
-            let vertex=if self.target.value.get("topology").is_some(){let free=self.free_vertices(&class);Some(free[self.search.choose(free.len())?])}else{None};
-            self.live
-                .insert(w.clone(), (class.clone(), vertex));
+            let vertex = if self.target.value.get("topology").is_some() {
+                let free = self.free_vertices(&class);
+                Some(free[self.search.choose(free.len())?])
+            } else {
+                None
+            };
+            self.live.insert(w.clone(), (class.clone(), vertex));
         }
         *self.counts.entry(class.clone()).or_default() += n;
         self.active.insert(identity.clone(), self.allocations.len());
@@ -190,25 +226,59 @@ impl Allocator<'_> {
     }
 }
 fn selector_entry(event: &Event, kind: &str, decision: Value) -> Value {
-    let mut e = json!({"path":event.location.path.iter().map(Occurrence::json).collect::<Vec<_>>(),"step":"*","phase":"*","generated":event.location.generated,"kind":kind});
+    let mut coordinate = event.location.root;
+    for point in event
+        .location
+        .path
+        .iter()
+        .take(event.location.path.len().saturating_sub(1))
+    {
+        if let Some(entered) = point.entered_oracle {
+            coordinate = entered;
+        }
+    }
+    let step = coordinate.step.map(integer_json).unwrap_or(json!("*"));
+    let phase = match coordinate.phase {
+        Some(schedule::Phase::Fwd) => "fwd",
+        Some(schedule::Phase::Rev) => "rev",
+        None => "*",
+    };
+    let mut e = json!({"path":event.location.path.iter().map(Occurrence::json).collect::<Vec<_>>(),"step":step,"phase":phase,"generated":event.location.generated,"kind":kind});
     e[kind] = decision;
     e
 }
 pub fn run(request: &Request) -> Result<Response> {
-    let mut search=Search::default();let mut unsupported=None;
-    loop{
-        search.domains.clear();let result=candidate(request,&mut search);
-        match result{
-            Ok(response)=>return Ok(response),
-            Err(error)if error.status==crate::Status::ScheduleInfeasible||error.status==crate::Status::GateUnsupported=>{
-                if error.status==crate::Status::GateUnsupported&&unsupported.is_none(){unsupported=Some(error.clone());}
-                if !search.advance(){return Err(unsupported.unwrap_or(error));}
-            },
-            Err(error)=>return Err(error)
+    let mut search = Search::default();
+    let mut unsupported = None;
+    loop {
+        search.domains.clear();
+        search.required_divisor = 0;
+        let result = candidate(request, &mut search);
+        match result {
+            Ok(response) => return Ok(response),
+            Err(error)
+                if error.status == crate::Status::ScheduleInfeasible
+                    || error.status == crate::Status::GateUnsupported =>
+            {
+                if error.status == crate::Status::ScheduleInfeasible
+                    && search.required_divisor > search.epsilon_divisor.max(1)
+                {
+                    search.epsilon_divisor = search.required_divisor;
+                    continue;
+                }
+                if error.status == crate::Status::GateUnsupported && unsupported.is_none() {
+                    unsupported = Some(error.clone());
+                }
+                if !search.advance() {
+                    return Err(unsupported.unwrap_or(error));
+                }
+                search.epsilon_divisor = 1;
+            }
+            Err(error) => return Err(error),
         }
     }
 }
-fn candidate(request:&Request,search:&mut Search)->Result<Response>{
+fn candidate(request: &Request, search: &mut Search) -> Result<Response> {
     let object = request
         .object
         .as_ref()
@@ -309,13 +379,9 @@ fn candidate(request:&Request,search:&mut Search)->Result<Response>{
     } else {
         None
     };
-    let gate_count = trace
-        .events
-        .iter()
-        .filter(|e| matches!(e.leaf.op, Operation::Gate(_)))
-        .count()
-        .max(1);
-    let share = d::share(&epsilon, gate_count as u64)?;
+    // These are explicit schedule shares. Refine against charged native leaves
+    // when a scheme expands one source gate into several approximate gates.
+    let share = d::share(&epsilon, allocator.search.epsilon_divisor.max(1))?;
     let mut entries = Vec::new();
     let mut events = Vec::new();
     let mut event_times = Vec::new();
@@ -452,6 +518,7 @@ fn candidate(request:&Request,search:&mut Search)->Result<Response>{
     event_orders.push(allocator.order);
     let error: Rational = errors.iter().cloned().sum();
     if error > epsilon {
+        allocator.search.required_divisor = errors.iter().filter(|e| !e.is_zero()).count() as u64;
         return Err(Error::infeasible(
             "§11: achieved operator-norm error exceeds requested epsilon",
         ));
@@ -487,6 +554,24 @@ fn candidate(request:&Request,search:&mut Search)->Result<Response>{
         schedule["interface_vertices"] = json!(placements);
     }
     schedule::Document::parse(schedule.clone())?.validate_request(request)?;
+    // Emitted selectors have complete paths and concrete operation coordinates.
+    // Detect duplicate maximal addresses before exposing a schedule to consumers.
+    let mut addresses = BTreeSet::new();
+    for entry in schedule["entries"].as_array().unwrap() {
+        let key = canonical::to_vec(&json!([
+            entry["path"],
+            entry["step"],
+            entry["phase"],
+            entry["generated"],
+            entry["kind"]
+        ]))?;
+        if !addresses.insert(key) {
+            return Err(Error::new(
+                crate::Status::InvalidState,
+                "scheduler generated duplicate operation selectors",
+            ));
+        }
+    }
     let schedule_bytes = canonical::to_vec(&schedule)?;
     let schedule_hash = canonical::hash(&schedule_bytes);
     let certificate = certificate(
@@ -574,7 +659,7 @@ fn certificate(
                 .iter()
                 .map(|s| slot_record(s, allocator))
                 .collect::<Result<Vec<_>>>()?;
-            let scratch=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_none()&&a.state!="borrowed").map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
+            let scratch=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_none()&&a.state!="borrowed"&&!a.identity.starts_with("oracle-state/history-")).map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
             let ancillae=allocator.allocations.iter().filter(|a|a.owner==Some(i)&&a.scheme.is_some()).map(|a|json!({"id":a.identity,"scheme":a.scheme,"class":a.class,"state":a.state,"width":a.wires.len()})).collect::<Vec<_>>();
             let borrowed = allocator
                 .allocations
@@ -582,7 +667,17 @@ fn certificate(
                 .filter(|a| a.owner == Some(i) && a.state == "borrowed" && a.scheme.is_none())
                 .map(|a| json!({"id":a.identity,"class":a.class,"width":a.wires.len()}))
                 .collect::<Vec<_>>();
-            regions[&inv.hash] = json!({"kind":f.kind,"signature":f.signature,"bounds":f.signature["bounds"],"frame":{"slots":slots,"scratch":scratch,"history":[],"borrow":borrowed,"ancillae":ancillae},"resources":{},"gates_used":{},"claims":[],"verification":{"oracle":null,"borrow_frames":[],"inverse_pairs":[],"unitary":[],"channel":[],"fault_rate":{"domain":{"bundles":[],"borrowed":[],"regions":[]},"faults_by_code":{},"undefined_excluded":0,"layout_dependent_excluded":0}},"cleanup":{},"error":{},"definedness_assumptions":[]});
+            let history = allocator
+                .allocations
+                .iter()
+                .filter(|a| {
+                    a.owner == Some(i)
+                        && a.identity.starts_with("oracle-state/history-")
+                        && a.scheme.is_none()
+                })
+                .map(|a| json!({"id":a.identity,"class":a.class,"width":a.wires.len()}))
+                .collect::<Vec<_>>();
+            regions[&inv.hash] = json!({"kind":f.kind,"signature":f.signature,"bounds":f.signature.get("bounds").cloned().unwrap_or(json!([])),"frame":{"slots":slots,"scratch":scratch,"history":history,"borrow":borrowed,"ancillae":ancillae},"resources":{},"gates_used":{},"claims":[],"verification":{"oracle":null,"borrow_frames":[],"inverse_pairs":[],"unitary":[],"channel":[],"fault_rate":{"domain":{"bundles":[],"borrowed":[],"regions":[]},"faults_by_code":{},"undefined_excluded":0,"layout_dependent_excluded":0}},"cleanup":{},"error":{},"definedness_assumptions":[]});
         }
         let local: Rational = errors
             .iter()
@@ -597,10 +692,35 @@ fn certificate(
             .map(|(_, e)| e.clone())
             .sum();
         let record = &mut regions[&inv.hash];
-        if record["cleanup"].get(&key).is_none(){record["cleanup"][&key]=json!([]);}
-        for pair in trace.cleanups.iter().filter(|p|p.owner==i){record["cleanup"][&key].as_array_mut().unwrap().push(json!({"path":pair.carrier.path.iter().map(Occurrence::json).collect::<Vec<_>>(),"realisation":pair.realisation}));}
+        if record["cleanup"].get(&key).is_none() {
+            record["cleanup"][&key] = json!([]);
+        }
+        for pair in trace.cleanups.iter().filter(|p| p.owner == i) {
+            record["cleanup"][&key].as_array_mut().unwrap().push(json!({"path":pair.carrier.path.iter().map(Occurrence::json).collect::<Vec<_>>(),"realisation":pair.realisation}));
+        }
         record["error"][&key] = json!({"local":{"operator_norm":d::upper(&local)?},"inclusive":{"operator_norm":d::upper(&inclusive)?}});
         let claim = json!({"kind":"numerical","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"metric":"operator_norm","precision_bits":128,"bound":d::upper(&inclusive)?});
+        if object.functions[&inv.name].kind == "oracle" {
+            let f = &object.functions[&inv.name];
+            let mut bundles = inv
+                .controls
+                .iter()
+                .enumerate()
+                .map(|(i, _)| json!({"name":format!("control:{i}"),"width":1,"lo":0,"hi":1}))
+                .collect::<Vec<_>>();
+            for p in f.groups[..3].iter().flatten() {
+                let width = crate::object::wire_width(&p.ty)?;
+                let high = (num_bigint::BigUint::from(1u8)
+                    << usize::try_from(width).map_err(|_| {
+                        Error::new(crate::Status::NoMem, "domain width exceeds host size")
+                    })?)
+                    - num_bigint::BigUint::from(1u8);
+                bundles.push(json!({"name":p.name,"width":width,"lo":0,"hi":high.to_string()}));
+            }
+            let index = record["claims"].as_array().unwrap().len();
+            record["claims"].as_array_mut().unwrap().push(json!({"kind":"exhaustive","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"expected":"oracle","domain":{"bundles":bundles,"borrowed":[],"regions":[]}}));
+            record["verification"]["oracle"] = json!(index);
+        }
         for proof in trace.borrow_proofs.iter().filter(|p| p.owner == i) {
             let index = record["claims"].as_array().unwrap().len();
             record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"translation_lemma","invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"subclaims":[],"witness":proof.witness}));

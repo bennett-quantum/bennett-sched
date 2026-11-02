@@ -112,10 +112,10 @@ fn exact_target_scheme_is_expanded_once_and_bound_in_schedule() {
 }
 
 #[test]
-fn postponed_oracle_has_a_specific_bead_reason_and_no_feasible_document() {
+fn postponed_lproc_oracle_has_a_specific_bead_reason_and_no_feasible_document() {
     let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
     let example = spec
-        .split("### 16.3 Example objects")
+        .split("**Example 2**")
         .nth(1)
         .unwrap()
         .split("```")
@@ -124,12 +124,14 @@ fn postponed_oracle_has_a_specific_bead_reason_and_no_feasible_document() {
         .trim_start_matches('\n');
     let mut r = request();
     r.set_object(example.as_bytes()).unwrap();
-    r.set_region(
-        "ed9865300b85a519c2379de98e36e635e72b5b78d8bdfca03dccf9a09aa3df5e",
-        "forward",
-        0,
-    )
-    .unwrap();
+    let hash = r
+        .object
+        .as_ref()
+        .unwrap()
+        .closure_hash("sum_db")
+        .unwrap()
+        .to_owned();
+    r.set_region(&hash, "forward", 0).unwrap();
     r.budget = Some([3, 0, 0, 0]);
     let response = r.schedule().unwrap();
     assert_eq!(response.outcome, Outcome::Unsupported);
@@ -260,11 +262,157 @@ fn approximate_scheme_charges_each_native_leaf_and_composes_its_error() {
 }
 
 #[test]
-fn allocation_search_finds_a_usable_class_after_the_first_class_has_no_native_gate(){
-    let sig=json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});let source=common::action("perm_action","a",sig,"perm_action @a (t:wire mut) () () () ()","x t");let mut r=request();r.set_object(&source).unwrap();let hash=r.object.as_ref().unwrap().closure_hash("a").unwrap().to_owned();r.set_region(&hash,"forward",0).unwrap();let mut target=r.target.as_ref().unwrap().value.clone();target["classes"]=json!({"A":{"capacity":1,"qubit_second":1,"dirty_rate":1},"B":{"capacity":1,"qubit_second":1,"dirty_rate":1}});target["gates"][0]["classes"]=json!(["B"]);target["gates"][0]["controls"]=json!({"min":0,"max":0});r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();let result=r.schedule().unwrap();assert_eq!(result.outcome,Outcome::Ok,"{:?}",result.reason);let c=canonical::parse(&result.certificate).unwrap();assert_eq!(c["regions"][&hash]["frame"]["slots"][0]["class"],"B");
+fn allocation_search_finds_a_usable_class_after_the_first_class_has_no_native_gate() {
+    let sig = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});
+    let source = common::action(
+        "perm_action",
+        "a",
+        sig,
+        "perm_action @a (t:wire mut) () () () ()",
+        "x t",
+    );
+    let mut r = request();
+    r.set_object(&source).unwrap();
+    let hash = r
+        .object
+        .as_ref()
+        .unwrap()
+        .closure_hash("a")
+        .unwrap()
+        .to_owned();
+    r.set_region(&hash, "forward", 0).unwrap();
+    let mut target = r.target.as_ref().unwrap().value.clone();
+    target["classes"] = json!({"A":{"capacity":1,"qubit_second":1,"dirty_rate":1},"B":{"capacity":1,"qubit_second":1,"dirty_rate":1}});
+    target["gates"][0]["classes"] = json!(["B"]);
+    target["gates"][0]["controls"] = json!({"min":0,"max":0});
+    r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+    let result = r.schedule().unwrap();
+    assert_eq!(result.outcome, Outcome::Ok, "{:?}", result.reason);
+    let c = canonical::parse(&result.certificate).unwrap();
+    assert_eq!(c["regions"][&hash]["frame"]["slots"][0]["class"], "B");
 }
 
 #[test]
-fn placement_search_finds_adjacent_vertices_when_the_lowest_free_pair_is_disconnected(){
-    let mut r=request();let mut target=r.target.as_ref().unwrap().value.clone();target["classes"]["fast"]["capacity"]=json!(3);target["topology"]=json!({"vertices":[{"class":"fast"},{"class":"fast"},{"class":"fast"}],"edges":[[1,2]]});r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();let result=r.schedule().unwrap();assert_eq!(result.outcome,Outcome::Ok,"{:?}",result.reason);let s=canonical::parse(&result.schedule).unwrap();assert_eq!(s["interface_vertices"],json!([[1],[2]]));
+fn placement_search_finds_adjacent_vertices_when_the_lowest_free_pair_is_disconnected() {
+    let mut r = request();
+    let mut target = r.target.as_ref().unwrap().value.clone();
+    target["classes"]["fast"]["capacity"] = json!(3);
+    target["topology"] =
+        json!({"vertices":[{"class":"fast"},{"class":"fast"},{"class":"fast"}],"edges":[[1,2]]});
+    r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+    let result = r.schedule().unwrap();
+    assert_eq!(result.outcome, Outcome::Ok, "{:?}", result.reason);
+    let s = canonical::parse(&result.schedule).unwrap();
+    assert_eq!(s["interface_vertices"], json!([[1], [2]]));
+}
+
+#[test]
+fn normative_inc8_schedules_through_the_abi_with_history_and_oracle_claim() {
+    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let source = spec
+        .split("### 16.3 Example objects")
+        .nth(1)
+        .unwrap()
+        .split("```")
+        .nth(1)
+        .unwrap()
+        .trim_start_matches('\n');
+    let mut r = request();
+    r.set_object(source.as_bytes()).unwrap();
+    let hash = r
+        .object
+        .as_ref()
+        .unwrap()
+        .closure_hash("inc8")
+        .unwrap()
+        .to_owned();
+    r.set_region(&hash, "forward", 0).unwrap();
+    r.budget = Some([3, 0, 0, 0]);
+    let mut target = r.target.as_ref().unwrap().value.clone();
+    target["classes"]["fast"]["capacity"] = json!(1024);
+    target["gates"]=json!(["x","cx","ccx","mcx","swap"].iter().map(|op|json!({"op":op,"classes":["fast"],"controls":{"min":0,"max":64},"epsilon":0,"cost":{"time":1}})).collect::<Vec<_>>());
+    r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+    let result = r.schedule().unwrap();
+    assert_eq!(result.outcome, Outcome::Ok, "{:?}", result.reason);
+    let document =
+        bennett_sched::schedule::Document::parse(canonical::parse(&result.schedule).unwrap())
+            .unwrap();
+    let trace = bennett_sched::source::Trace::build(
+        r.object.as_ref().unwrap(),
+        "inc8",
+        0,
+        &json!([]),
+        [3, 0, 0, 0],
+    )
+    .unwrap();
+    for event in &trace.events {
+        bennett_sched::schedule::resolve(&document.entries, &event.location, event.location.kind)
+            .unwrap();
+    }
+    let c = canonical::parse(&result.certificate).unwrap();
+    let region = &c["regions"][&hash];
+    assert_eq!(region["frame"]["history"].as_array().unwrap().len(), 3);
+    assert!(
+        region["frame"]["history"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|r| r["width"] == 13)
+    );
+    let claim = region["verification"]["oracle"].as_u64().unwrap() as usize;
+    assert_eq!(region["claims"][claim]["expected"], "oracle");
+    assert_eq!(
+        region["claims"][claim]["invocation"]["budget"],
+        json!(["3", "0", "0", "0"])
+    );
+}
+
+#[test]
+fn accuracy_allocation_handles_exact_source_gates_and_splits_a_scheme_native_error_budget() {
+    for scheme in [false, true] {
+        let sig = json!({"abi":"0.9","tier":"q","kind":"action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});
+        let source = common::action(
+            "action",
+            "a",
+            sig,
+            "action @a (t:wire mut) () () () ()",
+            if scheme { "x t" } else { "x t\nh t\nh t" },
+        );
+        let mut r = request();
+        r.set_object(&source).unwrap();
+        let hash = r
+            .object
+            .as_ref()
+            .unwrap()
+            .closure_hash("a")
+            .unwrap()
+            .to_owned();
+        r.set_region(&hash, "forward", 0).unwrap();
+        r.set_accuracy(if scheme { "0.01" } else { "0.002" })
+            .unwrap();
+        let mut target = r.target.as_ref().unwrap().value.clone();
+        let exact = json!({"op":"x","classes":["fast"],"controls":{"min":0,"max":0},"epsilon":0,"cost":{"time":1}});
+        let h = json!({"op":"h","classes":["fast"],"controls":{"min":0,"max":0},"epsilon":if scheme{json!({"var":"eps"})}else{json!(0.001)},"cost":{"time":1}});
+        if scheme {
+            let mut s = h.clone();
+            s["op"] = json!("s");
+            target["gates"] = json!([h, s]);
+            target["schemes"] = json!([{"name":"hssh","realises":{"op":"x","controls":{"min":0,"max":0}},"ancillae":{"count":0,"state":"clean","class":"fast"},"template":[{"gate":"h","wires":["t"]},{"gate":"s","wires":["t"]},{"gate":"s","wires":["t"]},{"gate":"h","wires":["t"]}]}]);
+        } else {
+            target["gates"] = json!([exact, h]);
+        }
+        r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+        let result = r.schedule().unwrap();
+        assert_eq!(
+            result.outcome,
+            Outcome::Ok,
+            "scheme={scheme} {:?}",
+            result.reason
+        );
+        let c = canonical::parse(&result.certificate).unwrap();
+        assert_eq!(
+            c["regions"][&hash]["error"]["forward:0"]["inclusive"]["operator_norm"],
+            if scheme { "0.01" } else { "0.002" }
+        );
+    }
 }

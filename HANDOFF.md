@@ -11,8 +11,11 @@ translation borrow frames, atomic semantic-call/intrinsic version checking,
 matched dependency windows, sufficient composed-use factorisation, imports,
 approximate schemes and zero-time/child resource accounting are implemented.
 
-akl/ark/qnl remain in progress. Oracle/lproc construction, full cleanup partition
-and recompute, qinplace and general proofs remain required. lzv records a
+akl/ark/qnl remain in progress. Layout/lproc construction, nested calls, fresh-call recompute/input-history
+replay, qinplace and general proofs remain required. Root memoryless oracle
+construction, history/claim emission, source cleanup partition and primitive
+recompute, and finite class/vertex search now have focused passing regressions.
+awo records the missing restricted T3 frame subject/workspace-domain schema. lzv records a
 context-varying frame schema gap; its exact upstream request is queued in
 .tmp/cross-repo-beads.md. Do not stop independent work for that queue alone.
 

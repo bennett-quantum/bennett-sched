@@ -5636,7 +5636,7 @@
       "source": "conformance/cases/H/H-unsupported/case.json",
       "sha256": "03c962922b4124051f6a4f0401a3272e6dc597f508980c9c49f49770a3685e06",
       "coverage": "equivalent-witness-test",
-      "test": "pipeline::postponed_oracle_has_a_specific_bead_reason_and_no_feasible_document"
+      "test": "pipeline::postponed_lproc_oracle_has_a_specific_bead_reason_and_no_feasible_document"
     }
   ],
   "normative_objects": [
@@ -5644,7 +5644,9 @@
       "number": 1,
       "sha256": "f5e8c91a366feef9b090e273a33bceb8ccb1a3c29fce3d2454f8d563f6a08e19",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "schedule": "pipeline::normative_inc8_schedules_through_the_abi_with_history_and_oracle_claim",
+      "semantics": "oracle (equivalent two-bit increment full input/target/fault/control domains, budgets 0-4)"
     },
     {
       "number": 2,
@@ -5656,7 +5658,8 @@
       "number": 3,
       "sha256": "d5b4f9d7a0e58798eb3e7eedc47305c32a1ce514636dc57782bc39df6154a4a0",
       "coverage": "all-interface-hashes-checked",
-      "test": "normative_objects"
+      "test": "normative_objects",
+      "semantics": "borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record (all 8 basis tuples and 16 inherited-control tuples)"
     },
     {
       "number": 4,
@@ -5728,19 +5731,23 @@
       "path": "conformance/fixtures/accepted-k78-k80-09/k80.json",
       "sha256": "cc12c172ed1c4fef3d02e2ee846d19e76f9081e838e40a7bdde50e67ae4abce2",
       "vectors": 5,
-      "coverage": "not-exercised",
+      "coverage": "partial-equivalent-witness",
       "beads": [
         "bennett-sched-ark"
-      ]
+      ],
+      "test": "cleanup (primitive/intrinsic recompute, eight-leaf carrier ordinals, loop coordinate provenance)",
+      "remaining": "fresh semantic-call recompute contexts and direct complete manifest replay"
     },
     {
       "path": "conformance/fixtures/accepted-k81-09/k81.json",
       "sha256": "5be6e32af625a7cca057a2bcdb449b6be63a2fff46fbd8ffbaad1a6984100038",
       "vectors": 2,
-      "coverage": "not-exercised",
+      "coverage": "partial-equivalent-witness",
       "beads": [
         "bennett-sched-ark"
-      ]
+      ],
+      "test": "cleanup::intrinsic_boundaries_and_joint_call_inverses_have_exactly_one_owner",
+      "remaining": "fresh call recompute, nonzero target history replay and direct complete manifest replay"
     },
     {
       "path": "conformance/fixtures/accepted-k82-09/k82.json",
@@ -5766,5 +5773,5 @@
     "stdout": "",
     "stderr": "§1: expected isa=0.8\n"
   },
-  "recorded_at_utc": "2026-11-01T23:40:55Z"
+  "recorded_at_utc": "2026-11-02T00:12:54Z"
 }

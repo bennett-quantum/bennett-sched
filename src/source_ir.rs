@@ -16,7 +16,8 @@ fn synthetic(source: &Event, op: Operation) -> Event {
     let mut e = source.clone();
     e.leaf = Leaf {
         ordinal: 0,
-        calls: vec![], origin:vec![],
+        calls: vec![],
+        origin: vec![],
         op,
     };
     e
@@ -118,7 +119,8 @@ pub fn events(object: &Object, trace: &Trace, owner: usize) -> Result<Vec<Event>
                 owner,
                 leaf: Leaf {
                     ordinal: 0,
-                    calls: vec![], origin:vec![],
+                    calls: vec![],
+                    origin: vec![],
                     op: Operation::Gate(Gate {
                         op: format!("${kind}/call{sign}/{identity}"),
                         wires: targets,

@@ -43,7 +43,7 @@ EQUIVALENT = {
     "H-reproducibility": "pipeline::schedules_real_controlled_fixture_and_emits_bound_exact_certificate",
     "H-mbu-realisation-invalid": "schedule::parse_entry restricts unitary cleanup; selectors",
     "H-unknown-expansion-library": "selectors::a_schedule_cannot_bind_an_unavailable_expansion_library",
-    "H-unsupported": "pipeline::postponed_oracle_has_a_specific_bead_reason_and_no_feasible_document",
+    "H-unsupported": "pipeline::postponed_lproc_oracle_has_a_specific_bead_reason_and_no_feasible_document",
 }
 
 
@@ -88,7 +88,10 @@ def main():
     for index, block in enumerate(example_text.split("```")):
         block = block.lstrip("\n")
         if index % 2 and block.startswith("bennett-object "):
-            examples.append({"number": len(examples) + 1, "sha256": sha(block.encode()), "coverage": "all-interface-hashes-checked", "test": "normative_objects"})
+            record={"number": len(examples) + 1, "sha256": sha(block.encode()), "coverage": "all-interface-hashes-checked", "test": "normative_objects"}
+            if record["number"]==1: record.update(schedule="pipeline::normative_inc8_schedules_through_the_abi_with_history_and_oracle_claim",semantics="oracle (equivalent two-bit increment full input/target/fault/control domains, budgets 0-4)")
+            if record["number"]==3: record.update(semantics="borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record (all 8 basis tuples and 16 inherited-control tuples)")
+            examples.append(record)
     portable = []
     for path in sorted((SPEC / "conformance/fixtures").glob("accepted-*/*.json")):
         v = json.loads(path.read_bytes())
@@ -97,6 +100,10 @@ def main():
             record.update(coverage="direct-fixture-test",test="named_interface",catalog_interfaces=54,edge_digests=86)
         elif path.name=="k79.json":
             record.update(coverage="source-admission-and-complete-basis-tuples",test="regions::every_k79_source_address_vector_is_admitted_or_rejected_before_ref_helper_expansion",admitted=4,rejected=8,basis_tuples=128)
+        elif path.name=="k80.json":
+            record.update(coverage="partial-equivalent-witness",test="cleanup (primitive/intrinsic recompute, eight-leaf carrier ordinals, loop coordinate provenance)",remaining="fresh semantic-call recompute contexts and direct complete manifest replay")
+        elif path.name=="k81.json":
+            record.update(coverage="partial-equivalent-witness",test="cleanup::intrinsic_boundaries_and_joint_call_inverses_have_exactly_one_owner",remaining="fresh call recompute, nonzero target history replay and direct complete manifest replay")
         portable.append(record)
     report = {
         "schema": "bennett-sched.conformance-inventory.v1",
