@@ -312,6 +312,15 @@ fn forwarded_lproc_program() -> Object {
 fn fixed_lproc_token_forwarding_keeps_two_positional_instances_without_lift_call_edges() {
     use std::collections::{BTreeMap, BTreeSet};
     let object = forwarded_lproc_program();
+    let space = bennett_sched::lproc::IndexSpace::form(&object, "outer").unwrap();
+    eprintln!(
+        "two-instance fixture activation cells: {:?}",
+        space
+            .instances
+            .iter()
+            .map(|i| i.activation_cells)
+            .collect::<Vec<_>>()
+    );
     for (first, second) in [(1, 0), (1, 1), (0, 1)] {
         for outer in [0, 7, 8] {
             let params = json!([
