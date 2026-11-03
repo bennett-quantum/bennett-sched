@@ -123,3 +123,58 @@ pub fn caller(
     };
     format!("bennett-object isa=0.9 object=0.9 launch=0.9 sched=0.9 cert=0.9 coverage=0.9 target=0.9 ptr_width={ptr_width}\n\nsection symbols\n{}\n\nsection functions\n{}\n{function}\n{data}{layout}",String::from_utf8(canonical::to_vec(&symbols).unwrap()).unwrap(),old.trim_end_matches('\n')).into_bytes()
 }
+
+/// Acyclic test sources with scalar layout fields and no globals/mappings.
+#[allow(dead_code)]
+pub fn layout_sources(definitions: &[(&str, &str, Value, &str)], layout: Value) -> Vec<u8> {
+    assert!(layout["globals"].as_object().unwrap().is_empty());
+    assert!(layout["interface_regions"].as_object().unwrap().is_empty());
+    let ptr = layout["ptr_width"].as_u64().unwrap();
+    let jcs = |v: &Value| String::from_utf8(canonical::to_vec(v).unwrap()).unwrap();
+    let mut leaves = layout
+        .as_object()
+        .unwrap()
+        .iter()
+        .filter(|(k, _)| !["globals", "interface_regions"].contains(&k.as_str()))
+        .map(|(k, v)| (jcs(&json!([k])), jcs(v)))
+        .collect::<Vec<_>>();
+    leaves.sort();
+    let layout_suffix = leaves
+        .iter()
+        .map(|(p, v)| format!("layout {p} {v}\n"))
+        .collect::<String>();
+    let mut hashes = std::collections::BTreeMap::<String, String>::new();
+    let mut symbols = json!({});
+    for (index, (name, kind, signature, function)) in definitions.iter().enumerate() {
+        let mut bound = function.to_string();
+        let mut refs = Vec::new();
+        for token in function.split_whitespace() {
+            if let Some(reference) = token.strip_prefix('@').filter(|n| n != name) {
+                let hash = hashes
+                    .get(reference)
+                    .expect("test source definitions must precede their callers");
+                if !refs.contains(hash) {
+                    refs.push(hash.clone());
+                    bound = bound.replace(&format!("@{reference} "), &format!("@{hash} "));
+                }
+            }
+        }
+        let refs = refs.iter().map(|h| format!("{h}\n")).collect::<String>();
+        let hash = canonical::hash(
+            format!(
+                "isa=0.9\nptr_width={ptr}\n{}\n{bound}\n{}{refs}",
+                jcs(signature),
+                if *kind == "oracle" {
+                    layout_suffix.as_str()
+                } else {
+                    ""
+                }
+            )
+            .as_bytes(),
+        );
+        symbols[index.to_string()] =
+            json!({"name":name,"kind":kind,"signature":signature,"interface_hash":hash});
+        hashes.insert(name.to_string(), hash);
+    }
+    format!("bennett-object isa=0.9 object=0.9 launch=0.9 sched=0.9 cert=0.9 coverage=0.9 target=0.9 ptr_width={ptr}\n\nsection symbols\n{}\n\nsection functions\n{}\n\nsection layout\n{}\n",jcs(&symbols),definitions.iter().map(|(_,_,_,f)|*f).collect::<Vec<_>>().join("\n"),jcs(&layout)).into_bytes()
+}

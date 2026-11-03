@@ -15,6 +15,7 @@ pub mod oracle;
 mod oracle_activation;
 mod oracle_calls;
 mod oracle_memory;
+mod oracle_pairs;
 pub mod oracle_state;
 mod qinplace;
 pub mod ref_contract;

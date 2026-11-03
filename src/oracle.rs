@@ -776,19 +776,29 @@ pub fn build(
         .chain(&f.regs)
         .map(|p| p.name.clone())
         .collect::<std::collections::BTreeSet<_>>();
-    let mut nodes = f.body.clone();
-    for node in &mut nodes {
-        node.lhs = node
-            .lhs
-            .as_ref()
-            .map(|s| rename(s, &names, "source."))
-            .transpose()?;
-        node.operands = node
-            .operands
-            .iter()
-            .map(|s| rename(s, &names, "source."))
-            .collect::<Result<_>>()?;
+    fn qualified_nodes(
+        body: &[Node],
+        names: &std::collections::BTreeSet<String>,
+        prefix: &str,
+    ) -> Result<Vec<Node>> {
+        body.iter()
+            .map(|original| {
+                let mut node = original.clone();
+                node.lhs = node
+                    .lhs
+                    .as_ref()
+                    .map(|s| rename(s, names, prefix))
+                    .transpose()?;
+                node.operands = node
+                    .operands
+                    .iter()
+                    .map(|s| rename(s, names, prefix))
+                    .collect::<Result<_>>()?;
+                Ok(node)
+            })
+            .collect()
     }
+    let nodes = qualified_nodes(&f.body, &names, "source.")?;
     let slot_widths = &plan.slot_widths;
     let q = plan.frame_width;
     let state_schema = library.recipes["oracle.construct"]["parameters"][13].clone();
@@ -935,6 +945,13 @@ pub fn build(
         .filter(|(name, _)| readable.contains(*name))
         .map(|(name, binding)| (name.clone(), binding.clone()))
         .collect::<Env>();
+    let token_origins = f.groups[4]
+        .iter()
+        .enumerate()
+        .filter(|(_, p)| p.ty == "token")
+        .map(|(i, p)| (format!("source.{}", p.name), i as u64))
+        .collect();
+    crate::oracle_pairs::validate(&nodes, &source_env, 0, &labels, &token_origins)?;
     for (i, node) in nodes.iter().enumerate() {
         let (body, successor) = row(
             node,
@@ -1048,20 +1065,22 @@ pub fn build(
                 "lproc rows differ from the canonical index space",
             ));
         }
-        for original in &function.body {
-            let mut node = original.clone();
-            node.lhs = node
-                .lhs
-                .as_ref()
-                .map(|s| rename(s, &names, &prefix))
-                .transpose()?;
-            node.operands = node
-                .operands
-                .iter()
-                .map(|s| rename(s, &names, &prefix))
-                .collect::<Result<_>>()?;
+        let nodes = qualified_nodes(&function.body, &names, &prefix)?;
+        let token_origins = function.groups[2]
+            .iter()
+            .enumerate()
+            .map(|(i, p)| (format!("{prefix}{}", p.name), instance.key[i]))
+            .collect();
+        crate::oracle_pairs::validate(
+            &nodes,
+            &source_env,
+            instance.first,
+            &instance.labels,
+            &token_origins,
+        )?;
+        for (original, node) in function.body.iter().zip(&nodes) {
             let (body, successor) = row(
-                &node,
+                node,
                 rows.len() as u64,
                 n,
                 p,
