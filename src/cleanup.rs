@@ -6,6 +6,7 @@ use crate::{
     source::Event,
 };
 use std::collections::{BTreeMap, BTreeSet};
+mod raw;
 mod replay;
 #[derive(Clone, Debug)]
 pub struct Pair {
@@ -190,6 +191,13 @@ impl crate::source::Trace {
         &mut self,
         entries: &[crate::schedule::Entry],
     ) -> crate::Result<()> {
+        self.realise_cleanup_with_view(entries, &raw::View::default())
+    }
+    pub(crate) fn realise_cleanup_with_view(
+        &mut self,
+        entries: &[crate::schedule::Entry],
+        view: &raw::View,
+    ) -> crate::Result<()> {
         use crate::{
             Error, Status,
             expansion::{Leaf, inverse},
@@ -200,7 +208,7 @@ impl crate::source::Trace {
             .cleanups
             .iter()
             .map(|p| {
-                Ok(resolve(entries, &p.carrier, Kind::Cleanup)?
+                Ok(resolve(entries, &view.project(&p.carrier), Kind::Cleanup)?
                     .map(|(_, e)| e.decision["realisation"].as_str().unwrap())
                     .unwrap_or("reverse")
                     .to_owned())
@@ -218,8 +226,12 @@ impl crate::source::Trace {
             if !pair.permutation {
                 return Err(Error::arg("§6.4: recompute requires a permutation value"));
             }
+            if self.invocations[pair.owner].raw_inverse {
+                raw::replace(self, &mut staged, pair.owner, entries, view)?;
+                continue;
+            }
             if pair.lifted_oracle.is_some() {
-                replay::replace(self, &mut staged, pair_index, entries)?;
+                replay::replace(self, &mut staged, pair_index, entries, view)?;
                 staged.cleanups[pair_index].realisation = choice.clone();
                 continue;
             }
@@ -240,7 +252,7 @@ impl crate::source::Trace {
                             })
                     })
             }) {
-                replay::replace(self, &mut staged, pair_index, entries)?;
+                replay::replace(self, &mut staged, pair_index, entries, view)?;
                 staged.cleanups[pair_index].realisation = choice.clone();
                 continue;
             }
@@ -405,7 +417,9 @@ impl crate::source::Trace {
                     .collect::<Vec<_>>(),
             );
             let mut events = Vec::new();
-            for event in &staged.events {
+            let mut boundaries = vec![0; staged.events.len() + 1];
+            for (i, event) in staged.events.iter().enumerate() {
+                boundaries[i] = events.len();
                 if pair.cleanup.iter().any(|l| same_source(&event.location, l)) {
                     if same_source(&event.location, &pair.carrier) {
                         if let Some(replacement) = emitted.take() {
@@ -419,23 +433,16 @@ impl crate::source::Trace {
             if emitted.is_some() {
                 return Err(Error::arg("cleanup carrier has no source occurrence"));
             }
+            boundaries[staged.events.len()] = events.len();
+            for inv in &mut staged.invocations {
+                inv.start = boundaries[inv.start];
+                inv.end = boundaries[inv.end];
+            }
             staged.events = events;
             staged.cleanups[pair_index].realisation = choice.clone();
         }
         replay::remove_replaced_invocations(self, &mut staged)?;
-        for owner in 0..staged.invocations.len() {
-            let positions = staged
-                .events
-                .iter()
-                .enumerate()
-                .filter(|(_, e)| crate::source::is_descendant(e.owner, owner, &staged.invocations))
-                .map(|(i, _)| i)
-                .collect::<Vec<_>>();
-            if let (Some(first), Some(last)) = (positions.first(), positions.last()) {
-                staged.invocations[owner].start = *first;
-                staged.invocations[owner].end = last + 1;
-            }
-        }
+        replay::refresh_spans(&mut staged);
         *self = staged;
         Ok(())
     }

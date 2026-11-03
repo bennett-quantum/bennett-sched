@@ -129,16 +129,11 @@ fn lifted_borrow_calls_keep_forward_and_inverse_proofs_and_restore_all_dirty_inp
         let before = cases.clone();
         native.run_many(&mut cases).unwrap();
         for (state, initial) in cases.iter().zip(&before) {
-            for name in borrowed.iter().chain(
-                ["in:0[0]", "control:0"]
-                    .iter()
-                    .map(|n| *n)
-                    .map(String::from)
-                    .collect::<Vec<_>>()
-                    .iter(),
-            ) {
+            for name in &borrowed {
                 assert_eq!(state[name], initial[name]);
             }
+            assert_eq!(state["in:0[0]"], initial["in:0[0]"]);
+            assert_eq!(state["control:0"], initial["control:0"]);
             assert_eq!(
                 state["tgt:0[0]"],
                 initial["tgt:0[0]"] ^ (budget == 2 && initial["in:0[0]"] && initial["control:0"])

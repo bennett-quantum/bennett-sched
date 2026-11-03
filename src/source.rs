@@ -35,6 +35,7 @@ pub struct Invocation {
     pub end: usize,
     pub parent: Option<usize>,
     pub adjoint: bool,
+    pub raw_inverse: bool,
     pub path: Vec<Occurrence>,
     /// Coordinate in the trace's root oracle, outside this invocation's path.
     pub containing: Coordinate,
@@ -76,6 +77,7 @@ pub struct Trace {
     pub borrow_proofs: Vec<crate::borrow::Proof>,
     pub cleanups: Vec<crate::cleanup::Pair>,
     pub qinplaces: Vec<crate::qinplace::Proof>,
+    pub(crate) replaced_invocations: BTreeSet<usize>,
 }
 fn deferred(feature: &str) -> Error {
     Error::new(
@@ -279,6 +281,7 @@ impl Trace {
             borrow_proofs: vec![],
             cleanups: vec![],
             qinplaces: vec![],
+            replaced_invocations: BTreeSet::new(),
         };
         let lib = Library::published()?;
         let mut builder = Builder {
@@ -618,6 +621,7 @@ impl Builder<'_> {
             end: start,
             parent,
             adjoint: false,
+            raw_inverse: false,
             path: chain.to_vec(),
             containing: Coordinate::default(),
         });

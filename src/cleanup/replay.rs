@@ -182,6 +182,7 @@ struct Emitter<'a> {
     staged: &'a mut Trace,
     pair: &'a Pair,
     entries: &'a [crate::schedule::Entry],
+    view: &'a super::raw::View,
     identity: String,
     events: Vec<Event>,
     ordinal: u64,
@@ -282,7 +283,7 @@ impl Emitter<'_> {
                 .map_err(|_| Error::new(Status::NoMem, "replay controls exceed host"))?,
             &original.params,
             original.budget,
-            original.adjoint ^ backwards,
+            original.adjoint ^ original.raw_inverse ^ backwards,
         )?;
         let number = self.call_index;
         self.call_index += 1;
@@ -359,7 +360,7 @@ impl Emitter<'_> {
             }
         }
         // Fresh paths are already concrete when selecting nested cleanup.
-        child.realise_cleanup_entries(self.entries)?;
+        child.realise_cleanup_with_view(self.entries, self.view)?;
         self.reserve(child.events.len())?;
         let base = self.staged.invocations.len();
         let offset = self.events.len();
@@ -464,6 +465,7 @@ pub(super) fn replace(
     staged: &mut Trace,
     pair_index: usize,
     entries: &[crate::schedule::Entry],
+    view: &super::raw::View,
 ) -> Result<()> {
     let pair = &source.cleanups[pair_index];
     let computation = if let Some(index) = pair.lifted_oracle {
@@ -514,6 +516,7 @@ pub(super) fn replace(
         staged,
         pair,
         entries,
+        view,
         identity: identity.clone(),
         events: vec![],
         ordinal: 0,
@@ -667,6 +670,13 @@ pub(super) fn owner_replaced(source: &Trace, staged: &Trace, owner: usize) -> bo
     if owner >= source.invocations.len() {
         return false;
     }
+    if staged
+        .replaced_invocations
+        .iter()
+        .any(|ancestor| crate::source::is_descendant(owner, *ancestor, &source.invocations))
+    {
+        return true;
+    }
     staged
         .cleanups
         .iter()
@@ -685,10 +695,33 @@ pub(super) fn owner_replaced(source: &Trace, staged: &Trace, owner: usize) -> bo
                 && crate::source::is_descendant(owner, pair.owner, &source.invocations)
         })
 }
+pub(super) fn refresh_spans(trace: &mut Trace) {
+    let mut ranges = vec![None::<(usize, usize)>; trace.invocations.len()];
+    for (i, event) in trace.events.iter().enumerate() {
+        let mut owner = Some(event.owner);
+        while let Some(index) = owner {
+            ranges[index] = Some(match ranges[index] {
+                Some((first, _)) => (first, i + 1),
+                None => (i, i + 1),
+            });
+            owner = trace.invocations[index].parent;
+        }
+    }
+    for (inv, range) in trace.invocations.iter_mut().zip(ranges) {
+        if let Some((first, end)) = range {
+            (inv.start, inv.end) = (first, end);
+        }
+    }
+}
 pub(super) fn remove_replaced_invocations(source: &Trace, staged: &mut Trace) -> Result<()> {
-    let removed = (0..source.invocations.len())
+    let mut removed = (0..source.invocations.len())
         .filter(|i| owner_replaced(source, staged, *i))
         .collect::<BTreeSet<_>>();
+    for (i, inv) in staged.invocations.iter().enumerate() {
+        if inv.parent.is_some_and(|parent| removed.contains(&parent)) {
+            removed.insert(i);
+        }
+    }
     let map = (0..staged.invocations.len())
         .filter(|i| !removed.contains(i))
         .enumerate()
@@ -724,5 +757,6 @@ pub(super) fn remove_replaced_invocations(source: &Trace, staged: &mut Trace) ->
     for p in &mut staged.qinplaces {
         p.owner = map[&p.owner];
     }
+    staged.replaced_invocations.clear();
     Ok(())
 }

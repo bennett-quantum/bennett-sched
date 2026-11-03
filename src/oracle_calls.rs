@@ -239,9 +239,7 @@ impl Projection {
             inv.start = index + start;
             inv.end = index + end;
             inv.parent = Some(old.parent.map_or(0, |p| base + p));
-            if trace.object.functions[&inv.name].kind != "oracle" {
-                inv.adjoint ^= reverse;
-            }
+            inv.raw_inverse ^= reverse;
             inv.containing = parent.root;
             let mut path = edge.clone();
             if oracle {

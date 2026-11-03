@@ -164,7 +164,8 @@ pub fn prove(object: &Object, trace: &Trace) -> Result<Vec<Proof>> {
                     "§5.6: borrow-frame proof across nested static sequences is postponed (bennett-sched-ark)",
                 ));
             }
-            let adjoint = trace.invocations[event.owner].adjoint;
+            let invocation = &trace.invocations[event.owner];
+            let adjoint = invocation.adjoint ^ invocation.raw_inverse;
             let forward = if adjoint {
                 events.iter().rev().copied().collect()
             } else {

@@ -1248,6 +1248,7 @@ pub fn build(
         end,
         parent: None,
         adjoint: false,
+        raw_inverse: false,
         path: vec![],
         containing: Coordinate::default(),
     }];
@@ -1261,5 +1262,6 @@ pub fn build(
         borrow_proofs: projection.borrow_proofs,
         cleanups: projection.cleanups,
         qinplaces: projection.qinplaces,
+        replaced_invocations: Default::default(),
     })
 }
