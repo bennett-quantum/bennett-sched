@@ -1,79 +1,96 @@
-use std::{
-    fs,
-    io::Write,
-    os::unix::fs::PermissionsExt,
-    path::PathBuf,
-    process::{Command, Stdio},
-};
+// The shared gate tool owns worktree, pin isolation and ref protocol tests.
+// This repository checks its own installed stub and declared check contract.
+use serde_json::Value;
+use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf, process::Command};
+
+fn hex(value: &Value, width: usize) -> bool {
+    value.as_str().is_some_and(|s| {
+        s.len() == width
+            && s.bytes()
+                .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+            && s.bytes().any(|c| c != b'0')
+    })
+}
+
 #[test]
-fn push_gate_uses_the_supplied_sha_and_deduplicates_refs_in_isolated_worktree() {
+fn push_gate_declares_pinned_siblings_and_runs_only_the_installed_tool_stub() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let tmp = PathBuf::from(std::env::var_os("TMPDIR").expect("TMPDIR"))
-        .join(format!("gate-protocol-{}", std::process::id()));
-    let checkout = tmp.join("checkout");
-    let bin = tmp.join("bin");
-    fs::create_dir_all(checkout.join("scripts")).unwrap();
-    fs::create_dir_all(&bin).unwrap();
-    fs::copy(
-        root.join("scripts/pre-push"),
-        checkout.join("scripts/pre-push"),
-    )
-    .unwrap();
-    let git = bin.join("git");
-    fs::write(
-        &git,
-        r#"#!/usr/bin/env python3
-import os,sys
-a=sys.argv[1:]
-with open(os.environ['GATE_AUDIT'],'a') as f:f.write('git '+repr(a)+'\n')
-if a[2:4]==['rev-parse','--verify']:
- print(a[4].removesuffix('^{commit}'))
-elif a[2:4]==['worktree','add']:
- assert a[4]=='--detach'
- assert a[6]=='a'*40
-elif a[2:4]==['worktree','remove']:pass
-else:raise SystemExit('unexpected git protocol '+repr(a))
-"#,
-    )
-    .unwrap();
-    fs::set_permissions(&git, fs::Permissions::from_mode(0o755)).unwrap();
-    let cargo = bin.join("cargo");
-    fs::write(
-        &cargo,
-        r#"#!/usr/bin/env python3
-import os,sys
-assert '/checkout-gate.' in sys.argv[sys.argv.index('--manifest-path')+1]
-assert os.environ.get('DISPLAY') is None
-assert os.environ['TMPDIR'].endswith('/.tmp/sol-sched/tmp')
-with open(os.environ['GATE_AUDIT'],'a') as f:f.write('cargo '+repr(sys.argv[1:])+'\n')
-"#,
-    )
-    .unwrap();
-    fs::set_permissions(&cargo, fs::Permissions::from_mode(0o755)).unwrap();
-    let log = tmp.join("audit");
-    let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap());
-    let mut child = Command::new("bash")
-        .arg(checkout.join("scripts/pre-push"))
-        .env("PATH", path)
-        .env("GATE_AUDIT", &log)
-        .env("DISPLAY", ":99")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+    let config = Command::new("python3")
+        .args([
+            "-I",
+            "-c",
+            "import json,sys,tomllib; print(json.dumps(tomllib.load(open(sys.argv[1],'rb'))))",
+        ])
+        .arg(root.join("gate.toml"))
+        .output()
         .unwrap();
-    let sha = "a".repeat(40);
-    let zero = "0".repeat(40);
-    write!(child.stdin.take().unwrap(),"refs/heads/main {sha} refs/heads/main {zero}\nrefs/heads/other {sha} refs/heads/other {zero}\nrefs/heads/deleted {zero} refs/heads/deleted {sha}\n").unwrap();
-    let result = child.wait_with_output().unwrap();
     assert!(
-        result.status.success(),
+        config.status.success(),
         "{}",
-        String::from_utf8_lossy(&result.stderr)
+        String::from_utf8_lossy(&config.stderr)
     );
-    let log = fs::read_to_string(log).unwrap();
-    assert_eq!(log.matches("'worktree', 'add'").count(), 1);
-    assert_eq!(log.matches("cargo [").count(), 2);
-    assert!(!log.contains("'HEAD'"));
-    fs::remove_dir_all(tmp).unwrap();
+    let config: Value = serde_json::from_slice(&config.stdout).unwrap();
+    assert_eq!(config["schema"], 1);
+    assert_eq!(config["repo"], "bennett-sched");
+    assert!(hex(&config["tool_sha"], 40));
+    let isa = &config["siblings"]["bennett-isa-spec"];
+    assert!(hex(&isa["sha"], 40));
+    assert!(hex(&isa["files"]["spec/Bennett-ISA-Spec-0.9.md"], 64));
+    let builds = isa["build"].as_array().unwrap();
+    assert!(builds.iter().any(|b| {
+        b["cwd"] == "reference-interpreter"
+            && b["argv"] == serde_json::json!(["cargo", "build", "--offline"])
+            && b["outputs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|p| p == "reference-interpreter/target/debug/bennett-isa-ref")
+    }));
+    assert_eq!(
+        config["env"]["BENNETT_REF_BIN"],
+        "{sibling:bennett-isa-spec}/reference-interpreter/target/debug/bennett-isa-ref"
+    );
+    let checks = config["check"].as_array().unwrap();
+    assert!(
+        checks
+            .iter()
+            .any(|c| c["argv"].as_array().is_some_and(|a| a.len() > 2
+                && a[0] == "cargo"
+                && a[1] == "test"
+                && a.iter().any(|s| s == "--offline")))
+    );
+    assert!(
+        checks
+            .iter()
+            .any(|c| c["argv"] == serde_json::json!(["cargo", "fmt", "--", "--check"]))
+    );
+    let path = root.join("scripts/pre-push");
+    let stub = fs::read_to_string(&path).unwrap();
+    assert_ne!(fs::metadata(path).unwrap().permissions().mode() & 0o111, 0);
+    assert!(
+        stub.contains("show HEAD:gate.toml"),
+        "hook must read a committed tool pin"
+    );
+    assert!(
+        stub.contains("show \"$tool_sha:tools/gate_run.py\""),
+        "hook must extract the pinned tool"
+    );
+    assert!(
+        stub.contains("exec python3 -I \"$tool\" run --repo \"$root\" --tool-sha \"$tool_sha\"")
+    );
+    assert!(stub.contains("BENNETT_GATE_HOOK_PROBE"));
+    assert!(
+        !stub.contains("cargo test") && !stub.contains("worktree add"),
+        "the stub must delegate the gate protocol"
+    );
+    assert!(
+        !stub.contains("../bennett/tools/gate_run.py"),
+        "the hook must not run a live sibling tool"
+    );
+    let checkpoint = fs::read_to_string(root.join("scripts/check-working-tree")).unwrap();
+    assert!(checkpoint.contains("cargo test") && checkpoint.contains("cargo fmt"));
+    assert!(
+        !checkpoint.contains("git "),
+        "the runner's optional local checkpoint must stay git-free"
+    );
 }

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Optional local checkpoint for the runner; not a pinned push-gate result.
+set -euo pipefail
+unset DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
+root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+free -g
+uptime
+available="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
+[[ "$available" =~ ^[0-9]+$ ]] || { echo "checkpoint: cannot determine available memory" >&2; exit 1; }
+jobs=4 threads=4
+if (( available < 6 * 1024 * 1024 )); then jobs=2; threads=2; fi
+mkdir -p "$root/.tmp/sol-sched/tmp"
+export TMPDIR="$root/.tmp/sol-sched/tmp"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/.tmp/sol-sched/target}"
+timeout 600 cargo test --offline -j"$jobs" --manifest-path "$root/Cargo.toml" -- --test-threads="$threads"
+cargo fmt --manifest-path "$root/Cargo.toml" -- --check

@@ -208,6 +208,74 @@ fn rebind_location(
     location.root = root;
 }
 impl Projection {
+    pub(crate) fn register(
+        &mut self,
+        call: &crate::source_registry::SourceCall,
+        parent: &crate::schedule::Location,
+    ) -> Result<()> {
+        let trace = &call.trace;
+        let reverse = call.reverse;
+        let index = call.start;
+        assert_eq!(call.end - call.start, trace.events.len());
+        let key = Arc::as_ptr(trace) as usize;
+        if self.groups.contains_key(&key) {
+            return Err(Error::new(
+                crate::Status::InvalidState,
+                "source call provenance was registered twice",
+            ));
+        }
+        let mut edge = parent.path.clone();
+        edge.last_mut().unwrap().call_index = Some(0);
+        let oracle = trace.object.functions[&trace.invocations[0].name].kind == "oracle";
+        edge.last_mut().unwrap().entered_oracle = oracle.then_some(Default::default());
+        if reverse && !trace.borrow_proofs.is_empty() {
+            return Err(Error::new(
+                crate::Status::GateUnsupported,
+                "§11: raw-inverse lifted callee borrow-frame proof rebinding remains bennett-sched-y0n",
+            ));
+        }
+        let base = 1 + self.invocations.len();
+        for old in &trace.invocations {
+            let mut inv = old.clone();
+            let (start, end) = if reverse {
+                (trace.events.len() - old.end, trace.events.len() - old.start)
+            } else {
+                (old.start, old.end)
+            };
+            inv.start = index + start;
+            inv.end = index + end;
+            inv.parent = Some(old.parent.map_or(0, |p| base + p));
+            let mut path = edge.clone();
+            path.extend(inv.path);
+            inv.path = path;
+            for p in inv.path.iter_mut().skip(edge.len()) {
+                p.entered_oracle = p.entered_oracle.map(|c| reversed_coordinate(c, reverse));
+            }
+            self.invocations.push(inv);
+        }
+        for old in &trace.cleanups {
+            let mut pair = old.clone();
+            pair.owner += base;
+            rebind_location(&mut pair.carrier, &edge, parent.root, reverse);
+            for l in pair.computation.iter_mut().chain(&mut pair.cleanup) {
+                rebind_location(l, &edge, parent.root, reverse);
+            }
+            self.cleanups.push(pair);
+        }
+        for old in &trace.qinplaces {
+            let mut p = old.clone();
+            p.owner += base;
+            self.qinplaces.push(p);
+        }
+        for old in &trace.borrow_proofs {
+            let mut p = old.clone();
+            p.owner += base;
+            self.borrow_proofs.push(p);
+        }
+        self.groups.insert(key, (base, index));
+
+        Ok(())
+    }
     pub(crate) fn event(
         &mut self,
         leaf: &crate::expansion::Leaf,
@@ -225,56 +293,16 @@ impl Projection {
         let oracle = trace.object.functions[&trace.invocations[0].name].kind == "oracle";
         edge.last_mut().unwrap().entered_oracle = oracle.then_some(Default::default());
         let key = Arc::as_ptr(&source.trace) as usize;
-        let base = if let Some((base, _)) = self.groups.get(&key) {
-            *base
-        } else {
-            if reverse && !trace.borrow_proofs.is_empty() {
-                return Err(Error::new(
-                    crate::Status::GateUnsupported,
-                    "§11: raw-inverse lifted callee borrow-frame proof rebinding remains bennett-sched-y0n",
-                ));
-            }
-            let base = 1 + self.invocations.len();
-            for old in &trace.invocations {
-                let mut inv = old.clone();
-                let (start, end) = if reverse {
-                    (trace.events.len() - old.end, trace.events.len() - old.start)
-                } else {
-                    (old.start, old.end)
-                };
-                inv.start = index + start;
-                inv.end = index + end;
-                inv.parent = Some(old.parent.map_or(0, |p| base + p));
-                let mut path = edge.clone();
-                path.extend(inv.path);
-                inv.path = path;
-                for p in inv.path.iter_mut().skip(edge.len()) {
-                    p.entered_oracle = p.entered_oracle.map(|c| reversed_coordinate(c, reverse));
-                }
-                self.invocations.push(inv);
-            }
-            for old in &trace.cleanups {
-                let mut pair = old.clone();
-                pair.owner += base;
-                rebind_location(&mut pair.carrier, &edge, parent.root, reverse);
-                for l in pair.computation.iter_mut().chain(&mut pair.cleanup) {
-                    rebind_location(l, &edge, parent.root, reverse);
-                }
-                self.cleanups.push(pair);
-            }
-            for old in &trace.qinplaces {
-                let mut p = old.clone();
-                p.owner += base;
-                self.qinplaces.push(p);
-            }
-            for old in &trace.borrow_proofs {
-                let mut p = old.clone();
-                p.owner += base;
-                self.borrow_proofs.push(p);
-            }
-            self.groups.insert(key, (base, index));
-            base
-        };
+        let base = self
+            .groups
+            .get(&key)
+            .map(|(base, _)| *base)
+            .ok_or_else(|| {
+                Error::new(
+                    crate::Status::InvalidState,
+                    "native source event has no call metadata",
+                )
+            })?;
         let (_, start) = self.groups[&key];
         let expected = if reverse {
             trace.events.len() - 1 - (index - start)
@@ -299,4 +327,74 @@ impl Projection {
         };
         Ok(Some((location, base + event.owner)))
     }
+}
+
+pub(crate) fn constructor_location(
+    provenance: &[crate::expansion::Origin],
+    rows: &[(String, String, Vec<u64>)],
+    root: &str,
+) -> (crate::schedule::Location, usize) {
+    use crate::schedule::{Coordinate, Kind, Location, Occurrence, Phase};
+    let state = provenance
+        .iter()
+        .rev()
+        .find(|o| o.constructor == "visit" && o.name == "State");
+    let frame = provenance
+        .iter()
+        .rev()
+        .find(|o| o.constructor == "visit" && o.name == "Frames");
+    let (point, coordinate, space) = if let Some(state) = state {
+        (
+            if state.reverse {
+                "$release"
+            } else {
+                "$construct"
+            }
+            .into(),
+            Coordinate::default(),
+            rows.len() + usize::from(state.reverse),
+        )
+    } else if let Some(frame) = frame {
+        let row = provenance
+            .iter()
+            .rev()
+            .find(|o| o.constructor == "apply" && (o.name == "Rows" || o.name == "Next"))
+            .map(|o| o.index)
+            .unwrap_or(usize::MAX);
+        (
+            rows.get(row)
+                .map(|r| r.1.clone())
+                .unwrap_or_else(|| "$step".into()),
+            Coordinate {
+                step: Some(frame.index as u64 + 1),
+                phase: Some(if frame.reverse {
+                    Phase::Rev
+                } else {
+                    Phase::Fwd
+                }),
+            },
+            row,
+        )
+    } else {
+        ("$commit".into(), Coordinate::default(), rows.len() + 2)
+    };
+    (
+        Location {
+            root: coordinate,
+            path: vec![Occurrence {
+                symbol: rows
+                    .get(space)
+                    .map(|r| r.0.clone())
+                    .unwrap_or_else(|| root.into()),
+                point,
+                iteration: vec![],
+                instance: rows.get(space).map(|r| r.2.clone()).unwrap_or_default(),
+                call_index: None,
+                entered_oracle: None,
+            }],
+            generated: 0,
+            kind: Kind::Gate,
+        },
+        space,
+    )
 }

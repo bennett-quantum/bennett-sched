@@ -5,7 +5,7 @@ agent runs no git commands; the runner commits. No later commit SHA is claimed.
 The current observed ISA pin is ecb8551250bca5e0702c6c7894b603388b2e51bf (K83).
 See docs/PLAN.md and SPEC_VERSIONS.toml for clauses, digests and evidence limits.
 
-The latest complete gate is timeout 660 scripts/pre-push --working-tree, exit 0,
+The latest historical working-tree gate (2026-11-02) is timeout 660 scripts/pre-push --working-tree, exit 0,
 175 tests including C11 consumers, reference differential, inventory and fmt.
 It covers review 3k1/mi3/io7/2qd/760 fixes and the 1na reporting guard. K83 source
 changes passed the full 129-test gate and ecz is closed. Exact
@@ -53,12 +53,15 @@ published reference binary rejects 0.9 admission (expected isa=0.8); its publish
 compatibility object supplies only a four-input differential. Certificates here
 contain producer claims, with no independent 0.9 checker verdict claimed.
 
-The default push hook checks supplied local SHAs in clean sibling worktrees;
-the runner must run that after committing. Working-tree and mocked protocol
-tests do not establish actual committed-SHA verification. Host advisory requires
-free -g/uptime before long runs, max j4, threads2 below 6 GB available. Gate chooses
-these limits automatically. Root gate.toml remains outside authorized paths
-(68k). Hooks/worklog untouched.
+The push hook now exactly uses the published pinned-tool stub (68k);
+tests/gate.rs checks its configuration and delegation contract rather than a
+copied worktree protocol. scripts/check-working-tree is the optional git-free
+runner checkpoint. Focused gate test and bash syntax checks pass. Full gates and
+hook-check belong to the orchestrator under the new 2026-11-03 R3 instruction.
+Root gate.toml still pins ecaaac0/021d5df while SPEC_VERSIONS and the K83 tests
+target ecb8551/7458b36. It is outside the agent's write allowlist; its pin must be
+aligned before claiming a complete pinned push result. Hooks/worklog untouched.
+
 
 
 Px2 focused memory/allocator suite passed 16 tests, including every small
@@ -105,3 +108,10 @@ execution/inverse passes all 512 input/control tuples through five adapter forms
 Typed values, semantic forwarding, mutable regions and invalid inputs have
 focused coverage. Catalog/hash unchanged. Full gate passed 175 tests; 6qc is closed. Lifted row binding
 and coordinate projection remain the next integration step, not implemented.
+
+Current y0n integration has focused passing coverage for lifted calls/uncalls,
+nested token coordinates, bound history certificates and zero-leaf call contexts.
+The non-emitting metadata channel retains empty-call multiplicity and raw inverse
+identities. Lproc/deeper binding checks and §5.5/K65/borrow proof mechanics remain
+in progress; no current full-gate result is claimed. The orchestrator owns full
+gates and review under the 2026-11-03 policy.

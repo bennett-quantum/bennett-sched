@@ -96,12 +96,12 @@ def main():
             if record["number"]==3: record.update(semantics="borrow::normative_translation_frame_is_universal_and_emits_a_separate_borrow_record (all 8 basis tuples and 16 inherited-control tuples)")
             symbols=json.loads(block.split("section symbols\n",1)[1].split("\n",1)[0])
             regions=[]
-            deferred={"through":"nested oracle/permutation call row construction", "plus_db":"classical pseudo-location wire binding", "g":"classical pseudo-location wire binding", "ginv":"classical pseudo-location wire binding", "addya":"classical pseudo-location wire binding in inverse pair"}
+            deferred={"through":"classical pseudo-location wire binding in nested/lproc callee", "plus_db":"classical pseudo-location wire binding", "g":"classical pseudo-location wire binding", "ginv":"classical pseudo-location wire binding", "addya":"classical pseudo-location wire binding in inverse pair"}
             for symbol in symbols.values():
                 if symbol["kind"] in {"oracle","action","perm_action"}:
                     name=symbol["name"]
                     region={"name":name,"interface_hash":symbol["interface_hash"],"outcome":"UNSUPPORTED" if name in deferred else "OK","test":"normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"}
-                    if name in deferred: region.update(reason=deferred[name],beads=["bennett-sched-r28","bennett-sched-ark"] if name in {"g","ginv","plus_db","addya"} else ["bennett-sched-ark"])
+                    if name in deferred: region.update(reason=deferred[name],beads=["bennett-sched-r28","bennett-sched-ark"] if name in {"g","ginv","plus_db","addya","through"} else ["bennett-sched-ark"])
                     if name=="sum_db":
                         region.update(outcome="ERROR",status="BENNETT_E_NOMEM",reason="Materialized reference constructor leaf workspace exhausted at B=3; scalable expansion remains required.",beads=["bennett-sched-2u4","bennett-sched-ark"],zero_budget_witness={"outcome":"OK","budget":[0,0,0,0]})
                     regions.append(region)

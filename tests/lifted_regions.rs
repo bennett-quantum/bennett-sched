@@ -208,4 +208,185 @@ fn zero_leaf_permutation_calls_retain_all_forward_and_inverse_invocation_records
         assert_eq!(call.parent, Some(0));
         assert_eq!(call.path[0].point, "entry:0");
     }
+    let mut request = bennett_sched::Request::default();
+    request
+        .set_region(object.closure_hash("outer").unwrap(), "forward", 0)
+        .unwrap();
+    let callee = object.closure_hash("empty").unwrap().to_owned();
+    request.object = Some(std::sync::Arc::new(object));
+    request
+        .set_target(&std::fs::read("data/k83-target.json").unwrap())
+        .unwrap();
+    request.set_params(b"[]").unwrap();
+    request.budget = Some([2, 0, 0, 0]);
+    request.set_accuracy("0").unwrap();
+    let response = request.schedule().unwrap();
+    assert_eq!(
+        response.outcome,
+        bennett_sched::Outcome::Ok,
+        "{:?}",
+        response.reason
+    );
+    let certificate = bennett_sched::canonical::require_jcs(&response.certificate).unwrap();
+    let count = certificate["composition"]["multiplicities"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .filter(|(key, _)| key.starts_with(&callee))
+        .map(|(_, n)| n.as_u64().unwrap())
+        .sum::<u64>();
+    assert_eq!(count, 4);
+}
+
+fn forwarded_lproc_program() -> Object {
+    use bennett_sched::canonical;
+    use serde_json::Value;
+    let signatures = [
+        json!({"abi":"0.9","tier":"q","kind":"oracle","in":[1],"tgt":1,"fault":4,"mem":[],"args":[]}),
+        json!({"abi":"0.9","tier":"q","kind":"lproc","params":[1],"result":1,"tokens":["token"],"args":[],"mem":[]}),
+        json!({"abi":"0.9","tier":"q","kind":"oracle","in":[1],"tgt":1,"fault":4,"mem":[],"args":["token","token"]}),
+    ];
+    let functions = [
+        "oracle @o (x:wire in) (t:wire) (f:wire[4]) () ()\n^entry():\nlift.retval x",
+        "lproc @worker (p:reg[1]) (r:reg[1]) (b:token) () ()\nregs { f:reg[4] }\n^entry():\nlift.oracle_call @o b (p) r f () ()\nlift.ret r",
+        "oracle @outer (x:wire in) (t:wire) (fr:wire[4]) () (b0:token, b1:token)\nregs { y:reg[1], z:reg[1], r:reg[1] }\n^entry():\ny = lift.call @worker (x) (b0) () ()\nz = lift.call @worker (x) (b1) () ()\nr = lift.xor y z\nlift.retval r",
+    ];
+    let layout = json!({"ptr_width":3,"H":0,"A_tab":0,"S_cells":3,"null_size":1,"heap_base":1,"heap_limit_max":0,"globals":{},"interface_regions":{}});
+    let jcs = |v: &Value| String::from_utf8(canonical::to_vec(v).unwrap()).unwrap();
+    let mut leaves = layout
+        .as_object()
+        .unwrap()
+        .iter()
+        .filter(|(k, _)| !["globals", "interface_regions"].contains(&k.as_str()))
+        .map(|(k, v)| (jcs(&json!([k])), jcs(v)))
+        .collect::<Vec<_>>();
+    leaves.sort();
+    let layout_suffix = leaves
+        .iter()
+        .map(|(p, v)| format!("layout {p} {v}\n"))
+        .collect::<String>();
+    let names = ["o", "worker", "outer"];
+    let kinds = ["oracle", "lproc", "oracle"];
+    let mut hashes = Vec::<String>::new();
+    let mut symbols = json!({});
+    for index in 0..3 {
+        let mut body = functions[index].to_owned();
+        let mut refs = Vec::new();
+        for earlier in 0..index {
+            if body.contains(&format!("@{} ", names[earlier])) {
+                body = body.replace(
+                    &format!("@{} ", names[earlier]),
+                    &format!("@{} ", hashes[earlier]),
+                );
+                refs.push(hashes[earlier].clone());
+            }
+        }
+        refs.sort();
+        refs.dedup();
+        let suffix = refs.iter().map(|h| format!("{h}\n")).collect::<String>();
+        let hash = canonical::hash(
+            format!(
+                "isa=0.9\nptr_width=3\n{}\n{body}\n{}{suffix}",
+                jcs(&signatures[index]),
+                if kinds[index] == "oracle" {
+                    layout_suffix.as_str()
+                } else {
+                    ""
+                }
+            )
+            .as_bytes(),
+        );
+        symbols[index.to_string()] = json!({"kind":kinds[index],"name":names[index],"signature":signatures[index],"interface_hash":hash});
+        hashes.push(hash);
+    }
+    let source = format!(
+        "bennett-object isa=0.9 object=0.9 launch=0.9 sched=0.9 cert=0.9 coverage=0.9 target=0.9 ptr_width=3\n\nsection symbols\n{}\n\nsection functions\n{}\n\nsection layout\n{}\n",
+        jcs(&symbols),
+        functions.join("\n"),
+        jcs(&layout)
+    );
+    Object::parse(source.as_bytes()).unwrap()
+}
+
+#[test]
+fn fixed_lproc_token_forwarding_keeps_two_positional_instances_without_lift_call_edges() {
+    use std::collections::{BTreeMap, BTreeSet};
+    let object = forwarded_lproc_program();
+    for (first, second) in [(1, 0), (1, 1), (0, 1)] {
+        for outer in [0, 7, 8] {
+            let params = json!([
+                [first.to_string(), "0", "0", "0"],
+                [second.to_string(), "0", "0", "0"]
+            ]);
+            let trace = Trace::build(&object, "outer", 1, &params, [outer, 0, 8, 1]).unwrap();
+            let callees = trace
+                .invocations
+                .iter()
+                .filter(|i| i.name == "o")
+                .collect::<Vec<_>>();
+            if outer > 0 {
+                assert_eq!(callees.len(), outer as usize * 4);
+                let keys = callees
+                    .iter()
+                    .map(|i| i.path[0].instance.clone())
+                    .collect::<BTreeSet<_>>();
+                assert_eq!(keys, BTreeSet::from([vec![0], vec![1]]));
+                for inv in callees {
+                    assert_eq!(
+                        inv.path.len(),
+                        1,
+                        "lift.call is not a region invocation edge"
+                    );
+                    assert_eq!(inv.path[0].symbol, object.symbols["worker"].interface_hash);
+                    assert_eq!(inv.path[0].point, "entry:0");
+                    assert_eq!(inv.path[0].call_index, Some(0));
+                    assert_eq!(
+                        inv.budget[0],
+                        if inv.path[0].instance == [0] {
+                            first
+                        } else {
+                            second
+                        }
+                    );
+                }
+            }
+            let leaves = trace
+                .events
+                .iter()
+                .map(|e| e.leaf.clone())
+                .collect::<Vec<_>>();
+            let mut cases = Vec::new();
+            for bits in 0..128 {
+                let mut state = BTreeMap::new();
+                for (name, n, offset) in [("in:0", 1, 0), ("tgt:0", 1, 1), ("fault:0", 4, 2)] {
+                    for bit in 0..n {
+                        state.insert(format!("{name}[{bit}]"), bits & (1 << (offset + bit)) != 0);
+                    }
+                }
+                state.insert("control:0".into(), bits & 64 != 0);
+                cases.push(state);
+            }
+            basis::Program::compile(&leaves)
+                .unwrap()
+                .run_many(&mut cases)
+                .unwrap();
+            for (bits, state) in cases.iter().enumerate() {
+                let changed =
+                    outer == 8 && bits & 64 != 0 && ((first > 0) ^ (second > 0)) && bits & 1 != 0;
+                assert_eq!(
+                    state["tgt:0[0]"],
+                    (bits & 2 != 0) ^ changed,
+                    "outer={outer}, tokens={first},{second}"
+                );
+                for bit in 0..4 {
+                    assert_eq!(
+                        state[&format!("fault:0[{bit}]")],
+                        (bits & (1 << (bit + 2)) != 0) ^ (bit == 0 && outer < 8 && bits & 64 != 0)
+                    );
+                }
+                assert_eq!(state["in:0[0]"], bits & 1 != 0);
+                assert_eq!(state.len(), 7);
+            }
+        }
+    }
 }

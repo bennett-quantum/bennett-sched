@@ -62,7 +62,7 @@ mkdir -p .tmp/sol-sched/tmp
 env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
   TMPDIR="$PWD/.tmp/sol-sched/tmp" CARGO_TARGET_DIR="$PWD/.tmp/sol-sched/target" \
   cargo build --offline -j4
-scripts/pre-push --working-tree
+cargo test --offline -j2 --test pipeline -- --test-threads=2
 python3 scripts/conformance.py --write --probe-reference --require-complete
 ```
 
@@ -74,8 +74,15 @@ tested. The controlled-action trace is compared on its complete basis domain
 with the reference interpreter's published 0.8 compatibility fixture. That
 binary rejects 0.9 admission and cannot certify 0.9 schedule execution.
 
-The push hook's default mode tests every supplied local SHA in a clean detached
-worktree beside the repo. `--working-tree` is an explicitly labelled checkpoint
-for the commit-owning runner and runs no git commands. Tests read published
-fixtures from sibling `bennett-isa-spec`; `BENNETT_REF_BIN` may select its
-published reference binary. No sibling implementation code is linked or copied.
+The push hook delegates to the shared tool extracted from the meta repository's
+committed objects at the tool_sha in gate.toml. It checks the pushed SHA with
+siblings and the reference binary at their declared pins. The orchestrator owns
+full gate runs; scripts/check-working-tree remains an optional local checkpoint
+for the runner. Its result does not establish pinned push verification.
+The tests assert this repository's config/stub contract; shared tool self-tests
+own the isolation and ref protocol. The gate ISA pin currently needs alignment
+with SPEC_VERSIONS.toml before a complete pinned result can be claimed.
+
+Tests read published fixtures from sibling bennett-isa-spec;
+BENNETT_REF_BIN may select its published reference binary. No sibling
+implementation code is linked or copied.

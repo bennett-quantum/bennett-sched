@@ -1,61 +1,20 @@
 #!/usr/bin/env bash
-# Default hook mode verifies each pushed commit in its own detached worktree
-# beside the checkout, preserving ../bennett-isa-spec fixture resolution.
-# --working-tree is the explicitly labelled checkpoint mode used by a runner
-# that owns git and has not committed the agent's files yet. It never runs git.
+# Push gate (no CI). Runs the [[check]]s of gate.toml on the pushed sha in a clean detached
+# worktree, with siblings at the shas pinned there. See bennett/tools/gate_README.md in the
+# meta repo. The tool is run, never imported: it is a dev tool at a pinned commit, like cargo.
 set -euo pipefail
-unset DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
-script_path="$(readlink -f -- "${BASH_SOURCE[0]}")"
-script_dir="$(dirname -- "$script_path")"
-root="$(dirname -- "$script_dir")"
-check() {
-  local checkout="$1" target="$2"
-  local jobs=4 threads=4 available
-  free -g
-  uptime
-  available="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
-  [[ "$available" =~ ^[0-9]+$ ]] || { echo "pre-push: cannot determine available memory" >&2; return 1; }
-  if (( available < 6 * 1024 * 1024 )); then jobs=2; threads=2; fi
-  mkdir -p "$checkout/.tmp/sol-sched/tmp" "$target"
-  env TMPDIR="$checkout/.tmp/sol-sched/tmp" CARGO_TARGET_DIR="$target" \
-    timeout 600 cargo test --offline -j"$jobs" --manifest-path "$checkout/Cargo.toml" -- --test-threads="$threads"
-  env TMPDIR="$checkout/.tmp/sol-sched/tmp" \
-    cargo fmt --manifest-path "$checkout/Cargo.toml" -- --check
-}
-if [[ "${1:-}" == --working-tree ]]; then
-  echo "pre-push: working-tree checkpoint (no commit/SHA verification)" >&2
-  check "$root" "${CARGO_TARGET_DIR:-$root/.tmp/sol-sched/target}"
-  exit
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
+root="$(git -C "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" rev-parse --show-toplevel)"
+if [ "${BENNETT_GATE_HOOK_PROBE:-}" = 1 ]; then echo "bennett-gate-hook-chained $root"; exit 0; fi
+pin="$(git -C "$root" show HEAD:gate.toml 2>/dev/null)" || { echo "pre-push: HEAD has no gate.toml" >&2; exit 3; }
+tool_sha="$(sed -n 's/^tool_sha = "\([0-9a-f]\{40\}\)"$/\1/p' <<<"$pin")"
+[ -n "$tool_sha" ] || { echo "pre-push: gate.toml has no full tool_sha" >&2; exit 3; }
+common="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)"
+meta="${BENNETT_GATE_WORKSPACE:-$(dirname "$(dirname "$common")")}/bennett"
+tool="$root/.tmp/gate/tool/gate_run-$tool_sha.py"
+if [ ! -s "$tool" ]; then
+  mkdir -p "$(dirname "$tool")"
+  git -C "$meta" show "$tool_sha:tools/gate_run.py" >"$tool.$$"
+  mv "$tool.$$" "$tool"
 fi
-unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
-shas=()
-saw_ref=0
-if [[ ! -t 0 ]]; then
-  while read -r -t 10 local_ref local_sha remote_ref remote_sha; do
-    saw_ref=1
-    [[ "$local_sha" =~ ^[0-9a-f]{40,64}$ ]] || { echo "pre-push: malformed local SHA" >&2; exit 1; }
-    [[ "$local_sha" =~ ^0+$ ]] || shas+=("$local_sha")
-  done
-fi
-if [[ ${#shas[@]} == 0 ]]; then
-  # A deletion-only push has nothing to test. Direct invocation gates HEAD.
-  if [[ "$saw_ref" == 1 ]]; then exit 0; fi
-  shas+=("$(git -C "$root" rev-parse --verify HEAD)")
-fi
-declare -A checked=()
-for sha in "${shas[@]}"; do
-  [[ -z "${checked[$sha]:-}" ]] || continue
-  checked[$sha]=1
-  sha="$(git -C "$root" rev-parse --verify "${sha}^{commit}")"
-  worktree="$(mktemp -d "$(dirname -- "$root")/$(basename -- "$root")-gate.XXXXXX")"
-  cleanup() {
-    git -C "$root" worktree remove --force "$worktree" >/dev/null 2>&1 || true
-    rm -rf -- "$worktree"
-  }
-  trap cleanup EXIT INT TERM
-  git -C "$root" worktree add --detach "$worktree" "$sha" >/dev/null
-  echo "pre-push: verifying pushed SHA $sha in $worktree" >&2
-  check "$worktree" "$root/.tmp/push-target/$sha"
-  cleanup
-  trap - EXIT INT TERM
-done
+exec python3 -I "$tool" run --repo "$root" --tool-sha "$tool_sha" "$@"

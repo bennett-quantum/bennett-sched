@@ -12,7 +12,7 @@ it does not replace Beads.
 1. Implemented and focused-tested: binary ABI, exact decimals and canonical document identity.
 2. Partial: schema/selectors/binding and closed constructors implemented; K82 binding and all published binding witnesses implemented; full functional family replay remains qnl.
 3. Partial: memoryless/layout oracle construction, lproc call/return rows, source cleanup carriers/recompute and supported action traces, native/exact/approximate schemes and bound resource certificates implemented; ark/2u4 track remaining algorithms.
-4. Audit performed: all ten object identities and the full controlled-action basis domain checked; every published case/manifest inventoried, remaining conformance tracked in qnl. Push protocol has a mock isolation test; the runner must verify the committed SHA.
+4. Audit performed: all ten object identities and the full controlled-action basis domain checked; every published case/manifest inventoried, remaining conformance tracked in qnl. The installed pinned-tool stub and gate.toml have a focused contract test; the orchestrator must verify the committed SHA and matching ISA pin.
 
 ## Requirement inventory
 
@@ -129,12 +129,19 @@ its 0.8 compatibility fixture. Its attempt to admit the actual 0.9 object exits
 Numerical certificate claims emitted here remain producer claims for independent
 checking; no proof/evidence label or rigorous interval-checker success is claimed.
 
-The full working-tree gate is `scripts/pre-push --working-tree`. The default
-hook gates each stdin local SHA in an isolated worktree beside the repo. Its
-protocol/isolation regression uses mock executables, never real git. The
-implementation agent is forbidden to run git; the runner must run the default
-hook after committing. Working-tree checks and the mock regression do not
-substitute for that actual committed-SHA verification.
+The push gate is the published pinned-tool stub. It extracts the tool from
+committed meta objects at gate.toml's tool_sha and delegates pushed-SHA isolation,
+sibling materialisation and reference builds to that tool. tests/gate.rs checks
+the installed stub/config contract; shared gate self-tests own protocol coverage.
+scripts/check-working-tree preserves the optional local, git-free runner
+checkpoint. Under the 2026-11-03 R3 note the agent runs focused tests only; the
+orchestrator runs full gates and hook-check. Earlier working-tree gate evidence
+below predates this adoption and does not prove pinned push verification.
+
+The root gate.toml currently has an older ISA commit/spec digest than
+SPEC_VERSIONS.toml and the K83 fixture inventory. That config is outside this
+job's write allowlist. The orchestrator must align the two pins and verify the
+pushed SHA; no test is relaxed to hide that mismatch.
 
 Memoryless oracle evidence now includes full-domain two-bit increment at every
 budget 0–4, arbitrary target/fault values and inherited control, and branching
@@ -441,3 +448,38 @@ missing context, invalid/source-inconsistent tuples and explicit NoMem.
 Lifted oracle/uncall/permutation row argument binding and outer row/child
 coordinate projection remain the next ark integration step; this registry alone
 does not claim those rows. Full gate: timeout 660 scripts/pre-push --working-tree, exit 0, 175 tests plus C11/reference differential/inventory/fmt. 6qc is closed.
+
+## Lifted source calls and non-emitting contexts — y0n
+
+Lifted oracle/uncall/permutation rows now bind complete typed interfaces to the
+linked source builder. Exact tokens remain separate from positional arguments.
+Root and fixed lproc environments retain token/region forwarding, with source
+location and alias checks; tokens still cannot be read as wires.
+
+Projection preserves each callee's invocation, own source points and native
+ordinals, frames and proof metadata, independently of outer oracle steps.
+Raw inverse retains forward identities and mirrors source coordinates.
+Callee leaves do not consume caller ordinals. Identical decisions at a shared
+nested selector address merge; incompatible decisions constrain placement search.
+
+A non-emitting source-call channel carries spans and constructor provenance,
+so zero-leaf callees retain invocation records and certificate multiplicity.
+Inverse mirrors spans and reverses call order while keeping forward call numbers.
+Metadata has an explicit 65,536-record host workspace bound; larger streaming
+remains 2u4. A host failure never drops a call or narrows a quantum domain.
+
+Focused lifted/registry tests pass 12 tests, including complete small domains,
+nested token budgets, retained empty contexts and their certificate multiplicity.
+Lproc positional-context coverage is in progress. Full current-tree verification
+is reserved to the orchestrator under R3; no new pinned/full-gate result is claimed.
+Required remaining y0n mechanics include all-path LIFO/input-write admission
+for §5.5, K65 lifted-uncall carriers/recompute, and raw-inverse borrowed-frame
+proof rebinding. The latter currently has a named diagnostic rather than an
+invented proof.
+
+The source registry and C ABI bind a selected device closure within its device
+object. That object hash identifies the device artifact, not an enclosing native
+binary. A mixed fat binary may carry several such objects and request schedules
+per selected closure. Host entry points, host code inventory and host handles
+remain outside these records; no launch-ABI field or whole-binary assumption is
+introduced (standing constraint bennett-4ht).

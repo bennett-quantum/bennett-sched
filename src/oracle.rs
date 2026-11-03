@@ -4,7 +4,7 @@ use crate::{
     Error, Result, Status,
     expansion::{Binding, Env, Library, Operation},
     object::{self, Node, Object},
-    schedule::{Coordinate, Kind, Location, Occurrence, Phase},
+    schedule::{Coordinate, Kind, Phase},
     source::{Event, Invocation, Slot, Trace},
 };
 use serde_json::{Value, json};
@@ -1116,11 +1116,12 @@ pub fn build(
     let inherited = (0..inherited)
         .map(|i| format!("control:{i}"))
         .collect::<Vec<_>>();
-    let leaves = library.body(
+    let expanded = library.body_with_sources(
         &[json!({"invoke":"oracle.construct","args":args})],
         &env,
         &inherited,
     )?;
+    let leaves = expanded.leaves;
     let mut counts = BTreeMap::<(u64, usize), u64>::new();
     for leaf in &leaves {
         if leaf.origin.iter().any(|o| o.source.is_some()) {
@@ -1145,6 +1146,14 @@ pub fn build(
     let mut ordinals = BTreeMap::<(Option<u64>, bool, usize), u64>::new();
     let mut events = Vec::new();
     let mut projection = crate::oracle_calls::Projection::default();
+    for call in &expanded.source_calls {
+        let (parent, _) = crate::oracle_calls::constructor_location(
+            &call.origin,
+            &row_points,
+            &object.symbols[name].interface_hash,
+        );
+        projection.register(call, &parent)?;
+    }
     for mut leaf in leaves {
         // Source callees carry their own State/Frames tags. Only constructors
         // outside the linked source boundary address the containing oracle.
@@ -1154,49 +1163,12 @@ pub fn build(
             .rposition(|o| o.source.is_some())
             .map_or(0, |i| i + 1);
         let provenance = &leaf.origin[boundary..];
-        let state = provenance
-            .iter()
-            .rev()
-            .find(|o| o.constructor == "visit" && o.name == "State");
-        let frame = provenance
-            .iter()
-            .rev()
-            .find(|o| o.constructor == "visit" && o.name == "Frames");
-        let (point, step, phase, space) = if let Some(state) = state {
-            (
-                if state.reverse {
-                    "$release"
-                } else {
-                    "$construct"
-                }
-                .to_owned(),
-                None,
-                None,
-                row_points.len() + usize::from(state.reverse),
-            )
-        } else if let Some(frame) = frame {
-            let point = provenance
-                .iter()
-                .rev()
-                .find(|o| o.constructor == "apply" && (o.name == "Rows" || o.name == "Next"))
-                .map(|o| o.index)
-                .unwrap_or(usize::MAX);
-            (
-                row_points
-                    .get(point)
-                    .map(|r| r.1.clone())
-                    .unwrap_or_else(|| "$step".into()),
-                Some(frame.index as u64 + 1),
-                Some(if frame.reverse {
-                    Phase::Rev
-                } else {
-                    Phase::Fwd
-                }),
-                point,
-            )
-        } else {
-            ("$commit".into(), None, None, row_points.len() + 2)
-        };
+        let (mut location, space) = crate::oracle_calls::constructor_location(
+            provenance,
+            &row_points,
+            &object.symbols[name].interface_hash,
+        );
+        let Coordinate { step, phase } = location.root;
         let nested = leaf.origin.iter().any(|o| o.source.is_some());
         let counter = ordinals
             .entry((step, phase == Some(Phase::Rev), space))
@@ -1220,28 +1192,12 @@ pub fn build(
                 return Err(Error::arg("classical event in oracle construction"));
             }
         };
+        location.generated = ordinal;
+        location.kind = kind;
         let mut event = Event {
             owner: 0,
             leaf,
-            location: Location {
-                root: Coordinate { step, phase },
-                path: vec![Occurrence {
-                    symbol: row_points
-                        .get(space)
-                        .map(|r| r.0.clone())
-                        .unwrap_or_else(|| object.symbols[name].interface_hash.clone()),
-                    point,
-                    iteration: vec![],
-                    instance: row_points
-                        .get(space)
-                        .map(|r| r.2.clone())
-                        .unwrap_or_default(),
-                    call_index: None,
-                    entered_oracle: None,
-                }],
-                generated: ordinal,
-                kind,
-            },
+            location,
         };
         if let Some((location, owner)) =
             projection.event(&event.leaf, &event.location, events.len())?

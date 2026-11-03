@@ -424,3 +424,51 @@ fn linked_action_regions_preserve_shape_role_and_physical_cells_without_an_oracl
             .contains("oracle_invocation")
     );
 }
+
+#[test]
+fn zero_leaf_source_metadata_keeps_forward_call_numbers_during_raw_inverse() {
+    let signature = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[0]});
+    let source = common::action(
+        "perm_action",
+        "empty",
+        signature,
+        "perm_action @empty (t:wire mut) () () () ()",
+        "qloop 0 {\nx t\n}",
+    );
+    let mut library = Library::published().unwrap();
+    let hash = library
+        .link_source(Arc::new(Object::parse(&source).unwrap()), "empty")
+        .unwrap();
+    let mut env = Env::new();
+    env.insert("S".into(), Binding::Symbol(hash.clone()));
+    env.insert(
+        "A".into(),
+        Binding::Arguments {
+            symbol: hash,
+            values: vec![wires("t", 1)],
+            oracle_invocation: None,
+        },
+    );
+    let call = json!({"call":"S","args":"A"});
+    let output = library
+        .body_with_sources(
+            &[json!({"inverse":true,"body":[call.clone(),call]})],
+            &env,
+            &[],
+        )
+        .unwrap();
+    assert!(output.leaves.is_empty());
+    assert_eq!(output.source_calls.len(), 2);
+    assert_eq!(
+        output
+            .source_calls
+            .iter()
+            .map(|c| c.calls[0].call_index)
+            .collect::<Vec<_>>(),
+        [1, 0]
+    );
+    for call in output.source_calls {
+        assert!(call.reverse);
+        assert_eq!((call.start, call.end), (0, 0));
+    }
+}

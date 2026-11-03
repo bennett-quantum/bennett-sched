@@ -1168,6 +1168,7 @@ impl Compiler<'_> {
                         origin.reverse = !origin.reverse;
                     }
                 }
+                self.source_calls[source_start..].reverse();
                 self.live = before;
                 for leaf in inverse(&leaves) {
                     match &leaf.op {
