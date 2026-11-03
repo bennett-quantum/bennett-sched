@@ -339,15 +339,14 @@ impl Document {
                 "inherited_controls",
                 "budget",
                 "params_hash",
+                "token_aliases",
                 "epsilon",
                 "expansion",
                 "scheduler",
             ],
-            &["token_aliases"],
+            &[],
         )?;
-        if let Some(aliases) = b.get("token_aliases") {
-            crate::token_aliases::parse(&canonical::to_vec(aliases)?)?;
-        }
+        crate::token_aliases::parse(&canonical::to_vec(&b["token_aliases"])?)?;
         for key in ["closure_hash", "target_hash", "params_hash"] {
             if !canonical::is_hash(text(&b[key])?) {
                 return Err(Error::arg(format!("invalid {key}")));

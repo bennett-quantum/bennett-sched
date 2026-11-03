@@ -280,17 +280,41 @@ fn qinplace_typed_arguments_use_singleton_bit_domains_and_exact_nested_token_tup
     request.set_params(br#"[["3","0","0","0"],"18446744073709551617","0x8000000000000000",["2","0","0","0"],"4294967295"]"#).unwrap();
     request.budget = Some([0; 4]);
     request.set_accuracy("0").unwrap();
-    let response = common::schedule_distinct_tokens(&mut request).unwrap();
+    request.set_token_aliases(b"[0,1]").unwrap();
+    let response = request.schedule().unwrap();
     assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
     let cert = canonical::require_jcs(&response.certificate).unwrap();
     let region = &cert["regions"][&hash];
     let entry = &region["verification"]["inverse_pairs"][0];
+    assert_eq!(entry["token_aliases"], json!([0, 1]));
     assert_eq!(entry["budget"], json!(["3", "0", "0", "0"]));
     assert_eq!(entry["arg_tokens"], json!({"other":["2","0","0","0"]}));
     let domain = &region["claims"][entry["claim"].as_u64().unwrap() as usize]["domain"]["args"];
     assert_eq!(
         domain,
         &json!([{"name":"big","width":128,"lo":"18446744073709551617","hi":"18446744073709551617"},{"name":"angle","width":64,"lo":"9223372036854775808","hi":"9223372036854775808"},{"name":"addr","width":32,"lo":"4294967295","hi":"4294967295"}])
+    );
+    // The primary and argument tuple can be equal while their identities differ.
+    // Both partitions are legal, and a shared proof must retain that constraint.
+    request.set_params(br#"[["3","0","0","0"],"18446744073709551617","0x8000000000000000",["3","0","0","0"],"4294967295"]"#).unwrap();
+    for aliases in [b"[0,0]".as_slice(), b"[0,1]"] {
+        request.set_token_aliases(aliases).unwrap();
+        let response = request.schedule().unwrap();
+        assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+        let cert = canonical::require_jcs(&response.certificate).unwrap();
+        let pair = &cert["regions"][&hash]["verification"]["inverse_pairs"][0];
+        assert_eq!(
+            pair["token_aliases"],
+            canonical::require_jcs(aliases).unwrap()
+        );
+        assert_eq!(pair["budget"], json!(["3", "0", "0", "0"]));
+        assert_eq!(pair["arg_tokens"], json!({"other":["3","0","0","0"]}));
+    }
+    request.set_token_aliases(b"[0,0]").unwrap();
+    request.set_params(br#"[["4","0","0","0"],"18446744073709551617","0x8000000000000000",["3","0","0","0"],"4294967295"]"#).unwrap();
+    assert_eq!(
+        request.schedule().unwrap_err().status,
+        bennett_sched::Status::Arg
     );
 }
 

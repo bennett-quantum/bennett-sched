@@ -87,3 +87,34 @@ fn failing_schedule_clears_output_before_returning_status() {
         bennett_sched_request_free(r);
     }
 }
+
+#[test]
+fn alias_setter_checks_pointers_and_copies_input_atomically() {
+    unsafe {
+        assert_eq!(
+            bennett_sched_request_set_token_aliases(ptr::null_mut(), b"[]".as_ptr(), 2),
+            Status::Arg
+        );
+        let mut request = ptr::null_mut();
+        assert_eq!(bennett_sched_request_new(&mut request), Status::Ok);
+        let mut aliases = b"[0,1,0]".to_vec();
+        assert_eq!(
+            bennett_sched_request_set_token_aliases(request, aliases.as_ptr(), aliases.len()),
+            Status::Ok
+        );
+        aliases.fill(0);
+        for (data, len) in [
+            (ptr::null(), 1),
+            (ptr::null(), 0),
+            (b"[]".as_ptr(), usize::MAX),
+            (b"[1]".as_ptr(), 3),
+        ] {
+            assert_eq!(
+                bennett_sched_request_set_token_aliases(request, data, len),
+                Status::Arg
+            );
+            assert_eq!((*request).token_aliases, Some(vec![0, 1, 0]));
+        }
+        bennett_sched_request_free(request);
+    }
+}

@@ -221,6 +221,11 @@ fn published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebi
             "upstream K83 fixture format changed; remove the explicit missing-binding exception",
         );
         assert_eq!(error.status, Status::Arg);
+        assert!(error.reason.contains("token_aliases"), "{error}");
+        // Upgrade only the token-free equality binding and separately prove
+        // that the original missing expansion binding still rejects.
+        value["bindings"]["token_aliases"] = json!([]);
+        let error = Document::parse(value.clone()).unwrap_err();
         assert!(error.reason.contains("expansion"), "{error}");
         let mut request = Request::default();
         request.set_object(source.as_bytes()).unwrap();
@@ -237,6 +242,8 @@ fn published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebi
         request.set_params(b"[]").unwrap();
         request.budget = Some([0; 4]);
         request.set_accuracy("0").unwrap();
+        // Explicitly upgrade the pre-K91 token-free portable template.
+        value["bindings"]["token_aliases"] = json!([]);
         value["bindings"]["expansion"] = expansion_binding();
         value["bindings"]["target_hash"] = json!(request.target.as_ref().unwrap().hash);
         let result = Document::parse(value).unwrap().validate_request(&request);

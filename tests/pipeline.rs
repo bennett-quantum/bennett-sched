@@ -56,7 +56,7 @@ fn schedules_real_controlled_fixture_and_emits_bound_exact_certificate() {
     );
     assert_eq!(
         cert["bindings"]["invocation"],
-        json!({"args":[],"budget":["0","0","0","0"]})
+        json!({"args":[],"budget":["0","0","0","0"],"token_aliases":[]})
     );
     assert_eq!(
         cert["composition"]["multiplicities"]

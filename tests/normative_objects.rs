@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 mod common;
 use bennett_sched::object::Object;
 #[test]

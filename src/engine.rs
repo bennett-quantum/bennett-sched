@@ -747,11 +747,9 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
         }
     }
     let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|integer_json(*n)).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":merged});
-    if request.token_aliases.is_some() {
-        schedule["bindings"]["token_aliases"] = json!(crate::token_aliases::partition(
-            &trace.invocations[0].token_ids
-        ));
-    }
+    schedule["bindings"]["token_aliases"] = json!(crate::token_aliases::partition(
+        &trace.invocations[0].token_ids
+    ));
     if let Some(placements) = root_placements {
         schedule["interface_vertices"] = json!(placements);
     }
@@ -828,12 +826,9 @@ fn oracle_history(identity: &str) -> bool {
     });
     index.is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
 }
-fn invocation_binding(inv: &crate::source::Invocation, aliases: bool) -> Value {
-    let mut value = json!({"args":inv.params,"budget":inv.budget.map(|n|n.to_string())});
-    if aliases {
-        value["token_aliases"] = json!(crate::token_aliases::partition(&inv.token_ids));
-    }
-    value
+fn invocation_binding(inv: &crate::source::Invocation) -> Value {
+    json!({"args":inv.params,"budget":inv.budget.map(|n|n.to_string()),
+           "token_aliases":crate::token_aliases::partition(&inv.token_ids)})
 }
 fn frame_record(trace: &Trace, owner: usize, allocator: &Allocator<'_>) -> Result<Value> {
     let slots = trace.invocations[owner]
@@ -897,7 +892,7 @@ fn certificate(
         &request.epsilon.clone().unwrap_or_else(Rational::zero),
     )?;
     for (i, inv) in trace.invocations.iter().enumerate() {
-        let invocation = invocation_binding(inv, request.token_aliases.is_some());
+        let invocation = invocation_binding(inv);
         let key = format!("{variant}:{}", inv.controls.len());
         *multiplicities
             .entry(format!("{}:{key}", inv.hash))
@@ -1029,9 +1024,7 @@ fn certificate(
                 .unwrap()
                 .push(json!({"kind":"exhaustive","expected":"inverse_pair","domain":proof.domain}));
             let mut entry = json!({"g":proof.g,"ginv":proof.ginv,"claim":index,"budget":proof.budget.map(|n|n.to_string())});
-            if request.token_aliases.is_some() {
-                entry["token_aliases"] = json!(crate::token_aliases::partition(&proof.token_ids));
-            }
+            entry["token_aliases"] = json!(crate::token_aliases::partition(&proof.token_ids));
             if !proof.arg_tokens.as_object().unwrap().is_empty() {
                 entry["arg_tokens"] = proof.arg_tokens.clone();
             }
@@ -1152,7 +1145,7 @@ fn certificate(
         }
     }
     Ok((
-        json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":invocation_binding(root,request.token_aliases.is_some())},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::exact(&(d::integer(2)*&bounds.declared_total))?},"method":"sum_over_multiplicities"}}),
+        json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":invocation_binding(root)},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::exact(&(d::integer(2)*&bounds.declared_total))?},"method":"sum_over_multiplicities"}}),
         bounds.exact_total,
     ))
 }

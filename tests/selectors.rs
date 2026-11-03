@@ -172,6 +172,8 @@ fn a_schedule_cannot_bind_an_unavailable_expansion_library() {
         .unwrap(),
     )
     .unwrap();
+    // The published token-free template predates K91.
+    v["bindings"]["token_aliases"] = json!([]);
     v["bindings"]["expansion"]["name"] = json!("unavailable");
     assert_eq!(
         Document::parse(v).unwrap_err().status,

@@ -3,9 +3,13 @@ use serde_json::{Value, json};
 
 fn controlled() -> (Object, Value) {
     let root = "../bennett-isa-spec/conformance/fixtures/controlled-action-09";
+    // Explicit K91 rebinding of the pre-K91 token-free schedule template.
+    let mut schedule =
+        canonical::parse(&std::fs::read(format!("{root}/schedule.json")).unwrap()).unwrap();
+    schedule["bindings"]["token_aliases"] = json!([]);
     (
         Object::parse(&std::fs::read(format!("{root}/controlled.bisa")).unwrap()).unwrap(),
-        canonical::parse(&std::fs::read(format!("{root}/schedule.json")).unwrap()).unwrap(),
+        schedule,
     )
 }
 
