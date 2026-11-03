@@ -36,5 +36,5 @@ Nits (P2+): one bead, **bennett-sched-52u**.
 - **Not read:** source/oracle_call.rs, source/call_graph.rs.
 - **Checked sound:** upward 34-digit rounding, JCS key order and escaping, peak sweep, FFI catch_unwind, borrow translation lemma, recompute XOR algebra, §9.2 hashing (all 10 normative objects).
 - **Mixed fat object:** nothing here locks it out.
-- **Provenance:** 30 of the 43 commits are Codex (`wip(codex job sol-sched)`, gpt sol runner). The rest are orchestrator, beads, gate and worklog commits. No Claude implementation commits are in range.
+- **Provenance:** 29 of the 43 commits are Codex (`wip(codex job sol-sched)`), plus one orchestrator-committed checkpoint of the same runner (0428570). The rest are orchestrator, beads, gate and worklog commits. No Claude implementation commits are in range.
 - **R14 (scope):** only the reviewer's own paths were written. No fixes were made. Scheduler core is semantics-bearing, so on a later CLEAR round the rule 5 Muse seat is pending advisor confirmation.
