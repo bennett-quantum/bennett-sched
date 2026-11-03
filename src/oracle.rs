@@ -951,7 +951,8 @@ pub fn build(
         .filter(|(_, p)| p.ty == "token")
         .map(|(i, p)| (format!("source.{}", p.name), i as u64))
         .collect();
-    crate::oracle_pairs::validate(&nodes, &source_env, 0, &labels, &token_origins)?;
+    let mut cleanup_rows =
+        crate::oracle_pairs::validate(&nodes, &source_env, 0, &labels, &token_origins)?;
     for (i, node) in nodes.iter().enumerate() {
         let (body, successor) = row(
             node,
@@ -1071,13 +1072,19 @@ pub fn build(
             .enumerate()
             .map(|(i, p)| (format!("{prefix}{}", p.name), instance.key[i]))
             .collect();
-        crate::oracle_pairs::validate(
+        let matches = crate::oracle_pairs::validate(
             &nodes,
             &source_env,
             instance.first,
             &instance.labels,
             &token_origins,
         )?;
+        cleanup_rows.extend(matches.into_iter().map(|(uncall, call)| {
+            (
+                instance.first as usize + uncall,
+                instance.first as usize + call,
+            )
+        }));
         for (original, node) in function.body.iter().zip(&nodes) {
             let (body, successor) = row(
                 node,
@@ -1166,12 +1173,15 @@ pub fn build(
     let mut events = Vec::new();
     let mut projection = crate::oracle_calls::Projection::default();
     for call in &expanded.source_calls {
-        let (parent, _) = crate::oracle_calls::constructor_location(
+        let (parent, row) = crate::oracle_calls::constructor_location(
             &call.origin,
             &row_points,
             &object.symbols[name].interface_hash,
         );
         projection.register(call, &parent)?;
+        if let Some(compute) = cleanup_rows.get(&row) {
+            projection.lifted_cleanup(call, &parent, &row_points[*compute].1);
+        }
     }
     for mut leaf in leaves {
         // Source callees carry their own State/Frames tags. Only constructors
@@ -1239,6 +1249,7 @@ pub fn build(
         parent: None,
         adjoint: false,
         path: vec![],
+        containing: Coordinate::default(),
     }];
     invocations.extend(projection.invocations);
     Ok(Trace {

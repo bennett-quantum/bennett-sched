@@ -245,6 +245,7 @@ impl Projection {
             inv.start = index + start;
             inv.end = index + end;
             inv.parent = Some(old.parent.map_or(0, |p| base + p));
+            inv.containing = parent.root;
             let mut path = edge.clone();
             path.extend(inv.path);
             inv.path = path;
@@ -256,6 +257,7 @@ impl Projection {
         for old in &trace.cleanups {
             let mut pair = old.clone();
             pair.owner += base;
+            pair.lifted_oracle = pair.lifted_oracle.map(|i| base + i);
             rebind_location(&mut pair.carrier, &edge, parent.root, reverse);
             for l in pair.computation.iter_mut().chain(&mut pair.cleanup) {
                 rebind_location(l, &edge, parent.root, reverse);
@@ -275,6 +277,35 @@ impl Projection {
         self.groups.insert(key, (base, index));
 
         Ok(())
+    }
+    pub(crate) fn lifted_cleanup(
+        &mut self,
+        call: &crate::source_registry::SourceCall,
+        parent: &crate::schedule::Location,
+        computing_point: &str,
+    ) {
+        let index = self.groups[&(Arc::as_ptr(&call.trace) as usize)].0;
+        let mut carrier = parent.clone();
+        carrier.kind = crate::schedule::Kind::Cleanup;
+        carrier.generated = 0;
+        let mut computation = carrier.clone();
+        computation.path.last_mut().unwrap().point = computing_point.into();
+        let targets = call.trace.invocations[0]
+            .slots
+            .iter()
+            .filter(|s| ["tgt", "fault"].contains(&s.role.as_str()))
+            .flat_map(|s| s.wires.clone())
+            .collect();
+        self.cleanups.push(crate::cleanup::Pair {
+            owner: 0,
+            computation: vec![computation],
+            cleanup: vec![carrier.clone()],
+            carrier,
+            realisation: "reverse".into(),
+            targets,
+            permutation: true,
+            lifted_oracle: Some(index),
+        });
     }
     pub(crate) fn event(
         &mut self,

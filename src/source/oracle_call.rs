@@ -125,12 +125,6 @@ impl Builder<'_> {
         let inherited = u32::try_from(controls.len())
             .map_err(|_| Error::new(Status::NoMem, "control count exceeds host size"))?;
         let child = crate::oracle::build(self.object, &callee.name, inherited, &params, budget)?;
-        if !child.borrow_proofs.is_empty() || !child.cleanups.is_empty() {
-            return Err(Error::new(
-                Status::InvalidState,
-                "oracle construction returned source proof/cleanup metadata requiring call rebinding",
-            ));
-        }
         if child.slots.len() != slots.len() || child.inherited.len() != controls.len() {
             return Err(Error::new(
                 Status::InvalidState,
@@ -185,6 +179,7 @@ impl Builder<'_> {
             let mut full = path.clone();
             full.extend(invocation.path);
             invocation.path = full;
+            invocation.containing = Coordinate::default();
             self.trace.invocations.push(invocation);
         }
         for mut event in child.events {
@@ -216,6 +211,43 @@ impl Builder<'_> {
             event.location.root = Coordinate::default();
             event.owner += base;
             self.trace.events.push(event);
+        }
+        let bind_location = |location: &mut Location| {
+            let mut full = path.clone();
+            full.last_mut().unwrap().entered_oracle = Some(location.root);
+            full.extend(std::mem::take(&mut location.path));
+            location.path = full;
+            location.root = Coordinate::default();
+        };
+        for mut pair in child.cleanups {
+            pair.owner += base;
+            pair.lifted_oracle = pair.lifted_oracle.map(|i| base + i);
+            pair.targets = pair.targets.iter().map(|w| wire(w)).collect();
+            bind_location(&mut pair.carrier);
+            for location in pair.computation.iter_mut().chain(&mut pair.cleanup) {
+                bind_location(location);
+            }
+            self.trace.cleanups.push(pair);
+        }
+        for mut proof in child.borrow_proofs {
+            proof.owner += base;
+            for field in ["X", "B"] {
+                for w in proof.witness[field].as_array_mut().expect("translation wire set") {
+                    *w = json!(wire(w.as_str().expect("translation wire")));
+                }
+            }
+            self.trace.borrow_proofs.push(proof);
+        }
+        for mut proof in child.qinplaces {
+            proof.owner += base;
+            proof.target_id = wire(&proof.target_id);
+            proof.fault_id = wire(&proof.fault_id);
+            for wires in [&mut proof.target, &mut proof.inputs, &mut proof.controls] {
+                for w in wires {
+                    *w = wire(w);
+                }
+            }
+            self.trace.qinplaces.push(proof);
         }
         Ok(())
     }

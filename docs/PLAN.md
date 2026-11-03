@@ -412,7 +412,8 @@ the exact pre-call h without taking ownership of prior computing instructions.
 Non-permutation history cannot select this permutation-only realisation.
 General arbitrary mutable-interface and borrowed-entry histories still need
 the remaining 7va algorithm and receive that precise diagnostic. Large replay
-uses the explicit 1,000,000-leaf workspace bound; scalable materialisation remains
+uses an explicit 2,000,000-leaf whole-source workspace bound (generic recipe
+expansion still uses 1,000,000); scalable materialisation remains
 2u4 and no domain or row is discarded.
 
 Tests cover the K80 two-call occurrence/ordinal witness, K81 nonzero qcopy
@@ -470,12 +471,33 @@ remains 2u4. A host failure never drops a call or narrows a quantum domain.
 
 Focused lifted/registry tests pass 12 tests, including complete small domains,
 nested token budgets, retained empty contexts and their certificate multiplicity.
-Lproc positional-context coverage is in progress. Full current-tree verification
-is reserved to the orchestrator under R3; no new pinned/full-gate result is claimed.
-Required remaining y0n mechanics include all-path LIFO/input-write admission
-for §5.5, K65 lifted-uncall carriers/recompute, and raw-inverse borrowed-frame
-proof rebinding. The latter currently has a named diagnostic rather than an
-invented proof.
+Two additional fixed-lproc tests cover distinct token positions and coherent
+branches over every external input, target, fault and control value. The
+sequential two-call case correctly faults when the monotonic stack pointer
+exceeds its eight-cell budget; the branch case fits one six-cell activation.
+These tests passed separately with one test thread (69 and 87 seconds, peak RSS
+3.8 and 2.8 GiB respectively). Full current-tree verification is reserved to the
+orchestrator under R3; no new pinned/full-gate result is claimed.
+
+§5.5 source admission now follows reachable CFG paths in root and fixed-lproc
+activations, retaining per-key LIFO calls, exact token identities and argument
+values, and location versions. It rejects missing/ambiguous/non-LIFO matches
+and intervening input/output writes, accepts stores and balanced loops, and
+restores versions on matched uncalls. Nine focused tests pass (r0u closed).
+The finite worklist has explicit 32 MiB/8,192-state host bounds; scalable proofs
+for unbounded pending stacks remain required (kbc), with a NoMem regression.
+Required remaining y0n mechanics include K65 lifted-uncall carriers/recompute
+and raw-inverse borrowed-frame proof rebinding. The latter currently has a
+named diagnostic rather than an invented proof.
+
+Exactness propagates through every oracle and permutation-action descendant.
+Native and scheme leaves use zero epsilon share in those subtrees, so a later
+exact target entry can be selected after an approximate one. Approximate-only
+exact subtrees are INFEASIBLE; ordinary actions retain positive accuracy shares.
+Two request-level regressions plus 26 target/pipeline/source-pair tests pass
+(krn closed). The focused 13-region normative audit passes in 7.90 seconds,
+retaining 7 OK / 5 tracked UNSUPPORTED / 1 explicit NoMem (4j8 closed); this
+does not discharge the scalable sum_db algorithm in 2u4.
 
 The source registry and C ABI bind a selected device closure within its device
 object. That object hash identifies the device artifact, not an enclosing native

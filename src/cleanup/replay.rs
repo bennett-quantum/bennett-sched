@@ -33,11 +33,18 @@ fn at_source(path: &[Occurrence], source: &Location) -> bool {
                 }
             })
 }
+fn at_location(location: &Location, source: &Location) -> bool {
+    location.root == source.root && at_source(&location.path, source)
+}
 
 fn units(trace: &Trace, owner: usize, locations: &[Location]) -> Vec<Unit> {
     let mut selected = Vec::new();
     for (i, inv) in trace.invocations.iter().enumerate() {
-        if inv.parent == Some(owner) && locations.iter().any(|l| at_source(&inv.path, l)) {
+        if inv.parent == Some(owner)
+            && locations
+                .iter()
+                .any(|l| inv.containing == l.root && at_source(&inv.path, l))
+        {
             selected.push((inv.start, 0, i, Unit::Call(i)));
         }
     }
@@ -88,7 +95,7 @@ fn history(trace: &Trace, pair: &Pair, before: usize) -> Result<Vec<Unit>> {
     for i in &trace.invocations {
         if i.parent == Some(pair.owner) && i.start < before {
             let mut l = Location {
-                root: Default::default(),
+                root: i.containing,
                 path: i.path.clone(),
                 generated: 0,
                 kind: crate::schedule::Kind::Gate,
@@ -201,7 +208,7 @@ impl Emitter<'_> {
             .source
             .events
             .iter()
-            .find(|e| at_source(&e.location.path, &self.pair.carrier))
+            .find(|e| at_location(&e.location, &self.pair.carrier))
             .unwrap_or(&self.source.events[0]);
         let mut event = rebased(source, &self.pair.carrier, op, self.ordinal);
         event.owner = self.pair.owner;
@@ -317,6 +324,7 @@ impl Emitter<'_> {
                 slot.wires = slot.wires.iter().map(|w| mapped(w, &names)).collect();
             }
             inv.path = with_prefix(&edge, &inv.path);
+            inv.containing = self.pair.carrier.root;
         }
         for e in &mut child.events {
             e.leaf.op = map_op(e.leaf.op.clone(), &names)?;
@@ -363,6 +371,7 @@ impl Emitter<'_> {
         }
         for mut pair in child.cleanups {
             pair.owner += base;
+            pair.lifted_oracle = pair.lifted_oracle.map(|i| base + i);
             self.staged.cleanups.push(pair);
         }
         for mut proof in child.borrow_proofs {
@@ -449,7 +458,11 @@ pub(super) fn replace(
     entries: &[crate::schedule::Entry],
 ) -> Result<()> {
     let pair = &source.cleanups[pair_index];
-    let computation = units(source, pair.owner, &pair.computation);
+    let computation = if let Some(index) = pair.lifted_oracle {
+        vec![Unit::Call(index)]
+    } else {
+        units(source, pair.owner, &pair.computation)
+    };
     let first = computation
         .first()
         .map(|u| match u {
@@ -457,7 +470,14 @@ pub(super) fn replace(
             Unit::Call(i) => source.invocations[*i].start,
         })
         .ok_or_else(|| Error::arg("semantic replay has no computation"))?;
-    let history = history(source, pair, first)?;
+    // §5.5 oracle calls XOR their result and fault into arbitrary targets.
+    // Their delta is independent of the previous target contents, so fresh
+    // zero targets suffice once source matching proves unchanged inputs.
+    let history = if pair.lifted_oracle.is_some() {
+        vec![]
+    } else {
+        history(source, pair, first)?
+    };
     let identity = format!(
         "recompute/{pair_index}/{}",
         canonical::hash(&canonical::to_vec(&json!(
@@ -558,19 +578,28 @@ pub(super) fn replace(
             }
         }
     }
-    let insertion = emitter
-        .staged
-        .events
-        .iter()
-        .position(|e| at_source(&e.location.path, &pair.carrier))
+    let insertion = pair
+        .lifted_oracle
+        .map(|i| emitter.staged.invocations[i].start)
         .or_else(|| {
             emitter
                 .staged
-                .invocations
+                .events
                 .iter()
-                .take(start_inv)
-                .find(|i| i.parent == Some(pair.owner) && at_source(&i.path, &pair.carrier))
-                .map(|i| i.start)
+                .position(|e| at_location(&e.location, &pair.carrier))
+                .or_else(|| {
+                    emitter
+                        .staged
+                        .invocations
+                        .iter()
+                        .take(start_inv)
+                        .find(|i| {
+                            i.parent == Some(pair.owner)
+                                && i.containing == pair.carrier.root
+                                && at_source(&i.path, &pair.carrier)
+                        })
+                        .map(|i| i.start)
+                })
         })
         .ok_or_else(|| Error::arg("recompute carrier has no emitted source occurrence"))?;
     let replacement = std::mem::take(&mut emitter.events);
@@ -584,8 +613,24 @@ pub(super) fn replace(
             output_insertion = Some(events.len());
             events.extend(emitted.take().unwrap());
         }
-        if !pair.cleanup.iter().any(|l| at_source(&e.location.path, l)) {
-            events.push(e.clone());
+        let replaced = if let Some(index) = pair.lifted_oracle {
+            crate::source::is_descendant(e.owner, index, &emitter.staged.invocations)
+        } else {
+            pair.cleanup.iter().any(|l| at_location(&e.location, l))
+        };
+        if !replaced {
+            let mut e = e.clone();
+            if pair.lifted_oracle.is_some()
+                && e.owner == pair.owner
+                && same_source(&e.location, &pair.carrier)
+            {
+                // Rows and Next share this point's caller ordinal space.
+                // The replaced lifted row had only a semantic callee; its
+                // new caller leaves precede Next in the forward partition.
+                e.location.generated += emitter.ordinal;
+                e.leaf.ordinal = e.location.generated;
+            }
+            events.push(e);
         }
     }
     boundaries[emitter.staged.events.len()] = events.len();
@@ -599,10 +644,8 @@ pub(super) fn replace(
         events.extend(replacement);
     }
     for inv in &mut emitter.staged.invocations[..start_inv] {
-        if inv.start == inv.end {
-            inv.start = boundaries[inv.start];
-            inv.end = inv.start;
-        }
+        inv.start = boundaries[inv.start];
+        inv.end = boundaries[inv.end];
     }
     let offset = output_insertion.expect("recompute insertion emitted");
     for inv in &mut emitter.staged.invocations[start_inv..] {
@@ -623,10 +666,14 @@ pub(super) fn owner_replaced(source: &Trace, staged: &Trace, owner: usize) -> bo
         .any(|pair| {
             pair.realisation == "recompute"
                 && source.invocations[owner].parent.is_some()
-                && pair
-                    .cleanup
-                    .iter()
-                    .any(|l| at_source(&source.invocations[owner].path, l))
+                && if let Some(index) = pair.lifted_oracle {
+                    crate::source::is_descendant(owner, index, &source.invocations)
+                } else {
+                    pair.cleanup.iter().any(|l| {
+                        source.invocations[owner].containing == l.root
+                            && at_source(&source.invocations[owner].path, l)
+                    })
+                }
                 && crate::source::is_descendant(owner, pair.owner, &source.invocations)
         })
 }
@@ -659,6 +706,7 @@ pub(super) fn remove_replaced_invocations(source: &Trace, staged: &mut Trace) ->
     staged.cleanups.retain(|p| !removed.contains(&p.owner));
     for p in &mut staged.cleanups {
         p.owner = map[&p.owner];
+        p.lifted_oracle = p.lifted_oracle.and_then(|i| map.get(&i).copied());
     }
     staged.borrow_proofs.retain(|p| !removed.contains(&p.owner));
     for p in &mut staged.borrow_proofs {

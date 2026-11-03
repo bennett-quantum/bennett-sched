@@ -224,9 +224,9 @@ pub(crate) fn validate(
     first: u64,
     labels: &BTreeMap<String, u64>,
     tokens: &BTreeMap<String, u64>,
-) -> Result<()> {
+) -> Result<BTreeMap<usize, usize>> {
     if !nodes.iter().any(|n| n.op == "lift.oracle_uncall") {
-        return Ok(());
+        return Ok(BTreeMap::new());
     }
     let wires = env
         .iter()
@@ -353,5 +353,5 @@ pub(crate) fn validate(
             pending.push_back((*next, state.clone()));
         }
     }
-    Ok(())
+    Ok(matches)
 }

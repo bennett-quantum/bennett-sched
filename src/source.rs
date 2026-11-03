@@ -36,6 +36,8 @@ pub struct Invocation {
     pub parent: Option<usize>,
     pub adjoint: bool,
     pub path: Vec<Occurrence>,
+    /// Coordinate in the trace's root oracle, outside this invocation's path.
+    pub containing: Coordinate,
 }
 #[derive(Clone, Debug)]
 pub struct Trace {
@@ -590,6 +592,7 @@ impl Builder<'_> {
             parent,
             adjoint: false,
             path: chain.to_vec(),
+            containing: Coordinate::default(),
         });
         let locals = self.prepare_regions(f, &mut env, chain, owner)?;
         let readonly = self.trace.invocations[owner]

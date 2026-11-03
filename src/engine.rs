@@ -520,6 +520,15 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
     // These are explicit schedule shares. Refine against charged native leaves
     // when a scheme expands one source gate into several approximate gates.
     let share = d::share(&epsilon, allocator.search.epsilon_divisor.max(1))?;
+    let zero_share = Rational::zero();
+    let mut exact = Vec::with_capacity(trace.invocations.len());
+    for invocation in &trace.invocations {
+        let kind = object.functions[&invocation.name].kind.as_str();
+        exact.push(
+            matches!(kind, "oracle" | "perm_action")
+                || invocation.parent.is_some_and(|parent| exact[parent]),
+        );
+    }
     let mut entries = Vec::new();
     let mut events = Vec::new();
     let mut event_times = Vec::new();
@@ -559,6 +568,13 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
             }
             Operation::Release { identity, .. } => allocator.release(identity, &now)?,
             Operation::Gate(g) => {
+                // Exact regions constrain all descendants, including scheme
+                // leaves and ordinary actions called by a permutation action.
+                let gate_share = if exact[event.owner] {
+                    &zero_share
+                } else {
+                    &share
+                };
                 let classes = allocator.classes(&g.all_wires())?;
                 let realisation_prefix = allocator.class_prefix(&g.all_wires());
                 if let Some(n) = target.value["capabilities"]["max_predicate_depth"].as_u64() {
@@ -571,7 +587,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
                         "max_parallel is zero for a nonempty gate stream",
                     ));
                 }
-                let native = target.native(g, &classes, &share)?;
+                let native = target.native(g, &classes, gate_share)?;
                 let mut ancilla_identity = None;
                 let realisation;
                 let realized = if let Some(cost) = native {
@@ -601,7 +617,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
                     let mut realized = Vec::new();
                     for leaf in plan.leaves {
                         let classes = allocator.classes(&leaf.all_wires())?;
-                        let cost=target.native(&leaf,&classes,&share)?.ok_or_else(||{
+                        let cost=target.native(&leaf,&classes,gate_share)?.ok_or_else(||{
                             allocator.search.conflict_prefix=Some(realisation_prefix.max(allocator.class_prefix(&leaf.all_wires())));
                             Error::infeasible("§8.3: scheme leaf does not match a native gates entry; schemes do not nest")
                         })?;
@@ -614,16 +630,14 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
                     entries.push(selector_entry(
                         event,
                         "gate",
-                        json!({"realisation":realisation,"epsilon_share":d::exact(&share)?}),
+                        json!({"realisation":realisation,"epsilon_share":d::exact(gate_share)?}),
                     ));
                 }
                 for (leaf, cost) in realized {
                     allocator.check_topology(&leaf.all_wires(), realisation_prefix)?;
-                    if object.functions[&trace.invocations[event.owner].name].kind == "perm_action"
-                        && !cost.epsilon.is_zero()
-                    {
+                    if exact[event.owner] && !cost.epsilon.is_zero() {
                         return Err(Error::infeasible(
-                            "§4.4: permutation action requires exact gates",
+                            "§4.4/§5.2: exact region requires exact gates throughout its call subtree",
                         ));
                     }
                     errors.push(cost.epsilon);

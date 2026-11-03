@@ -16,6 +16,7 @@ pub struct Pair {
     pub realisation: String,
     pub targets: Vec<String>,
     pub permutation: bool,
+    pub(crate) lifted_oracle: Option<usize>,
 }
 fn writes(event: &Event) -> Vec<String> {
     match &event.leaf.op {
@@ -70,6 +71,7 @@ fn pair(
             .into_iter()
             .collect(),
         permutation: compute.iter().all(|i| permutation.contains(i)),
+        lifted_oracle: None,
     }
 }
 pub fn partition(
@@ -215,6 +217,11 @@ impl crate::source::Trace {
             let pair = &self.cleanups[pair_index];
             if !pair.permutation {
                 return Err(Error::arg("§6.4: recompute requires a permutation value"));
+            }
+            if pair.lifted_oracle.is_some() {
+                replay::replace(self, &mut staged, pair_index, entries)?;
+                staged.cleanups[pair_index].realisation = choice.clone();
+                continue;
             }
             let original = self
                 .events
