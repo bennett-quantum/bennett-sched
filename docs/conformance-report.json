@@ -1,7 +1,7 @@
 {
   "schema": "bennett-sched.conformance-inventory.v1",
   "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
-  "spec_sha256": "bbd887c7841f4eed40f7b3518270a8f2cf781204c14ac4cc3eabca5c5b4b8c3b",
+  "spec_sha256": "54dde0c83ff31d0a76de1814ac00273c3bb63fbd9c91d71aea625ad714959c5f",
   "case_count": 536,
   "suites": {
     "A": 22,
@@ -5832,7 +5832,7 @@
       "source": "conformance/cases/H/H-unsupported/case.json",
       "sha256": "03c962922b4124051f6a4f0401a3272e6dc597f508980c9c49f49770a3685e06",
       "coverage": "equivalent-witness-test",
-      "test": "pipeline::context_varying_frame_classes_are_explicitly_deferred_instead_of_misreported"
+      "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome"
     }
   ],
   "normative_objects": [
@@ -6160,5 +6160,5 @@
     "stdout": "{\"object_hash\":\"45bbb506541e3a8bb28a18e1bb0aef16ba01ee1e7cac74d5a190deb3ad36ef5a\",\"status\":\"ok\",\"symbols\":{\"controlled\":{\"closure_hash\":\"df131e972083b8d3b3b7d9341342b55252ca7a1963c4b7b6f702b9cdf3fbde12\",\"interface_hash\":\"df131e972083b8d3b3b7d9341342b55252ca7a1963c4b7b6f702b9cdf3fbde12\"},\"flip\":{\"closure_hash\":\"7ff7153a2ad3b857ec9eb86ca99b9bcbc605f60093d28e99fb749ed16d13274b\",\"interface_hash\":\"7ff7153a2ad3b857ec9eb86ca99b9bcbc605f60093d28e99fb749ed16d13274b\"}},\"unresolved_imports\":[]}\n",
     "stderr": ""
   },
-  "recorded_at_utc": "2026-11-03T10:53:20Z"
+  "recorded_at_utc": "2026-11-03T12:09:40Z"
 }

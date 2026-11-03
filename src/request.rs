@@ -19,6 +19,7 @@ pub struct Request {
     pub params: Option<Value>,
     pub epsilon: Option<Rational>,
     pub capacities: BTreeMap<String, u64>,
+    pub token_aliases: Option<Vec<u64>>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u32)]
@@ -78,6 +79,10 @@ impl Request {
             return Err(Error::arg("§11: accuracy must be nonnegative"));
         }
         self.epsilon = Some(eps);
+        Ok(())
+    }
+    pub fn set_token_aliases(&mut self, bytes: &[u8]) -> Result<()> {
+        self.token_aliases = Some(crate::token_aliases::parse(bytes)?);
         Ok(())
     }
     pub fn set_capacity(&mut self, class: &str, capacity: u64) -> Result<()> {

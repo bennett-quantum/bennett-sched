@@ -35,11 +35,11 @@ and selector rules. K83 focused command timeout 180 cargo test --offline -j2 --t
 structure --test admission --test borrow -- --test-threads=2 passed 17 tests.
 The full 129-test checkpoint also passed.
 
-Main akl/ark/qnl remain in progress. Required mechanics include the remaining lifted borrow proof adapter, general mutable-interface/borrowed prehistory, general cleanup/borrow proofs, objective optimization and streaming
+Main akl/ark/qnl remain in progress. Required mechanics include general mutable-interface/borrowed prehistory, general cleanup/borrow proofs, objective optimization and streaming
 2u4. Normative sum_db B=3 reports explicit NoMem at the materialized leaf
 workspace bound; B=0 has a successful schedule witness. No test domain is pruned.
 
-K87/K89/K90 now settle the earlier 1na/awo/lzv schema gaps; implementation remains required under vt8 and those beads. Contract decisions still queued under COMMON14 include r28 classical
+K87/K90 producer context records are implemented (1na/lzv closed); K89 general borrow proofs remain awo/vt8. K91 complete token-alias binding is xzv, still required. Contract decisions still queued under COMMON14 include r28 classical
 pseudo-location wires;4tj root interface_classes; qm2 designated borrow owners;
 Uniform repeated contexts work, while
 incompatible concrete maps are not silently overwritten. No proposed field is
@@ -109,5 +109,15 @@ and coordinate projection were implemented subsequently under y0n.
 Current y0n integration has focused passing coverage for lifted calls/uncalls,
 nested token coordinates, bound history certificates and zero-leaf call contexts.
 The non-emitting metadata channel retains empty-call multiplicity and raw inverse
-identities. Lproc token/branch domains pass; r0u source LIFO/version matching and uwu per-step K65 carriers/delta recompute now have focused coverage, including nonzero targets and deep metadata. Raw-inverse borrowed proof rebinding remains required; no current full-gate result is claimed. The orchestrator owns full
+identities. Lproc token/branch domains pass; r0u source LIFO/version matching and uwu per-step K65 carriers/delta recompute now have focused coverage, including nonzero targets and deep metadata. Source-adjoint/raw-inverse translation frames now emit adjoint_table proofs over the forward witness. mt9 normalises raw cleanup before recompute and reverses the chosen expansion, with phase views and empty-call metadata tested; no current full-gate result is claimed. The orchestrator owns full
 gates and review under the 2026-11-03 policy.
+
+
+Latest focused K87/K90/error checkpoint: canonical_cost5 + context_reports3 +
+exact_regions2 + pipeline13 passed23. Before the precision adjustment, the
+context/pipeline/review/oracle/lifted regression passed35. Per-context frames
+contain owned workspace rather than a union; differing B2/B3 calls now succeed.
+Native counts follow scheme expansion, common error bounds cover all contexts,
+and requested accuracy uses exact rationals. Borrow/differential/lifted-borrow
+checkpoint passed7, including emitted inverse-proof references and complete
+small dirty-state domains. Full current-tree gates remain orchestrator-owned.

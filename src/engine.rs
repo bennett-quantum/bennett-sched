@@ -429,6 +429,7 @@ fn prepare(request: &Request) -> Result<Trace> {
     let f = object.region(hash)?;
     object.validate_params(&f.name, params)?;
     object.validate_budget(budget)?;
+    crate::token_aliases::resolve(f, params, budget, request.token_aliases.as_deref())?;
     if !target.value["ptr_widths_supported"]
         .as_array()
         .unwrap()

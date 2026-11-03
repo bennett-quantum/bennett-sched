@@ -26,6 +26,7 @@ pub mod source;
 pub mod source_ir;
 pub mod source_registry;
 pub mod target;
+pub mod token_aliases;
 pub use request::{Outcome, Request, Response};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

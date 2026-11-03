@@ -52,8 +52,8 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | §8.2 / K12 | Count once per native leaf, makespan, per-class occupancy/peak, borrowed rate replacement, exact rows and upward 34-digit displays | `tests/canonical_cost.rs` decimal witnesses; designated owner alias/accounting needs qm2 |
 | §8.3–8.4 | First matching native entry/scheme, own+effective controls, ancillae, capacity, accuracy and topology | Native matching, exact/approximate scheme error composition, capacity, adjacency and sequential timing tested; finite class/per-bit vertex search implemented; cost optimisation remains open (ark) |
 | §9.1–9.2 | Canonical object parsing, signatures, semantic envelopes/SCC hashes and object/params/schedule identities | All ten normative object interface hashes, SCC envelopes and controlled fixture object hash checked; strict layout schema/ranges/images/mappings checked at load; complete source semantic admission remains partial |
-| §9.4 | Complete typed frame descriptor: slots/scratch/history/borrow/ancillae and live ranges | Supported action slot/scratch/borrow/ancilla records emitted; memoryless oracle history records emitted separately; K90 now defines frame_contexts; implementation remains lzv/vt8 |
-| §12.1–12.3 | Bound certificate, realised multiplicities, claims with honest evidence, local/inclusive errors and diamond composition | Binding/resources/numerical claim emission tested for supported traces; accepted K87 resource_contexts implementation remains1na/vt8; rigorous checker replay and general composition proof remain open (ark/qnl) |
+| §9.4 | Complete typed frame descriptor: slots/scratch/history/borrow/ancillae and live ranges | Supported action slot/scratch/borrow/ancilla records emitted; memoryless oracle history records emitted separately; K90 complete sorted frame_contexts emitted with per-invocation owned workspace; mixed A/B, differing budgets and zero-leaf contexts tested (lzv closed) |
+| §12.1–12.3 | Bound certificate, realised multiplicities, claims with honest evidence, local/inclusive errors and diamond composition | Binding/resources/numerical claim emission tested for supported traces; K87 complete resource_contexts and first projections emitted, with child-local exact timing and post-scheme native gate counts (1na closed); rigorous checker replay and general composition proof remain open (ark/qnl) |
 | §17 items 7–9, 15, 18 | Published default ref library, cleanup defaults, accuracy defaults, placement, full history | Ref identity, exact finite shares and placement checked; memoryless oracle full-history expansion checked; layout/lproc call/return history checked on small full domains; materialized large sum_db requires2u4 |
 
 ## Gaps and evidence limits
@@ -81,9 +81,7 @@ free-wire diagnostic is no longer an expansion blocker.
 The live ISA now settles the earlier schema requests: K90 defines exclusive
 uniform frame or complete canonical frame_contexts, K87 defines complete
 resource_contexts and first-context projections, and K89 defines selected
-borrow_frame/workspace entry proofs. Their algorithms remain required and are
-tracked in lzv, 1na, awo and vt8. Existing named Unsupported diagnostics are
-implementation debt, not unresolved contract decisions. The earlier proposals
+borrow_frame/workspace entry proofs. K87/K90 producer algorithms now replace the earlier diagnostics (1na/lzv closed). K89 general frame proof production remains required in awo/vt8. The earlier proposals
 remain in the local cross-repo queue as historical context.
 
 ## Postponed mechanics and conformance limits
@@ -496,9 +494,7 @@ this works for arbitrary prior targets because §5.5 calls are XOR involutions.
 Complete small domains, nonzero pre-call local history, one/all-step selection,
 fixed lproc instances, action callers, fresh call admission and maximal ties pass.
 Deep projection now preserves intermediate oracle coordinates in invocation
-metadata as well as native events. Required remaining y0n mechanics include
-raw-inverse borrowed-frame proof rebinding. The latter currently has a
-named diagnostic rather than an invented proof.
+metadata as well as native events. Raw-inverse borrowed frames now preserve their forward translation proof and add the adjoint_table subclaim required by normative Example 3. Complete small dirty/input/target/fault/control domains and emitted forward/inverse proof references pass. General non-translation borrow proofs remain awo/vt8.
 
 Exactness propagates through every oracle and permutation-action descendant.
 Native and scheme leaves use zero epsilon share in those subtrees, so a later
@@ -524,10 +520,56 @@ introduced (standing constraint bennett-4ht).
 | K84 | Treat nonmandated checker diagnostic names as implementation-defined | Three new checker cases and seventh portable manifest inventoried; direct replay remains qnl |
 | K85 | Fixed-image claim bindings and conditional proof/evidence distinctions over the selected device closure | Full quantum domain remains unchanged; fixed-image claim production remains vt8 |
 | K86 | Exact evaluated native-model binding, phase/control reconstruction and target identity | Existing target matching remains; new model schema/claim integration remains vt8 |
-| K87 | Canonical complete resource_contexts, first projection, native leaf counts and child-local exact accounting | 1na schema is now settled; producer implementation remains required |
+| K87 | Canonical complete resource_contexts, first projection, native leaf counts and child-local exact accounting | Implemented complete canonical resource contexts, exact child-local views and first projections; 1/3 witness and both controlled-call orders pass (1na closed) |
 | K88 | Per-wire class vectors and canonical frame slot fragments without splitting source slots | Existing homogeneous slot placements remain; heterogeneous descriptors remain vt8 |
 | K89 | Selected maximal borrow_frame relations and workspace entry components/products | awo schema is now settled; general frame proof algorithm remains required |
-| K90 | Exclusive all-context-valid frame or canonical complete frame_contexts | lzv schema is now settled; producer implementation remains required |
-| K91 | token_aliases equality partitions, captured source identities and negotiated /1 estimation ABI | Current tuple bindings and lexical origins predate this feature; explicit ABI/source/cache identity upgrade remains vt8 |
+| K90 | Exclusive all-context-valid frame or canonical complete frame_contexts | Implemented complete canonical frame contexts with per-invocation workspace and slots; A/B and B2/B3 histories pass (lzv closed) |
+| K91 | token_aliases equality partitions, captured source identities and negotiated /1 estimation ABI | Current tuple bindings and lexical origins predate this feature; explicit ABI/source/cache identity upgrade remains xzv/vt8 |
 | K92 | Complete owner-local qinplace pair coverage over all reached contexts | Existing exhaustive pair checks cover supported traces; complete new context accounting remains vt8 |
 | K93 | Flatten ordered bundle MCX controls, check distinct wires and scalar target | Existing wire binding flattens operands; direct accepted witness replay remains qnl/vt8 |
+
+
+## Context records and common errors — 1na / lzv / tgt
+
+Resource and frame records cover the same complete reached invocation set,
+including defaults, disabled predicates and empty callees. Keys preserve every
+outer and inner oracle coordinate, fixed instance and forward call occurrence.
+Repeated regions receive sorted context arrays; root/singleton regions retain a
+single frame. Every frame contains only that invocation's owned workspace.
+Compatibility resources/gates/estimate project the first canonical context.
+Root accounting counts each native event once; child views use invocation-local
+time and restricted interface/control footprints. Gate counts follow target
+scheme expansion. The K87 1/3 witness checks exact fractions and 34-digit upward
+resource displays without summing rounded child values.
+
+Common local error bounds cover every context of each variant/control key;
+inclusive bounds compose through the realised call tree. Numerical subjects and
+multiplicity totals use those common bounds. Exact target-derived rationals drive
+accuracy decisions; finite error enclosures are composed from the declared local
+bounds, with additional precision when a strict requested margin requires it.
+Terminating error decimals retain all digits. The enclosure workspace is bounded
+at 32 MiB with an explicit NoMem result, not an ISA domain restriction.
+Focused canonical_cost/context_reports/exact_regions/pipeline tests pass 23 tests,
+including both class/call orders and a near-1/3 request needing over 34 digits.
+No independent rigorous certificate-claim replay is inferred from these tests.
+
+## Raw inverse cleanup — mt9
+
+A raw inverse selects the forward construction and then reverses its emitted
+trace, retaining forward source points, ordinals and scratch/call identities.
+The cleanup realiser now extracts the captured raw subtree, normalises it to
+forward source order, resolves choices through a coordinate view, and reinverts
+the selected expansion. Views preserve the actual schedule meaning of inner
+oracle phases while temporary source traversal changes direction. Source
+adjoints remain distinct from raw inverse metadata.
+
+Rebuilt invocation, cleanup, borrow and qinplace records replace the retired
+subtree. Event-boundary maps preserve empty call anchors, and native spans are
+refreshed through the invocation tree. Complete 128-state interface domains pass
+for forward-only, inverse-only and combined choices, nested oracle phase views,
+and empty semantic-call cleanup/replay contexts. The original failure was a
+spurious nonzero-history refusal in the inverse phase. Focused timeout 240 cargo test --offline -j2 --test raw_inverse_cleanup
+--test lifted_cleanup --test k80_vectors --test review_regressions --test differential
+-- --test-threads=2 passes 22 tests. mt9 and y0n are closed for their integration
+scope; new K91 token identity binding remains xzv, and general input histories
+remain 7va.
