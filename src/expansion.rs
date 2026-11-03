@@ -329,7 +329,9 @@ impl Library {
         env: &Env,
         controls: &[String],
     ) -> Result<crate::source_registry::Expanded> {
-        expansion_stack(|| self.body_inner(body, env, controls, 1_000_000))
+        // Whole-source construction includes every fixed row instance and
+        // clock step, so it has a larger bounded workspace than one recipe.
+        expansion_stack(|| self.body_inner(body, env, controls, 2_000_000))
     }
     fn body_inner(
         &self,

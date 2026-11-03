@@ -238,18 +238,22 @@ fn zero_leaf_permutation_calls_retain_all_forward_and_inverse_invocation_records
     assert_eq!(count, 4);
 }
 
-fn forwarded_lproc_program() -> Object {
+fn forwarded_lproc_program(coherent: bool) -> Object {
     use bennett_sched::canonical;
     use serde_json::Value;
     let signatures = [
         json!({"abi":"0.9","tier":"q","kind":"oracle","in":[1],"tgt":1,"fault":4,"mem":[],"args":[]}),
         json!({"abi":"0.9","tier":"q","kind":"lproc","params":[1],"result":1,"tokens":["token"],"args":[],"mem":[]}),
-        json!({"abi":"0.9","tier":"q","kind":"oracle","in":[1],"tgt":1,"fault":4,"mem":[],"args":["token","token"]}),
+        json!({"abi":"0.9","tier":"q","kind":"oracle","in":if coherent{vec![1,1]}else{vec![1]},"tgt":1,"fault":4,"mem":[],"args":["token","token"]}),
     ];
     let functions = [
         "oracle @o (x:wire in) (t:wire) (f:wire[4]) () ()\n^entry():\nlift.retval x",
         "lproc @worker (p:reg[1]) (r:reg[1]) (b:token) () ()\nregs { f:reg[4] }\n^entry():\nlift.oracle_call @o b (p) r f () ()\nlift.ret r",
-        "oracle @outer (x:wire in) (t:wire) (fr:wire[4]) () (b0:token, b1:token)\nregs { y:reg[1], z:reg[1], r:reg[1] }\n^entry():\ny = lift.call @worker (x) (b0) () ()\nz = lift.call @worker (x) (b1) () ()\nr = lift.xor y z\nlift.retval r",
+        if coherent {
+            "oracle @outer (x:wire in, c:wire in) (t:wire) (fr:wire[4]) () (b0:token, b1:token)\nregs { y:reg[1] }\n^entry():\nqbranch c ^left ^right\n^left():\ny = lift.call @worker (x) (b0) () ()\nqjump ^done\n^right():\ny = lift.call @worker (x) (b1) () ()\nqjump ^done\n^done():\nlift.retval y"
+        } else {
+            "oracle @outer (x:wire in) (t:wire) (fr:wire[4]) () (b0:token, b1:token)\nregs { y:reg[1], z:reg[1], r:reg[1] }\n^entry():\ny = lift.call @worker (x) (b0) () ()\nz = lift.call @worker (x) (b1) () ()\nr = lift.xor y z\nlift.retval r"
+        },
     ];
     let layout = json!({"ptr_width":3,"H":0,"A_tab":0,"S_cells":3,"null_size":1,"heap_base":1,"heap_limit_max":0,"globals":{},"interface_regions":{}});
     let jcs = |v: &Value| String::from_utf8(canonical::to_vec(v).unwrap()).unwrap();
@@ -311,16 +315,9 @@ fn forwarded_lproc_program() -> Object {
 #[test]
 fn fixed_lproc_token_forwarding_keeps_two_positional_instances_without_lift_call_edges() {
     use std::collections::{BTreeMap, BTreeSet};
-    let object = forwarded_lproc_program();
+    let object = forwarded_lproc_program(false);
     let space = bennett_sched::lproc::IndexSpace::form(&object, "outer").unwrap();
-    eprintln!(
-        "two-instance fixture activation cells: {:?}",
-        space
-            .instances
-            .iter()
-            .map(|i| i.activation_cells)
-            .collect::<Vec<_>>()
-    );
+    assert!(space.instances.iter().all(|i| i.activation_cells == 6));
     for (first, second) in [(1, 0), (1, 1), (0, 1)] {
         for outer in [0, 7, 8] {
             let params = json!([
@@ -380,21 +377,77 @@ fn fixed_lproc_token_forwarding_keeps_two_positional_instances_without_lift_call
                 .run_many(&mut cases)
                 .unwrap();
             for (bits, state) in cases.iter().enumerate() {
-                let changed =
-                    outer == 8 && bits & 64 != 0 && ((first > 0) ^ (second > 0)) && bits & 1 != 0;
+                // The second call needs another six monotonic stack cells.
+                // With only eight available it faults before any outer retval.
                 assert_eq!(
                     state["tgt:0[0]"],
-                    (bits & 2 != 0) ^ changed,
+                    bits & 2 != 0,
                     "outer={outer}, tokens={first},{second}"
                 );
+                let code = if outer < 4 { 1 } else { 3 };
                 for bit in 0..4 {
                     assert_eq!(
                         state[&format!("fault:0[{bit}]")],
-                        (bits & (1 << (bit + 2)) != 0) ^ (bit == 0 && outer < 8 && bits & 64 != 0)
+                        (bits & (1 << (bit + 2)) != 0) ^ (bits & 64 != 0 && code & (1 << bit) != 0)
                     );
                 }
                 assert_eq!(state["in:0[0]"], bits & 1 != 0);
                 assert_eq!(state.len(), 7);
+            }
+        }
+    }
+}
+
+#[test]
+fn coherent_lproc_paths_execute_both_fixed_token_instances_over_the_complete_interface() {
+    use std::collections::BTreeMap;
+    let object = forwarded_lproc_program(true);
+    for (first, second) in [(1, 0), (1, 1), (0, 1)] {
+        for outer in [0, 5, 6] {
+            let params = json!([
+                [first.to_string(), "0", "0", "0"],
+                [second.to_string(), "0", "0", "0"]
+            ]);
+            let trace = Trace::build(&object, "outer", 1, &params, [outer, 0, 8, 1]).unwrap();
+            let leaves = trace
+                .events
+                .iter()
+                .map(|e| e.leaf.clone())
+                .collect::<Vec<_>>();
+            let mut cases = Vec::new();
+            for bits in 0..256 {
+                let mut state = BTreeMap::from([
+                    ("in:0[0]".into(), bits & 1 != 0),
+                    ("in:1[0]".into(), bits & 2 != 0),
+                    ("tgt:0[0]".into(), bits & 4 != 0),
+                    ("control:0".into(), bits & 128 != 0),
+                ]);
+                for bit in 0..4 {
+                    state.insert(format!("fault:0[{bit}]"), bits & (1 << (bit + 3)) != 0);
+                }
+                cases.push(state);
+            }
+            basis::Program::compile(&leaves)
+                .unwrap()
+                .run_many(&mut cases)
+                .unwrap();
+            for (bits, state) in cases.iter().enumerate() {
+                let selected = if bits & 2 != 0 { first } else { second };
+                assert_eq!(
+                    state["tgt:0[0]"],
+                    (bits & 4 != 0)
+                        ^ (outer >= 6 && bits & 128 != 0 && selected > 0 && bits & 1 != 0),
+                    "outer={outer}, tokens={first},{second}, input={bits}"
+                );
+                for bit in 0..4 {
+                    assert_eq!(
+                        state[&format!("fault:0[{bit}]")],
+                        (bits & (1 << (bit + 3)) != 0) ^ (bit == 0 && outer < 6 && bits & 128 != 0)
+                    );
+                }
+                assert_eq!(state["in:0[0]"], bits & 1 != 0);
+                assert_eq!(state["in:1[0]"], bits & 2 != 0);
+                assert_eq!(state.len(), 8);
             }
         }
     }
