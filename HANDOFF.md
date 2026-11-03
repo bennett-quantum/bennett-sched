@@ -39,7 +39,7 @@ Main akl/ark/qnl remain in progress. Required mechanics include general mutable-
 2u4. Normative sum_db B=3 reports explicit NoMem at the materialized leaf
 workspace bound; B=0 has a successful schedule witness. No test domain is pruned.
 
-K87/K90 producer context records are implemented (1na/lzv closed); K89 general borrow proofs remain awo/vt8. K91 complete token-alias binding is xzv, still required. Contract decisions still queued under COMMON14 include r28 classical
+K87/K90 producer context records are implemented (1na/lzv closed); K89 general borrow proofs remain awo/vt8. K91 setter/source identities/schedule/certificate/pair bindings are implemented, including inferred token-free partitions and explicit alias replay matching. Feature negotiation remains xzv pending b-isa-spec-b3ui; the draft explicitly forbids inventing a query. See docs/ABI.md. Contract decisions still queued under COMMON14 include r28 classical
 pseudo-location wires;4tj root interface_classes; qm2 designated borrow owners;
 Uniform repeated contexts work, while
 incompatible concrete maps are not silently overwritten. No proposed field is
@@ -121,3 +121,10 @@ Native counts follow scheme expansion, common error bounds cover all contexts,
 and requested accuracy uses exact rationals. Borrow/differential/lifted-borrow
 checkpoint passed7, including emitted inverse-proof references and complete
 small dirty-state domains. Full current-tree gates remain orchestrator-owned.
+
+
+Current K91 focused checkpoint: C11 legacy/additive consumers, FFI, admission,
+K83 rebinding, pipeline and differential tests pass; token_aliases11 plus
+selectors8 pass. The typed qinplace partition test passes after using a valid
+three-step oracle budget. No full gate was run. New review fdu (P0), jez and b08
+(P1) remain actionable; fdu is next. Negotiation remains pending upstream.

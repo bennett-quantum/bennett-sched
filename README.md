@@ -44,7 +44,7 @@ support coordinates and recursive declaration collection are implemented and
 verified under `bennett-sched-ecz`. Qinplace proofs currently use bounded exhaustive tables/replay; scalable proof methods remain `bennett-sched-a0v`. A host-workspace failure reports `BENNETT_E_NOMEM` and never substitutes a smaller domain. Bounded-memory
 streaming remains `bennett-sched-2u4`: normative sum_db at B=3 currently exhausts
 the explicit materialized leaf workspace and reports `BENNETT_E_NOMEM`.
-Accepted K87/K90 resource and frame contexts are implemented: every reached invocation has its own records and the first canonical resource projection remains available. K89 general borrow proofs remain `bennett-sched-awo`. New K84–K93 adoption is tracked by `vt8`, including K91 token identity bindings and ABI negotiation (`xzv`). Classical pseudo-location initialization requires
+Accepted K87/K90 resource and frame contexts are implemented: every reached invocation has its own records and the first canonical resource projection remains available. K89 general borrow proofs remain `bennett-sched-awo`. New K84–K93 adoption is tracked by `vt8`, including K91 ABI negotiation (`xzv`), whose setter and identity propagation are implemented; see [the ABI contract](docs/ABI.md). The draft forbids inventing negotiation while b-isa-spec-b3ui is pending. Classical pseudo-location initialization requires
 `bennett-sched-r28`; its exact state/cost proposal is queued upstream. Borrow-owner
 designation (`qm2`), explicit interface class choices (`4tj`) also have queued contract proposals. Differing call classes, controls and budgets retain complete context records. Encountered
 postponed features return `UNSUPPORTED` with a specific

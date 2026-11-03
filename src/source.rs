@@ -335,6 +335,8 @@ impl Trace {
             library: &lib,
             trace: &mut trace,
             active: BTreeSet::new(),
+            adjoint_depth: 0,
+            replacements: BTreeMap::new(),
         };
         builder.invoke(
             f,
@@ -372,6 +374,49 @@ struct Builder<'a> {
     library: &'a Library,
     trace: &'a mut Trace,
     active: BTreeSet<String>,
+    adjoint_depth: usize,
+    replacements: BTreeMap<InstructionKey, Vec<Leaf>>,
+}
+type InstructionKey = (usize, String, Vec<u64>);
+fn instruction_key(event: &Event) -> InstructionKey {
+    let occurrence = event.location.path.last().expect("source instruction path");
+    (
+        event.owner,
+        occurrence.point.clone(),
+        occurrence.iteration.clone(),
+    )
+}
+fn rebase_leaf(leaf: &mut Leaf, prefix: &str) -> Kind {
+    fn rebase(wire: &mut String, prefix: &str) {
+        if wire.starts_with("scratch/") || wire.starts_with("declaration/") {
+            *wire = format!("{prefix}/{wire}");
+        }
+    }
+    match &mut leaf.op {
+        Operation::Gate(gate) => {
+            for wire in gate.wires.iter_mut().chain(&mut gate.controls) {
+                rebase(wire, prefix);
+            }
+            Kind::Gate
+        }
+        Operation::Alloc {
+            identity, wires, ..
+        }
+        | Operation::Release {
+            identity, wires, ..
+        } => {
+            rebase(identity, prefix);
+            for wire in wires {
+                rebase(wire, prefix);
+            }
+            if matches!(leaf.op, Operation::Alloc { .. }) {
+                Kind::Alloc
+            } else {
+                Kind::Release
+            }
+        }
+        Operation::Classical { .. } => Kind::Classical,
+    }
 }
 struct LocalRegion {
     identity: String,
@@ -654,6 +699,7 @@ impl Builder<'_> {
         if !self.active.insert(f.name.clone()) {
             return Err(Error::arg("§3.1: cyclic action call graph"));
         }
+        self.adjoint_depth += usize::from(adjoint);
         let owner = self.trace.invocations.len();
         let start = self.trace.events.len();
         let token_ids = f.groups[3]
@@ -770,6 +816,34 @@ impl Builder<'_> {
                     at = end;
                     continue;
                 }
+                let key = instruction_key(&events[at]);
+                if let Some(replacement) = self.replacements.remove(&key) {
+                    // The counterpart was instantiated forward from its source
+                    // replacement with the same resolved lexical bindings.
+                    let end = at + replacement.len();
+                    if end > events.len()
+                        || events[at..end].iter().any(|e| instruction_key(e) != key)
+                    {
+                        return Err(Error::arg("source replacement expansion span mismatch"));
+                    }
+                    let previous = events[at..end]
+                        .iter()
+                        .rev()
+                        .map(|e| e.leaf.clone())
+                        .collect();
+                    for (event, leaf) in events[at..end].iter_mut().zip(replacement) {
+                        event.location.kind = match &leaf.op {
+                            Operation::Gate(_) => Kind::Gate,
+                            Operation::Alloc { .. } => Kind::Alloc,
+                            Operation::Release { .. } => Kind::Release,
+                            Operation::Classical { .. } => Kind::Classical,
+                        };
+                        event.leaf = leaf;
+                    }
+                    self.replacements.insert(key, previous);
+                    at = end;
+                    continue;
+                }
                 let e = &mut events[at];
                 e.leaf = expansion::inverse(std::slice::from_ref(&e.leaf))
                     .pop()
@@ -792,12 +866,20 @@ impl Builder<'_> {
                 }
                 at += 1;
             }
+            let old_keys = events.iter().map(instruction_key).collect::<Vec<_>>();
             remap_adjoint_iterations(
                 &mut events,
                 &mut self.trace.invocations[owner + 1..],
                 self.object,
                 chain.len(),
             )?;
+            let mut moved = Vec::new();
+            for (old, event) in old_keys.into_iter().zip(&events) {
+                if let Some(leaves) = self.replacements.remove(&old) {
+                    moved.push((instruction_key(event), leaves));
+                }
+            }
+            self.replacements.extend(moved);
             qinplace::form_adjoint(
                 &mut events,
                 &mut self.trace.invocations,
@@ -840,6 +922,7 @@ impl Builder<'_> {
         }
         self.trace.invocations[owner].end = self.trace.events.len();
         self.active.remove(&f.name);
+        self.adjoint_depth -= usize::from(adjoint);
         Ok(())
     }
     fn emit(
@@ -857,38 +940,7 @@ impl Builder<'_> {
             iteration
         ]))?);
         for mut leaf in leaves {
-            fn rebase(w: &mut String, prefix: &str) {
-                if w.starts_with("scratch/") || w.starts_with("declaration/") {
-                    *w = format!("{prefix}/{w}");
-                }
-            }
-            let kind = match &mut leaf.op {
-                Operation::Gate(g) => {
-                    for w in g.wires.iter_mut().chain(&mut g.controls) {
-                        rebase(w, &prefix);
-                    }
-                    Kind::Gate
-                }
-                Operation::Alloc {
-                    identity, wires, ..
-                } => {
-                    rebase(identity, &prefix);
-                    for w in wires {
-                        rebase(w, &prefix);
-                    }
-                    Kind::Alloc
-                }
-                Operation::Release {
-                    identity, wires, ..
-                } => {
-                    rebase(identity, &prefix);
-                    for w in wires {
-                        rebase(w, &prefix);
-                    }
-                    Kind::Release
-                }
-                Operation::Classical { .. } => Kind::Classical,
-            };
+            let kind = rebase_leaf(&mut leaf, &prefix);
             let mut loc = location(f, node, iteration, chain, leaf.ordinal, kind);
             loc.path.last_mut().unwrap().symbol =
                 self.object.symbols[&f.name].interface_hash.clone();
@@ -1074,6 +1126,7 @@ impl Builder<'_> {
             }
             let op = operation.as_str();
             let mut leaves = Vec::new();
+            let mut replacement = None;
             match op {
                 "qpred" => {
                     if operands.len() != 1 {
@@ -1449,6 +1502,14 @@ impl Builder<'_> {
                         env,
                         &effective,
                     )?;
+                    if self.adjoint_depth > 0 {
+                        replacement = Some(self.recipe(
+                            "quncopy.bound",
+                            json!([s.len(), operands[0], name]),
+                            env,
+                            &effective,
+                        )?);
+                    }
                 }
                 "quncopy" => {
                     if operands.len() != 2 {
@@ -1461,6 +1522,14 @@ impl Builder<'_> {
                         env,
                         &effective,
                     )?;
+                    if self.adjoint_depth > 0 {
+                        replacement = Some(self.recipe(
+                            "qcopy.bound",
+                            json!([n, operands[0], operands[1]]),
+                            env,
+                            &effective,
+                        )?);
+                    }
                     env.remove(&operands[1]);
                 }
                 "qxor" | "qexch" => {
@@ -1488,6 +1557,9 @@ impl Builder<'_> {
                         env,
                         &effective,
                     )?;
+                    if self.adjoint_depth > 0 {
+                        replacement = Some(leaves.clone());
+                    }
                 }
                 "action_call" => {
                     if operands.len() != 5 {
@@ -1654,7 +1726,18 @@ impl Builder<'_> {
                         iteration
                     );
                     let plan = bind_memory(node, env, &readonly, &identity)?;
-                    leaves = self.recipe(&plan.kind, plan.args, env, &effective)?;
+                    leaves = self.recipe(&plan.kind, plan.args.clone(), env, &effective)?;
+                    if self.adjoint_depth > 0 {
+                        let inverse_kind = if let Some(role) = plan.kind.strip_prefix("qload.") {
+                            format!("qunload.{role}")
+                        } else if let Some(role) = plan.kind.strip_prefix("qunload.") {
+                            format!("qload.{role}")
+                        } else {
+                            plan.kind.clone()
+                        };
+                        replacement =
+                            Some(self.recipe(&inverse_kind, plan.args, env, &effective)?);
+                    }
                     if let Some(name) = plan.consumed {
                         env.remove(&name);
                     }
@@ -1715,6 +1798,18 @@ impl Builder<'_> {
                         "§4: unknown or misplaced source instruction {op}"
                     )));
                 }
+            }
+            if let Some(mut replacement) = replacement {
+                let prefix = canonical::hash(&canonical::to_vec(&json!([
+                    chain.iter().map(Occurrence::json).collect::<Vec<_>>(),
+                    node.point,
+                    iteration
+                ]))?);
+                for leaf in &mut replacement {
+                    rebase_leaf(leaf, &prefix);
+                }
+                self.replacements
+                    .insert((owner, node.point.clone(), iteration.to_vec()), replacement);
             }
             self.emit(f, node, iteration, chain, owner, leaves)?;
         }

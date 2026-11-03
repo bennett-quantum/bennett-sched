@@ -524,7 +524,7 @@ introduced (standing constraint bennett-4ht).
 | K88 | Per-wire class vectors and canonical frame slot fragments without splitting source slots | Existing homogeneous slot placements remain; heterogeneous descriptors remain vt8 |
 | K89 | Selected maximal borrow_frame relations and workspace entry components/products | awo schema is now settled; general frame proof algorithm remains required |
 | K90 | Exclusive all-context-valid frame or canonical complete frame_contexts | Implemented complete canonical frame contexts with per-invocation workspace and slots; A/B and B2/B3 histories pass (lzv closed) |
-| K91 | token_aliases equality partitions, captured source identities and negotiated /1 estimation ABI | Current tuple bindings and lexical origins predate this feature; explicit ABI/source/cache identity upgrade remains xzv/vt8 |
+| K91 | token_aliases equality partitions, captured source identities and negotiated /1 estimation ABI | Setter, canonical partitions, global source identities, cleanup/cache matching and schedule/certificate/pair bindings implemented and focused-tested. Loader negotiation remains xzv pending the explicit b-isa-spec-b3ui contract; the current draft forbids inventing it |
 | K92 | Complete owner-local qinplace pair coverage over all reached contexts | Existing exhaustive pair checks cover supported traces; complete new context accounting remains vt8 |
 | K93 | Flatten ordered bundle MCX controls, check distinct wires and scalar target | Existing wire binding flattens operands; direct accepted witness replay remains qnl/vt8 |
 
@@ -573,3 +573,24 @@ spurious nonzero-history refusal in the inverse phase. Focused timeout 240 cargo
 -- --test-threads=2 passes 22 tests. mt9 and y0n are closed for their integration
 scope; new K91 token identity binding remains xzv, and general input histories
 remain 7va.
+
+
+## K91 identity bindings — xzv
+
+The setter and source/certificate binding implementation is described in
+[ABI.md](ABI.md). All five three-token partitions and both equal-tuple action
+partitions pass; the latter retain the complete 64-state input/target/fault
+domain while producing different K65 cleanup carriers. Captures preserve global
+ids despite identical callee-local partitions. Fixed-lproc forwarding, request
+replay rejection, atomic pointer/buffer handling and dynamic C11 linkage pass.
+Token-free legacy requests now emit the inferred partition and the schedule
+schema requires it. K83 fixture tests separately record missing token_aliases
+and expansion bindings, then explicitly rebind their portable templates.
+Inverse-pair entries preserve their primary/argument partition and exact nested
+token tuples; increasing only the primary budget cannot retain a shared alias.
+The draft's advisor R21 note leaves feature-query negotiation pending
+b-isa-spec-b3ui and forbids invented protocols, so xzv is not closed.
+
+The 2026-11-03 batch review adds fdu (P0 source-adjoint ordinal formation), jez
+(P1 class search scaling) and b08 (P1 overstated E-vector evidence). These are
+required fixes; review and full gates remain orchestrator-owned.
