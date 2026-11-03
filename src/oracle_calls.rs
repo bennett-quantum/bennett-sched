@@ -228,12 +228,6 @@ impl Projection {
         edge.last_mut().unwrap().call_index = Some(0);
         let oracle = trace.object.functions[&trace.invocations[0].name].kind == "oracle";
         edge.last_mut().unwrap().entered_oracle = oracle.then_some(Default::default());
-        if reverse && !trace.borrow_proofs.is_empty() {
-            return Err(Error::new(
-                crate::Status::GateUnsupported,
-                "§11: raw-inverse lifted callee borrow-frame proof rebinding remains bennett-sched-y0n",
-            ));
-        }
         let base = 1 + self.invocations.len();
         for old in &trace.invocations {
             let mut inv = old.clone();
@@ -245,6 +239,9 @@ impl Projection {
             inv.start = index + start;
             inv.end = index + end;
             inv.parent = Some(old.parent.map_or(0, |p| base + p));
+            if trace.object.functions[&inv.name].kind != "oracle" {
+                inv.adjoint ^= reverse;
+            }
             inv.containing = parent.root;
             let mut path = edge.clone();
             if oracle {
@@ -276,6 +273,7 @@ impl Projection {
         for old in &trace.borrow_proofs {
             let mut p = old.clone();
             p.owner += base;
+            p.adjoint ^= reverse;
             self.borrow_proofs.push(p);
         }
         self.groups.insert(key, (base, index));

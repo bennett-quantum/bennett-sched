@@ -943,7 +943,20 @@ fn certificate(
                 .collect::<BTreeMap<_, _>>();
             let leaves = trace.events[inv.start..inv.end]
                 .iter()
-                .map(|e| e.leaf.clone())
+                .map(|e| {
+                    let mut leaf = e.leaf.clone();
+                    // This fault-rate domain fixes omitted entries at zero.
+                    // Universal borrow proofs are emitted separately; this
+                    // single tuple uses zero as each dirty lifetime's entry.
+                    if let Operation::Alloc { state, .. } | Operation::Release { state, .. } =
+                        &mut leaf.op
+                    {
+                        if state == "borrowed" {
+                            *state = "clean".into();
+                        }
+                    }
+                    leaf
+                })
                 .collect::<Vec<_>>();
             crate::expansion::simulate_basis(&leaves, &mut bits)?;
             let mut cause = num_bigint::BigUint::zero();
@@ -970,8 +983,14 @@ fn certificate(
             record["verification"]["fault_rate"] = json!({"domain":{"bundles":controls,"borrowed":[],"regions":[]},"faults_by_code":faults,"undefined_excluded":0,"layout_dependent_excluded":0});
         }
         for proof in trace.borrow_proofs.iter().filter(|p| p.owner == i) {
-            let index = record["claims"].as_array().unwrap().len();
+            let mut index = record["claims"].as_array().unwrap().len();
             record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"translation_lemma","invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"subclaims":[],"witness":proof.witness}));
+            if proof.adjoint {
+                // §16.3 example 3: the inverse frame need not have the lemma's
+                // syntax. Its forward proof and the adjoint table establish it.
+                record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"adjoint_table","invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"subclaims":[index],"witness":{}}));
+                index += 1;
+            }
             record["verification"]["borrow_frames"]
                 .as_array_mut()
                 .unwrap()

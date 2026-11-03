@@ -13,6 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub struct Proof {
     pub owner: usize,
     pub witness: Value,
+    pub adjoint: bool,
 }
 
 fn flip(g: &Gate) -> Option<(String, BTreeSet<String>)> {
@@ -163,7 +164,13 @@ pub fn prove(object: &Object, trace: &Trace) -> Result<Vec<Proof>> {
                     "§5.6: borrow-frame proof across nested static sequences is postponed (bennett-sched-ark)",
                 ));
             }
-            let witness = translation(&events, &borrowed).ok_or_else(|| {
+            let adjoint = trace.invocations[event.owner].adjoint;
+            let forward = if adjoint {
+                events.iter().rev().copied().collect()
+            } else {
+                events
+            };
+            let witness = translation(&forward, &borrowed).ok_or_else(|| {
                 Error::new(
                     Status::GateUnsupported,
                     "§5.6: non-translation borrow-frame T3 proof is postponed (bennett-sched-ark)",
@@ -172,6 +179,7 @@ pub fn prove(object: &Object, trace: &Trace) -> Result<Vec<Proof>> {
             proofs.push(Proof {
                 owner: event.owner,
                 witness,
+                adjoint,
             });
         }
     }
