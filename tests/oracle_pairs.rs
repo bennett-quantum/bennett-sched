@@ -14,7 +14,7 @@ fn object(body: &str) -> Object {
     Object::parse(&common::caller(&base,"oracle","outer",signature,"oracle @outer (x:wire in) (t:wire) (fr:wire[4]) () (b:token)\nregs { r:reg[1], s:reg[1], f:reg[4], g:reg[4], a:reg[1], z:reg[1] }",body)).unwrap()
 }
 fn check(body: &str) -> bennett_sched::Result<Trace> {
-    Trace::build(
+    common::trace_distinct_tokens(
         &object(body),
         "outer",
         0,
@@ -106,7 +106,7 @@ fn classical_argument_values_and_token_origins_are_resolved_before_pairing() {
                 "0",
                 if equal { "0" } else { "1" }
             ]);
-            let result = Trace::build(&object, "outer", 0, &params, [0; 4]);
+            let result = common::trace_distinct_tokens(&object, "outer", 0, &params, [0; 4]);
             if equal && !distinct {
                 assert!(result.is_ok());
             } else {
@@ -126,7 +126,7 @@ fn balanced_loop_pairing_preserves_total_oracle_behavior_for_all_small_inputs_ta
         "qbranch x ^body ^exit\n^body():\nlift.oracle_call @o b (x) r f () ()\nlift.oracle_uncall @o b (x) r f () ()\nqjump ^entry\n^exit():\nlift.retval r",
     );
     for budget in 0..=5 {
-        let trace = Trace::build(
+        let trace = common::trace_distinct_tokens(
             &object,
             "outer",
             1,
@@ -189,7 +189,7 @@ fn pairing_retains_the_classical_pseudo_location_contract_diagnostic() {
         "lift.oracle_call @o b (a) r f () ()\nlift.oracle_uncall @o b (a) r f () ()\nlift.retval r",
     );
     let object = Object::parse(&bytes).unwrap();
-    let result = Trace::build(
+    let result = common::trace_distinct_tokens(
         &object,
         "outer",
         0,
@@ -226,7 +226,8 @@ fn stores_between_call_and_uncall_do_not_count_as_input_location_writes() {
         layout,
     );
     let object = Object::parse(&bytes).unwrap();
-    Trace::build(&object, "outer", 0, &json!([["1", "0", "0", "0"]]), [0; 4]).unwrap();
+    common::trace_distinct_tokens(&object, "outer", 0, &json!([["1", "0", "0", "0"]]), [0; 4])
+        .unwrap();
 }
 
 #[test]
@@ -259,7 +260,7 @@ fn two_lproc_token_formals_forwarding_one_root_token_retain_its_identity() {
         layout,
     );
     let object = Object::parse(&bytes).unwrap();
-    Trace::build(
+    common::trace_distinct_tokens(
         &object,
         "outer",
         0,

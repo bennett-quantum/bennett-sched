@@ -343,8 +343,11 @@ impl Document {
                 "expansion",
                 "scheduler",
             ],
-            &[],
+            &["token_aliases"],
         )?;
+        if let Some(aliases) = b.get("token_aliases") {
+            crate::token_aliases::parse(&canonical::to_vec(aliases)?)?;
+        }
         for key in ["closure_hash", "target_hash", "params_hash"] {
             if !canonical::is_hash(text(&b[key])?) {
                 return Err(Error::arg(format!("invalid {key}")));

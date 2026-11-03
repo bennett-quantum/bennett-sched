@@ -79,7 +79,7 @@ pub fn events(object: &Object, trace: &Trace, owner: usize) -> Result<Vec<Event>
             let end=trace.events.iter().enumerate().skip(index+1).find_map(|(i,e)|matches!(&e.leaf.op,Operation::Release{identity,..}if identity==&proof.fault_id).then_some(i+1)).ok_or_else(||Error::arg("qinplace private release missing"))?;
             let mut controls=proof.inputs.clone();controls.extend(proof.controls.clone());controls.sort();controls.dedup();
             let (low,high)=if proof.g<proof.ginv {(&proof.g,&proof.ginv)}else{(&proof.ginv,&proof.g)};
-            let identity=canonical::hash(&canonical::to_vec(&json!([low,high,proof.budget,proof.params,proof.target,controls]))?);
+            let identity=canonical::hash(&canonical::to_vec(&json!([low,high,proof.budget,proof.params,proof.token_ids,proof.target,controls]))?);
             let first=children.iter().filter(|(_,c)|c.start>=index&&c.end<=end).min_by_key(|(_,c)|c.start).ok_or_else(||Error::arg("qinplace call metadata missing"))?.1;
             let op=if low==high {format!("$perm/qinplace/{identity}")}else{format!("$perm/qinplace{}/{identity}",if &first.hash==low{"+"}else{"-"})};
             result.push(synthetic(&trace.events[index],Operation::Gate(Gate{op,wires:proof.target.clone(),controls,theta:None})));
@@ -112,6 +112,7 @@ pub fn events(object: &Object, trace: &Trace, owner: usize) -> Result<Vec<Event>
                 child.hash,
                 child.params,
                 child.budget,
+                child.token_ids,
                 child
                     .slots
                     .iter()

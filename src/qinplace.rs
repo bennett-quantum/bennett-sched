@@ -16,6 +16,7 @@ pub struct Proof {
     pub params: Value,
     pub domain: Value,
     pub arg_tokens: Value,
+    pub token_ids: Vec<u64>,
     pub target_id: String,
     pub fault_id: String,
     pub target: Vec<String>,
@@ -89,12 +90,13 @@ fn table(trace: &Trace, cases: usize, name: &str) -> Result<Vec<usize>> {
     }
     Ok(out)
 }
-pub fn verify(
+pub(crate) fn verify_with_ids(
     object: &Object,
     g: &str,
     h: &str,
     budget: [u64; 4],
     params: &Value,
+    token_ids: &[u64],
 ) -> Result<(Value, Value)> {
     let f = &object.functions[g];
     object.validate_params(g, params)?;
@@ -161,8 +163,8 @@ pub fn verify(
     let cases = 1usize
         .checked_shl(count as u32)
         .ok_or_else(|| memory("domain exponent"))?;
-    let gt = Trace::build(object, g, 0, params, budget)?;
-    let ht = Trace::build(object, h, 0, params, budget)?;
+    let gt = Trace::build_with_token_ids(object, g, 0, params, budget, false, token_ids)?;
+    let ht = Trace::build_with_token_ids(object, h, 0, params, budget, false, token_ids)?;
     if (gt.events.len() as u128 + ht.events.len() as u128) * (cases as u128) > 100_000_000 {
         return Err(memory(
             "complete exhaustive replay exceeds 100000000 leaf work credits",

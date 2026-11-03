@@ -36,6 +36,7 @@ pub struct Invocation {
     pub parent: Option<usize>,
     pub adjoint: bool,
     pub raw_inverse: bool,
+    pub token_ids: Vec<u64>,
     pub path: Vec<Occurrence>,
     /// Coordinate in the trace's root oracle, outside this invocation's path.
     pub containing: Coordinate,
@@ -203,6 +204,39 @@ impl Trace {
         adjoint: bool,
     ) -> Result<Self> {
         object.validate_params(name, params)?;
+        let f = object
+            .functions
+            .get(name)
+            .ok_or_else(|| Error::arg("unknown source region"))?;
+        let ids = crate::token_aliases::resolve(f, params, budget, None)?;
+        Self::build_with_token_ids(object, name, inherited, params, budget, adjoint, &ids)
+    }
+    pub fn build_with_token_aliases(
+        object: &Object,
+        name: &str,
+        inherited: u32,
+        params: &Value,
+        budget: [u64; 4],
+        aliases: &[u64],
+    ) -> Result<Self> {
+        object.validate_params(name, params)?;
+        let f = object
+            .functions
+            .get(name)
+            .ok_or_else(|| Error::arg("unknown source region"))?;
+        let ids = crate::token_aliases::resolve(f, params, budget, Some(aliases))?;
+        Self::build_with_token_ids(object, name, inherited, params, budget, false, &ids)
+    }
+    pub(crate) fn build_with_token_ids(
+        object: &Object,
+        name: &str,
+        inherited: u32,
+        params: &Value,
+        budget: [u64; 4],
+        adjoint: bool,
+        token_ids: &[u64],
+    ) -> Result<Self> {
+        object.validate_params(name, params)?;
         object.validate_budget(budget)?;
         let f = object
             .functions
@@ -211,9 +245,13 @@ impl Trace {
         if !["oracle", "action", "perm_action"].contains(&f.kind.as_str()) {
             return Err(Error::arg("§11: root must be an oracle or action"));
         }
+        crate::token_aliases::validate_ids(f, params, budget, token_ids)?;
+        for tuple in crate::token_aliases::tuples(f, params, budget)? {
+            object.validate_budget(tuple)?;
+        }
         call_graph::validate(object, name)?;
         if f.kind == "oracle" {
-            return crate::oracle::build(object, name, inherited, params, budget);
+            return crate::oracle::build(object, name, inherited, params, budget, token_ids);
         }
         let mut env = Env::new();
         let mut slots = Vec::new();
@@ -257,6 +295,7 @@ impl Trace {
                 wires: w,
             });
         }
+        let mut token_index = 0;
         for (p, v) in f.groups[3]
             .iter()
             .zip(params.as_array().expect("validated params"))
@@ -266,6 +305,13 @@ impl Trace {
                 Binding::Value {
                     isa_type: json!(p.ty),
                     value: v.clone(),
+                    token_identity: if p.ty == "token" {
+                        let id = token_ids[token_index];
+                        token_index += 1;
+                        Some(id)
+                    } else {
+                        None
+                    },
                 },
             );
         }
@@ -610,6 +656,12 @@ impl Builder<'_> {
         }
         let owner = self.trace.invocations.len();
         let start = self.trace.events.len();
+        let token_ids = f.groups[3]
+            .iter()
+            .filter(|p| p.ty == "token")
+            .map(|p| crate::token_aliases::binding_identity(&env[&p.name]))
+            .collect::<Result<Vec<_>>>()?;
+        crate::token_aliases::validate_ids(f, &params, budget, &token_ids)?;
         self.trace.invocations.push(Invocation {
             name: f.name.clone(),
             hash: self.object.closure_hash(&f.name)?.into(),
@@ -622,6 +674,7 @@ impl Builder<'_> {
             parent,
             adjoint: false,
             raw_inverse: false,
+            token_ids,
             path: chain.to_vec(),
             containing: Coordinate::default(),
         });
@@ -1534,7 +1587,12 @@ impl Builder<'_> {
                     }
                     let mut values = Vec::new();
                     for (p, a) in callee.groups[3].iter().zip(args) {
-                        let Some(Binding::Value { isa_type, value }) = env.get(&a) else {
+                        let Some(Binding::Value {
+                            isa_type,
+                            value,
+                            token_identity,
+                        }) = env.get(&a)
+                        else {
                             return Err(Error::arg("unbound call classical argument"));
                         };
                         if isa_type != &json!(p.ty) {
@@ -1546,6 +1604,7 @@ impl Builder<'_> {
                             Binding::Value {
                                 isa_type: isa_type.clone(),
                                 value: value.clone(),
+                                token_identity: *token_identity,
                             },
                         );
                     }

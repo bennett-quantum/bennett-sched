@@ -1,4 +1,4 @@
-use bennett_sched::{expansion::Operation, object::Object, source::Trace};
+use bennett_sched::{expansion::Operation, object::Object};
 use serde_json::json;
 #[path = "common/basis.rs"]
 mod basis;
@@ -31,7 +31,7 @@ fn lifted_oracle_calls_and_intrinsic_uncalls_keep_independent_budgets_and_clean_
         let required = if paired { 4 } else { 2 };
         for outer in 0..=required {
             for inner in 0..=2 {
-                let trace = Trace::build(
+                let trace = common::trace_distinct_tokens(
                     &object,
                     "outer",
                     1,
@@ -92,7 +92,7 @@ fn lifted_oracle_calls_and_intrinsic_uncalls_keep_independent_budgets_and_clean_
 fn lifted_call_paths_retain_callee_ordinals_and_nested_step_coordinates_under_outer_inverse() {
     use bennett_sched::schedule::Phase;
     let object = program(false);
-    let trace = Trace::build(
+    let trace = common::trace_distinct_tokens(
         &object,
         "outer",
         0,
@@ -150,7 +150,7 @@ fn a_nested_oracle_request_emits_a_shared_selector_per_address_and_all_history_r
     request.set_params(br#"[["1","0","0","0"]]"#).unwrap();
     request.budget = Some([2, 0, 0, 0]);
     request.set_accuracy("0").unwrap();
-    let response = request.schedule().unwrap();
+    let response = common::schedule_distinct_tokens(&mut request).unwrap();
     assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
     let document = Document::parse(canonical::require_jcs(&response.schedule).unwrap()).unwrap();
     document.validate_request(&request).unwrap();
@@ -197,7 +197,8 @@ fn zero_leaf_permutation_calls_retain_all_forward_and_inverse_invocation_records
         "lift.perm_call @empty (r) (x) () ()\nlift.retval r",
     );
     let object = Object::parse(&bytes).unwrap();
-    let trace = Trace::build(&object, "outer", 0, &json!([]), [2, 0, 0, 0]).unwrap();
+    let trace =
+        common::trace_distinct_tokens(&object, "outer", 0, &json!([]), [2, 0, 0, 0]).unwrap();
     let calls = trace
         .invocations
         .iter()
@@ -225,7 +226,7 @@ fn zero_leaf_permutation_calls_retain_all_forward_and_inverse_invocation_records
     request.set_params(b"[]").unwrap();
     request.budget = Some([2, 0, 0, 0]);
     request.set_accuracy("0").unwrap();
-    let response = request.schedule().unwrap();
+    let response = common::schedule_distinct_tokens(&mut request).unwrap();
     assert_eq!(
         response.outcome,
         bennett_sched::Outcome::Ok,
@@ -329,7 +330,9 @@ fn fixed_lproc_token_forwarding_keeps_two_positional_instances_without_lift_call
                 [first.to_string(), "0", "0", "0"],
                 [second.to_string(), "0", "0", "0"]
             ]);
-            let trace = Trace::build(&object, "outer", 1, &params, [outer, 0, 8, 1]).unwrap();
+            let trace =
+                common::trace_distinct_tokens(&object, "outer", 1, &params, [outer, 0, 8, 1])
+                    .unwrap();
             let callees = trace
                 .invocations
                 .iter()
@@ -413,7 +416,9 @@ fn coherent_lproc_paths_execute_both_fixed_token_instances_over_the_complete_int
                 [first.to_string(), "0", "0", "0"],
                 [second.to_string(), "0", "0", "0"]
             ]);
-            let trace = Trace::build(&object, "outer", 1, &params, [outer, 0, 8, 1]).unwrap();
+            let trace =
+                common::trace_distinct_tokens(&object, "outer", 1, &params, [outer, 0, 8, 1])
+                    .unwrap();
             let leaves = trace
                 .events
                 .iter()

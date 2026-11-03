@@ -111,6 +111,7 @@ impl Definition {
         &self,
         values: &[Binding],
         context: Option<&OracleInvocation>,
+        oracle_identity: Option<u64>,
         controls: &[String],
         identity: &str,
     ) -> Result<Arc<Trace>> {
@@ -134,6 +135,18 @@ impl Definition {
             [0; 4]
         };
         self.object.validate_budget(budget)?;
+        let mut token_ids = if oracle {
+            vec![oracle_identity.ok_or_else(|| {
+                Error::arg("K91: linked oracle requires an explicit resolved primary identity")
+            })?]
+        } else {
+            if oracle_identity.is_some() {
+                return Err(Error::arg(
+                    "primary oracle identity on an action source builder",
+                ));
+            }
+            vec![]
+        };
         let wires = f.groups[..wire_groups].iter().map(Vec::len).sum::<usize>();
         let regions = f.groups[wire_groups].len();
         let params = values[wires + regions..]
@@ -143,13 +156,23 @@ impl Definition {
                 _ => Err(Error::arg("linked source classical argument type mismatch")),
             })
             .collect::<Result<Vec<_>>>()?;
-        let mut trace = Trace::build(
+        for (parameter, binding) in f.groups[wire_groups + 1]
+            .iter()
+            .zip(&values[wires + regions..])
+        {
+            if parameter.ty == "token" {
+                token_ids.push(crate::token_aliases::binding_identity(binding)?);
+            }
+        }
+        let mut trace = Trace::build_with_token_ids(
             &self.object,
             &self.name,
             u32::try_from(controls.len())
                 .map_err(|_| Error::arg("source control count exceeds uint32"))?,
             &json!(params),
             budget,
+            false,
+            &token_ids,
         )?;
         trace.object = self.object.clone();
         let mut names = BTreeMap::new();

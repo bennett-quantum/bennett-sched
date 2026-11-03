@@ -2,7 +2,6 @@ use bennett_sched::{
     canonical,
     expansion::{Operation, inverse, simulate_basis},
     object::Object,
-    source::Trace,
 };
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -97,7 +96,7 @@ fn qinplace_and_source_adjoints_keep_private_order_call_occurrences_and_clean_fu
                 );
                 let object = Object::parse(&bytes).unwrap();
                 let b = if ins { 2 } else { 3 };
-                let trace = Trace::build(
+                let trace = common::trace_distinct_tokens(
                     &object,
                     "outer",
                     1,
@@ -227,7 +226,8 @@ fn qinplace_transfer_preserves_input_versions_only_after_the_inverse_restores_x(
             &format!("d = qcopy x\nqinplace @g @h b x\n{inverse}quncopy x d"),
         );
         let object = Object::parse(&bytes).unwrap();
-        let result = Trace::build(&object, "p", 0, &json!([["3", "0", "0", "0"]]), [0; 4]);
+        let result =
+            common::trace_distinct_tokens(&object, "p", 0, &json!([["3", "0", "0", "0"]]), [0; 4]);
         if restore {
             let trace = result.unwrap();
             let leaves = trace
@@ -280,7 +280,7 @@ fn qinplace_typed_arguments_use_singleton_bit_domains_and_exact_nested_token_tup
     request.set_params(br#"[["3","0","0","0"],"18446744073709551617","0x8000000000000000",["2","0","0","0"],"4294967295"]"#).unwrap();
     request.budget = Some([0; 4]);
     request.set_accuracy("0").unwrap();
-    let response = request.schedule().unwrap();
+    let response = common::schedule_distinct_tokens(&mut request).unwrap();
     assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
     let cert = canonical::require_jcs(&response.certificate).unwrap();
     let region = &cert["regions"][&hash];
@@ -303,9 +303,10 @@ fn qinplace_rejects_aliases_read_only_targets_and_missing_argument_lists() {
         "ctl x[0] qinplace @g @h b x (y) () ()",
     ] {
         let object = Object::parse(&action(2, true, op)).unwrap();
-        let error = Trace::build(&object, "p", 0, &json!([["2", "0", "0", "0"]]), [0; 4])
-            .err()
-            .expect("bad qinplace accepted");
+        let error =
+            common::trace_distinct_tokens(&object, "p", 0, &json!([["2", "0", "0", "0"]]), [0; 4])
+                .err()
+                .expect("bad qinplace accepted");
         assert_eq!(error.status, bennett_sched::Status::Arg, "{op}: {error}");
     }
 }
@@ -313,9 +314,10 @@ fn qinplace_rejects_aliases_read_only_targets_and_missing_argument_lists() {
 #[test]
 fn an_inverse_pair_domain_that_exceeds_host_tables_is_not_replaced_by_a_smaller_domain() {
     let object = Object::parse(&action(21, false, "qinplace @g @h b x")).unwrap();
-    let error = Trace::build(&object, "p", 0, &json!([["3", "0", "0", "0"]]), [0; 4])
-        .err()
-        .expect("host proof domain silently truncated");
+    let error =
+        common::trace_distinct_tokens(&object, "p", 0, &json!([["3", "0", "0", "0"]]), [0; 4])
+            .err()
+            .expect("host proof domain silently truncated");
     assert_eq!(error.status, bennett_sched::Status::NoMem);
     assert!(error.reason.contains("complete domain"), "{error}");
 }
@@ -368,7 +370,9 @@ fn qinplace_proof_and_controlled_execution_cover_every_interface_region_cell_val
         "qinplace @g @h b x (y) (db) ()",
     );
     let object = Object::parse(&bytes).unwrap();
-    let trace = Trace::build(&object, "p", 1, &json!([["2", "0", "0", "0"]]), [0; 4]).unwrap();
+    let trace =
+        common::trace_distinct_tokens(&object, "p", 1, &json!([["2", "0", "0", "0"]]), [0; 4])
+            .unwrap();
     assert_eq!(
         trace.qinplaces[0].domain["regions"],
         json!([{"name":"db","cells":"all"}])
@@ -409,7 +413,7 @@ fn qinplace_proof_and_controlled_execution_cover_every_interface_region_cell_val
 fn an_insufficient_budget_or_noninverse_pair_is_infeasible_without_discarding_inputs() {
     for (op, b) in [("qinplace @g @h b x", 2), ("qinplace @g @g b x", 3)] {
         let object = Object::parse(&action(2, false, op)).unwrap();
-        let error = Trace::build(
+        let error = common::trace_distinct_tokens(
             &object,
             "p",
             0,
@@ -449,7 +453,7 @@ fn qinplace_emits_a_bound_exhaustive_inverse_pair_entry_and_private_frames() {
     request.set_params(b"[[\"3\",\"0\",\"0\",\"0\"]]").unwrap();
     request.budget = Some([0; 4]);
     request.set_accuracy("0").unwrap();
-    let response = request.schedule().unwrap();
+    let response = common::schedule_distinct_tokens(&mut request).unwrap();
     assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
     Document::parse(canonical::require_jcs(&response.schedule).unwrap())
         .unwrap()
@@ -516,10 +520,10 @@ fn an_adjoint_request_allocation_resolves_its_emitted_alloc_selector() {
     request.set_params(br#"[["3","0","0","0"]]"#).unwrap();
     request.budget = Some([0; 4]);
     request.set_accuracy("0").unwrap();
-    let response = request.schedule().unwrap();
+    let response = common::schedule_distinct_tokens(&mut request).unwrap();
     assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
     let document = Document::parse(canonical::require_jcs(&response.schedule).unwrap()).unwrap();
-    let trace = Trace::build(
+    let trace = common::trace_distinct_tokens(
         request.object.as_ref().unwrap(),
         "outer",
         1,

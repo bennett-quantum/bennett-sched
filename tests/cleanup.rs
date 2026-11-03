@@ -17,7 +17,7 @@ fn simple(body: &str) -> Object {
 fn release_cleanup_coalesces_the_maximal_terminal_source_chain_and_keeps_disjoint_rows_out() {
     let object =
         simple("d = qalloc any 1\ncx x[0] d\ncx x[1] d\ncx x[1] d\nx t[0]\ncx x[0] d\nqfree d");
-    let trace = Trace::build(&object, "a", 0, &json!([]), [0; 4]).unwrap();
+    let trace = common::trace_distinct_tokens(&object, "a", 0, &json!([]), [0; 4]).unwrap();
     assert_eq!(trace.cleanups.len(), 1);
     let pair = &trace.cleanups[0];
     assert_eq!(pair.carrier.path.last().unwrap().point, "entry:6");
@@ -36,7 +36,7 @@ fn release_cleanup_coalesces_the_maximal_terminal_source_chain_and_keeps_disjoin
             .collect::<Vec<_>>(),
         ["entry:3", "entry:5", "entry:6"]
     );
-    let empty = Trace::build(
+    let empty = common::trace_distinct_tokens(
         &simple("d = qalloc any 1\nqfree d"),
         "a",
         0,
@@ -67,7 +67,7 @@ fn intrinsic_boundaries_and_joint_call_inverses_have_exactly_one_owner() {
         "perm_action @outer () (x:wire[2] in) () () ()",
         "d = qcopy x\naction_call @mix (d) () () ()\nadj action_call @mix (d) () () ()\nquncopy x d",
     );
-    let trace = Trace::build(
+    let trace = common::trace_distinct_tokens(
         &Object::parse(&bytes).unwrap(),
         "outer",
         0,
@@ -103,7 +103,7 @@ fn intrinsic_boundaries_and_joint_call_inverses_have_exactly_one_owner() {
                 "a = qalloc any 1\nb = qalloc any 1\naction_call @swap2 (a, b) () () ()\nadj action_call @swap2 (a, b) () () ()\n{order}"
             ),
         );
-        let trace = Trace::build(
+        let trace = common::trace_distinct_tokens(
             &Object::parse(&bytes).unwrap(),
             "outer",
             0,
@@ -136,7 +136,7 @@ fn k80_recompute_owns_eight_contiguous_leaves_and_cleanup_ties_are_resolved_at_t
     };
     use std::collections::BTreeMap;
     let object = simple("d = qalloc any 1\ncx x[0] d\ncx x[1] d\ncx x[1] d\ncx x[0] d\nqfree d");
-    let mut trace = Trace::build(&object, "a", 1, &json!([]), [0; 4]).unwrap();
+    let mut trace = common::trace_distinct_tokens(&object, "a", 1, &json!([]), [0; 4]).unwrap();
     let carrier = trace.cleanups[0].carrier.clone();
     let entry=parse_entry(&json!({"path":carrier.path.iter().map(|p|p.json()).collect::<Vec<_>>(),"step":"*","phase":"*","generated":0,"kind":"cleanup","cleanup":{"realisation":"recompute"}})).unwrap();
     trace.realise_cleanup_entries(&[entry.clone()]).unwrap();
@@ -179,7 +179,7 @@ fn k80_recompute_owns_eight_contiguous_leaves_and_cleanup_ties_are_resolved_at_t
         simulate_basis(&leaves, &mut state).unwrap();
         assert_eq!(state, before);
     }
-    let mut trace = Trace::build(&object, "a", 1, &json!([]), [0; 4]).unwrap();
+    let mut trace = common::trace_distinct_tokens(&object, "a", 1, &json!([]), [0; 4]).unwrap();
     let error = trace
         .realise_cleanup_entries(&[entry.clone(), entry])
         .unwrap_err();
@@ -193,7 +193,7 @@ fn empty_and_intrinsic_recompute_keep_the_release_and_restore_all_source_inputs(
     use std::collections::BTreeMap;
     for body in ["d = qalloc any 1\nqfree d", "d = qcopy x\nquncopy x d"] {
         let object = simple(body);
-        let mut trace = Trace::build(&object, "a", 0, &json!([]), [0; 4]).unwrap();
+        let mut trace = common::trace_distinct_tokens(&object, "a", 0, &json!([]), [0; 4]).unwrap();
         let p = &trace.cleanups[0];
         let entry=parse_entry(&json!({"path":p.carrier.path.iter().map(|p|p.json()).collect::<Vec<_>>(),"step":"*","phase":"*","generated":0,"kind":"cleanup","cleanup":{"realisation":"recompute"}})).unwrap();
         trace.realise_cleanup_entries(&[entry]).unwrap();
@@ -227,7 +227,7 @@ fn recompute_replay_uses_carrier_coordinates_instead_of_importing_original_loop_
         "d = qalloc any 1\nqloop 1 {\ncx x d\ncx z d\n}\ncx z d\ncx x d\nqfree d",
     );
     let object = Object::parse(&bytes).unwrap();
-    let mut trace = Trace::build(&object, "a", 0, &json!([]), [0; 4]).unwrap();
+    let mut trace = common::trace_distinct_tokens(&object, "a", 0, &json!([]), [0; 4]).unwrap();
     let carrier = trace.cleanups[0].carrier.clone();
     let entry=parse_entry(&json!({"path":carrier.path.iter().map(|p|p.json()).collect::<Vec<_>>(),"step":"*","phase":"*","generated":0,"kind":"cleanup","cleanup":{"realisation":"recompute"}})).unwrap();
     trace.realise_cleanup_entries(&[entry]).unwrap();
@@ -295,7 +295,7 @@ fn k80_two_call_recompute_has_fresh_edges_and_separate_caller_leaf_ordinals() {
         "d = qalloc any 1\naction_call @mix (d) (x[0]) () ()\naction_call @mix (d) (x[1]) () ()\nadj action_call @mix (d) (x[1]) () ()\nadj action_call @mix (d) (x[0]) () ()\nqfree d",
         false,
     );
-    let mut trace = Trace::build(&object, "outer", 1, &json!([]), [0; 4]).unwrap();
+    let mut trace = common::trace_distinct_tokens(&object, "outer", 1, &json!([]), [0; 4]).unwrap();
     recompute_at(&mut trace, "entry:5");
     let caller = trace
         .events
@@ -366,7 +366,7 @@ fn k81_call_recompute_replays_the_exact_nonzero_copy_history_without_owning_it()
         "d = qcopy x\naction_call @mix (d) () () ()\nadj action_call @mix (d) () () ()\nquncopy x d",
         true,
     );
-    let mut trace = Trace::build(&object, "outer", 1, &json!([]), [0; 4]).unwrap();
+    let mut trace = common::trace_distinct_tokens(&object, "outer", 1, &json!([]), [0; 4]).unwrap();
     let original = trace
         .events
         .iter()
@@ -435,7 +435,7 @@ fn fresh_call_cleanup_selectors_apply_after_rebinding_to_the_new_carrier_edge() 
         "d = qalloc any 1\naction_call @mix (d) (x) () ()\nadj action_call @mix (d) (x) () ()\nqfree d",
     );
     let object = Object::parse(&bytes).unwrap();
-    let mut trace = Trace::build(&object, "outer", 0, &json!([]), [0; 4]).unwrap();
+    let mut trace = common::trace_distinct_tokens(&object, "outer", 0, &json!([]), [0; 4]).unwrap();
     let carrier = trace
         .cleanups
         .iter()
@@ -484,7 +484,7 @@ fn a_recomputed_schedule_admits_its_fresh_call_paths_and_rejects_nonexistent_occ
     request.set_params(b"[]").unwrap();
     request.budget = Some([0; 4]);
     request.set_accuracy("0").unwrap();
-    let response = request.schedule().unwrap();
+    let response = common::schedule_distinct_tokens(&mut request).unwrap();
     assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
     let mut schedule = canonical::require_jcs(&response.schedule).unwrap();
     let source = request.object.as_ref().unwrap();
@@ -539,7 +539,7 @@ fn fresh_source_adjoints_rebuild_while_flags_and_local_region_support_spaces() {
         "perm_action @outer () (x:wire[2] in) () () ()",
         "d = qalloc any 1\naction_call @mix (d) (x) () ()\nadj action_call @mix (d) (x) () ()\nqfree d",
     );
-    let mut trace = Trace::build(
+    let mut trace = common::trace_distinct_tokens(
         &Object::parse(&bytes).unwrap(),
         "outer",
         1,
@@ -616,7 +616,7 @@ fn independent_call_history_does_not_copy_a_nonpermutation_preparation() {
         "d = qalloc any 1\nh d\naction_call @mix (d) () () ()\nadj action_call @mix (d) () () ()\nx d\nx d\nh d\nqfree d",
     );
     let object = Object::parse(&bytes).unwrap();
-    let mut trace = Trace::build(&object, "outer", 0, &json!([]), [0; 4]).unwrap();
+    let mut trace = common::trace_distinct_tokens(&object, "outer", 0, &json!([]), [0; 4]).unwrap();
     let carrier = trace
         .cleanups
         .iter()
@@ -659,7 +659,7 @@ fn replay_preserves_empty_call_spans_inside_fresh_callees() {
         "perm_action @outer () (x:wire in) () () ()",
         "d = qalloc any 1\naction_call @mix (d) (x) () ()\nadj action_call @mix (d) (x) () ()\nqfree d",
     );
-    let mut trace = Trace::build(
+    let mut trace = common::trace_distinct_tokens(
         &Object::parse(&bytes).unwrap(),
         "outer",
         0,
@@ -706,7 +706,7 @@ fn replayed_oracle_calls_keep_the_explicit_token_and_forward_history_coordinates
         "perm_action @outer () (x:wire in) () (b:token) ()",
         "t = qalloc any 1\nf = qalloc any 4\noracle_call @o b (x) t f () ()\noracle_call @o b (x) t f () ()\nqfree t\nqfree f",
     );
-    let mut trace = Trace::build(
+    let mut trace = common::trace_distinct_tokens(
         &Object::parse(&bytes).unwrap(),
         "outer",
         1,

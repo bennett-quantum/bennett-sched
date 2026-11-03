@@ -29,7 +29,11 @@ pub fn validate_partition(aliases: &[u64]) -> Result<()> {
     }
     Ok(())
 }
-fn tuples(function: &Function, params: &Value, budget: [u64; 4]) -> Result<Vec<[u64; 4]>> {
+pub(crate) fn tuples(
+    function: &Function,
+    params: &Value,
+    budget: [u64; 4],
+) -> Result<Vec<[u64; 4]>> {
     let oracle = function.kind == "oracle";
     if !oracle && !["action", "perm_action"].contains(&function.kind.as_str()) {
         return Err(Error::arg(
@@ -109,4 +113,16 @@ pub fn partition(ids: &[u64]) -> Vec<u64> {
             *labels.entry(*id).or_insert(next)
         })
         .collect()
+}
+pub(crate) fn binding_identity(binding: &crate::expansion::Binding) -> Result<u64> {
+    match binding {
+        crate::expansion::Binding::Value {
+            isa_type,
+            token_identity: Some(id),
+            ..
+        } if isa_type == "token" => Ok(*id),
+        _ => Err(Error::arg(
+            "K91: token binding has no resolved identity context",
+        )),
+    }
 }

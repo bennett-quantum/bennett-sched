@@ -280,7 +280,7 @@ impl Document {
         Ok(())
     }
     fn validate_request_bindings(&self, request: &Request) -> Result<()> {
-        request
+        let object = request
             .object
             .as_ref()
             .ok_or_else(|| Error::arg("request object is unset"))?;
@@ -307,6 +307,30 @@ impl Document {
             .params
             .as_ref()
             .ok_or_else(|| Error::arg("request params are unset"))?;
+        let function = object.region(text(&b["closure_hash"])?)?;
+        object.validate_params(&function.name, params)?;
+        let token_budget: [u64; 4] = budget
+            .as_slice()
+            .try_into()
+            .expect("validated request budget");
+        let actual = crate::token_aliases::resolve(
+            function,
+            params,
+            token_budget,
+            request.token_aliases.as_deref(),
+        )?;
+        let aliases = b
+            .get("token_aliases")
+            .map(|v| crate::token_aliases::parse(&canonical::to_vec(v)?))
+            .transpose()?;
+        let bound =
+            crate::token_aliases::resolve(function, params, token_budget, aliases.as_deref())
+                .map_err(|error| {
+                    fail(format!("schedule token_aliases binding: {}", error.reason))
+                })?;
+        if actual != bound {
+            return Err(fail("schedule/request token_aliases binding mismatch"));
+        }
         if text(&b["params_hash"])? != canonical::hash(&canonical::to_vec(params)?)
             || decimal::value(&b["epsilon"])?
                 != request
@@ -382,12 +406,20 @@ impl Document {
         self.validate_request_bindings(request)?;
         let object = request.object.as_ref().expect("validated object");
         let f = object.region(request.region.as_ref().expect("validated region"))?;
-        let mut trace = Trace::build(
+        let ids = crate::token_aliases::resolve(
+            f,
+            request.params.as_ref().expect("validated params"),
+            request.budget.expect("validated budget"),
+            request.token_aliases.as_deref(),
+        )?;
+        let mut trace = Trace::build_with_token_ids(
             object,
             &f.name,
             request.inherited_controls,
             request.params.as_ref().expect("validated params"),
             request.budget.expect("validated budget"),
+            false,
+            &ids,
         )?;
         if self.entries.iter().any(|e| e.kind == Kind::Cleanup) {
             trace.realise_cleanup_entries(&self.entries)?;

@@ -1,7 +1,6 @@
 use bennett_sched::{
     object::Object,
     schedule::{Kind, parse_entry},
-    source::Trace,
 };
 use serde_json::{Value, json};
 #[path = "common/basis.rs"]
@@ -46,7 +45,7 @@ fn entry(
 fn lifted_uncall_carriers_are_non_emitting_and_ties_resolve_before_mutation() {
     let object = object();
     for budget in 0..=4 {
-        let mut trace = Trace::build(
+        let mut trace = common::trace_distinct_tokens(
             &object,
             "outer",
             1,
@@ -106,7 +105,7 @@ fn lifted_recompute_matches_reverse_for_complete_external_domains_and_keeps_step
         let object = Object::parse(&program(history)).unwrap();
         let budget = if history { 6 } else { 4 };
         let carrier_count = 2 * budget;
-        let mut trace = Trace::build(
+        let mut trace = common::trace_distinct_tokens(
             &object,
             "outer",
             1,
@@ -210,7 +209,7 @@ fn action_oracle_calls_preserve_nested_lifted_carriers_and_per_step_recompute() 
         "oracle_call @outer a (x) t f () (b)",
     );
     let object = Object::parse(&source).unwrap();
-    let mut trace = Trace::build(
+    let mut trace = common::trace_distinct_tokens(
         &object,
         "entry",
         1,
@@ -285,7 +284,7 @@ fn fixed_lproc_instances_keep_separate_non_emitting_uncall_carriers() {
         ),
     ];
     let object = Object::parse(&common::layout_sources(&functions, json!({"ptr_width":3,"H":0,"A_tab":0,"S_cells":3,"null_size":1,"heap_base":1,"heap_limit_max":0,"globals":{},"interface_regions":{}}))).unwrap();
-    let mut trace = Trace::build(
+    let mut trace = common::trace_distinct_tokens(
         &object,
         "outer",
         0,
@@ -329,7 +328,7 @@ fn encoded_lifted_cleanup_documents_admit_fresh_call_paths_and_reject_an_absent_
     request.set_params(br#"[["0","0","0","0"]]"#).unwrap();
     request.budget = Some([4, 0, 0, 0]);
     request.set_accuracy("0").unwrap();
-    let response = request.schedule().unwrap();
+    let response = common::schedule_distinct_tokens(&mut request).unwrap();
     assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
     let certificate = canonical::require_jcs(&response.certificate).unwrap();
     assert_eq!(
@@ -374,7 +373,7 @@ fn deeply_projected_invocations_retain_their_containing_oracle_coordinates() {
         "lift.oracle_call @outer a (x) r f () (b)\nlift.retval r",
     );
     let object = Object::parse(&source).unwrap();
-    let trace = Trace::build(
+    let trace = common::trace_distinct_tokens(
         &object,
         "root",
         0,

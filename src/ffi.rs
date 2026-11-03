@@ -105,6 +105,14 @@ pub unsafe extern "C" fn bennett_sched_request_set_accuracy(
     status(|| unsafe { request(r)?.set_accuracy(string(epsilon)?) })
 }
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn bennett_sched_request_set_token_aliases(
+    r: *mut Request,
+    data: *const u8,
+    len: usize,
+) -> Status {
+    status(|| unsafe { request(r)?.set_token_aliases(bytes(data, len)?) })
+}
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn bennett_sched_request_set_capacity(
     r: *mut Request,
     class: *const c_char,

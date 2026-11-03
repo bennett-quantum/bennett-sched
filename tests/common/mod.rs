@@ -1,5 +1,54 @@
 use bennett_sched::canonical;
 use serde_json::{Value, json};
+
+/// These fixtures declare distinct root token parameters, including when their
+/// tuple values agree. Tests for shared identities supply their own partition.
+#[allow(dead_code)]
+pub fn trace_distinct_tokens(
+    object: &bennett_sched::object::Object,
+    name: &str,
+    inherited: u32,
+    params: &Value,
+    budget: [u64; 4],
+) -> bennett_sched::Result<bennett_sched::source::Trace> {
+    let f = object
+        .functions
+        .get(name)
+        .ok_or_else(|| bennett_sched::Error::arg("fixture region missing"))?;
+    let group = if f.kind == "oracle" {
+        4
+    } else if ["action", "perm_action"].contains(&f.kind.as_str()) {
+        3
+    } else {
+        return bennett_sched::source::Trace::build(object, name, inherited, params, budget);
+    };
+    let count = f.groups[group].iter().filter(|p| p.ty == "token").count();
+    if count == 0 {
+        return bennett_sched::source::Trace::build(object, name, inherited, params, budget);
+    }
+    let aliases = (0..(count + usize::from(f.kind == "oracle")) as u64).collect::<Vec<_>>();
+    bennett_sched::source::Trace::build_with_token_aliases(
+        object, name, inherited, params, budget, &aliases,
+    )
+}
+#[allow(dead_code)]
+pub fn schedule_distinct_tokens(
+    request: &mut bennett_sched::Request,
+) -> bennett_sched::Result<bennett_sched::Response> {
+    if request.token_aliases.is_none() {
+        if let (Some(object), Some(hash)) = (&request.object, &request.region) {
+            let f = object.region(hash)?;
+            let group = if f.kind == "oracle" { 4 } else { 3 };
+            let count = f.groups[group].iter().filter(|p| p.ty == "token").count();
+            if count > 0 {
+                let aliases =
+                    (0..(count + usize::from(f.kind == "oracle")) as u64).collect::<Vec<_>>();
+                request.set_token_aliases(&bennett_sched::canonical::to_vec(&json!(aliases))?)?;
+            }
+        }
+    }
+    request.schedule()
+}
 pub fn action(kind: &str, name: &str, signature: Value, header: &str, body: &str) -> Vec<u8> {
     let bounds = signature
         .get("bounds")

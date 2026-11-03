@@ -127,6 +127,7 @@ fn key(
     let Some(Binding::Value {
         value: tuple,
         isa_type,
+        ..
     }) = env.get(&args[1])
     else {
         return Err(fail("invalid oracle token"));
@@ -153,7 +154,10 @@ fn key(
     let values = object::list(&args[6])?
         .iter()
         .map(|name| {
-            let Some(Binding::Value { isa_type, value }) = env.get(name) else {
+            let Some(Binding::Value {
+                isa_type, value, ..
+            }) = env.get(name)
+            else {
                 return Err(fail("oracle args must be fixed classical arguments"));
             };
             if isa_type == "token" {

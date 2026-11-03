@@ -113,7 +113,12 @@ pub(crate) fn row(
     }
     let mut params = Vec::new();
     for (p, name) in callee.groups[wire_groups + 1].iter().zip(actual_args) {
-        let Some(Binding::Value { isa_type, value }) = env.get(&name) else {
+        let Some(Binding::Value {
+            isa_type,
+            value,
+            token_identity,
+        }) = env.get(&name)
+        else {
             return Err(Error::arg(
                 "§4.2: lifted args must be fixed classical arguments, never locations",
             ));
@@ -132,13 +137,17 @@ pub(crate) fn row(
         values.push(Binding::Value {
             isa_type: expected,
             value: value.clone(),
+            token_identity: *token_identity,
         });
     }
     source
         .object
         .validate_params(&callee.name, &json!(params))?;
     let context = if oracle {
-        let Some(Binding::Value { isa_type, value }) = env.get(&operands[1]) else {
+        let Some(Binding::Value {
+            isa_type, value, ..
+        }) = env.get(&operands[1])
+        else {
             return Err(Error::arg("lifted oracle requires a fixed token argument"));
         };
         if isa_type != "token" {
@@ -163,6 +172,11 @@ pub(crate) fn row(
             symbol: hash,
             values,
             oracle_invocation: context,
+            oracle_identity: if oracle {
+                Some(crate::token_aliases::binding_identity(&env[&operands[1]])?)
+            } else {
+                None
+            },
         },
     );
     Ok(json!({"invoke":node.op,"args":[symbol,arguments]}))

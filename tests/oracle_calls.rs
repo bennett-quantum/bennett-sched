@@ -45,7 +45,7 @@ fn params() -> Value {
 fn two_oracle_tokens_bind_distinct_constructions_independently_of_the_action_budget() {
     let bytes = caller("oracle_call @inc b2 (x) t f () ()\noracle_call @inc b3 (x) t f () ()");
     let object = Object::parse(&bytes).unwrap();
-    let trace = Trace::build(&object, "a", 1, &params(), [0; 4]).unwrap();
+    let trace = common::trace_distinct_tokens(&object, "a", 1, &params(), [0; 4]).unwrap();
     assert_eq!(trace.invocations.len(), 3);
     assert_eq!(trace.invocations[1].budget, [2, 0, 0, 0]);
     assert_eq!(trace.invocations[2].budget, [3, 0, 0, 0]);
@@ -108,7 +108,7 @@ fn enclosing_action_adjoints_keep_oracle_construction_step_phase_and_forward_ord
             &format!("{orientation}action_call @a (t, f) (x) () (b2, b3)"),
         );
         let object = Object::parse(&bytes).unwrap();
-        let trace = Trace::build(&object, "b", 1, &params(), [0; 4]).unwrap();
+        let trace = common::trace_distinct_tokens(&object, "b", 1, &params(), [0; 4]).unwrap();
         for inv in trace.invocations.iter().filter(|i| i.name == "inc") {
             let actual = &trace.events[inv.start..inv.end];
             assert_eq!(
@@ -119,7 +119,8 @@ fn enclosing_action_adjoints_keep_oracle_construction_step_phase_and_forward_ord
                 actual.last().unwrap().location.path.last().unwrap().point,
                 "$release"
             );
-            let reference = Trace::build(&object, "inc", 1, &json!([]), inv.budget).unwrap();
+            let reference =
+                common::trace_distinct_tokens(&object, "inc", 1, &json!([]), inv.budget).unwrap();
             assert_eq!(actual.len(), reference.events.len());
             for (a, b) in actual.iter().zip(&reference.events) {
                 assert_eq!(
@@ -143,14 +144,14 @@ fn malformed_call_operands_and_misplaced_rows_are_argument_errors() {
         "lift.free t",
     ] {
         let error = Object::parse(&caller(body))
-            .and_then(|object| Trace::build(&object, "a", 0, &params(), [0; 4]))
+            .and_then(|object| common::trace_distinct_tokens(&object, "a", 0, &params(), [0; 4]))
             .err()
             .expect("invalid call admitted");
         assert_eq!(error.status, bennett_sched::Status::Arg, "{body}: {error}");
     }
     let mut object = Object::parse(&increment()).unwrap();
     object.functions.get_mut("inc").unwrap().body[0].op = "lift.unknown".into();
-    let error = Trace::build(&object, "inc", 0, &json!([]), [3, 0, 0, 0])
+    let error = common::trace_distinct_tokens(&object, "inc", 0, &json!([]), [3, 0, 0, 0])
         .err()
         .expect("unknown row admitted");
     assert_eq!(error.status, bennett_sched::Status::Arg);
@@ -179,7 +180,7 @@ fn region_call_cycles_are_rejected_even_inside_zero_trip_loops() {
     let mut object = Object::parse(&bytes).unwrap();
     // Change only the already typed edge in the source AST to a self edge.
     object.functions.get_mut("a").unwrap().body[0].bodies[0][0].operands[0] = "@a".into();
-    let error = Trace::build(&object, "a", 0, &params(), [0; 4])
+    let error = common::trace_distinct_tokens(&object, "a", 0, &params(), [0; 4])
         .err()
         .expect("region cycle hidden by zero-trip loop");
     assert_eq!(error.status, bennett_sched::Status::Arg);
@@ -217,12 +218,14 @@ fn action_oracle_request_binds_callee_history_and_every_concrete_selector() {
         .unwrap();
     request.budget = Some([0; 4]);
     request.set_accuracy("0").unwrap();
-    let response = request.schedule().unwrap();
+    let response = common::schedule_distinct_tokens(&mut request).unwrap();
     assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
     let value = canonical::require_jcs(&response.schedule).unwrap();
     let document = Document::parse(value).unwrap();
     document.validate_request(&request).unwrap();
-    let trace = Trace::build(request.object.as_ref().unwrap(), "a", 1, &params(), [0; 4]).unwrap();
+    let trace =
+        common::trace_distinct_tokens(request.object.as_ref().unwrap(), "a", 1, &params(), [0; 4])
+            .unwrap();
     for event in &trace.events {
         if event.location.kind == bennett_sched::schedule::Kind::Alloc {
             bennett_sched::schedule::resolve(
@@ -287,7 +290,7 @@ fn action_oracle_request_binds_callee_history_and_every_concrete_selector() {
             .unwrap();
         repeated.budget = Some([0; 4]);
         repeated.set_accuracy("0").unwrap();
-        let response = repeated.schedule().unwrap();
+        let response = common::schedule_distinct_tokens(&mut repeated).unwrap();
         assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
         let c = canonical::require_jcs(&response.certificate).unwrap();
         let frames = c["regions"][&child]["frame_contexts"].as_array().unwrap();
@@ -345,7 +348,7 @@ fn source_adjoints_remap_caller_loop_occurrences_without_reversing_oracle_steps(
             &format!("{orientation}action_call @a (t, f) (x) () (b2, b3)"),
         );
         let object = Object::parse(&bytes).unwrap();
-        let trace = Trace::build(&object, "b", 1, &params(), [0; 4]).unwrap();
+        let trace = common::trace_distinct_tokens(&object, "b", 1, &params(), [0; 4]).unwrap();
         let mut calls = trace
             .invocations
             .iter()
@@ -356,7 +359,8 @@ fn source_adjoints_remap_caller_loop_occurrences_without_reversing_oracle_steps(
         for (iteration, inv) in calls.iter().enumerate() {
             assert_eq!(inv.path[1].iteration, vec![iteration as u64]);
             let actual = &trace.events[inv.start..inv.end];
-            let reference = Trace::build(&object, "inc", 1, &json!([]), [3, 0, 0, 0]).unwrap();
+            let reference =
+                common::trace_distinct_tokens(&object, "inc", 1, &json!([]), [3, 0, 0, 0]).unwrap();
             for (actual, reference) in actual.iter().zip(&reference.events) {
                 assert_eq!(actual.location.path[1].iteration, vec![iteration as u64]);
                 assert_eq!(
@@ -408,7 +412,7 @@ fn published_k77_two_token_inc8_witness_covers_every_input_and_both_controls() {
         "oracle_call @inc8 b2 (x) t f () ()\noracle_call @inc8 b3 (x) t f () ()",
     );
     let object = Object::parse(&bytes).unwrap();
-    let trace = Trace::build(&object, "two_tokens", 1, &params(), [0; 4]).unwrap();
+    let trace = common::trace_distinct_tokens(&object, "two_tokens", 1, &params(), [0; 4]).unwrap();
     let leaves = trace
         .events
         .iter()

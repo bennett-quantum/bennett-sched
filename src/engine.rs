@@ -429,7 +429,11 @@ fn prepare(request: &Request) -> Result<Trace> {
     let f = object.region(hash)?;
     object.validate_params(&f.name, params)?;
     object.validate_budget(budget)?;
-    crate::token_aliases::resolve(f, params, budget, request.token_aliases.as_deref())?;
+    let token_ids =
+        crate::token_aliases::resolve(f, params, budget, request.token_aliases.as_deref())?;
+    for tuple in crate::token_aliases::tuples(f, params, budget)? {
+        object.validate_budget(tuple)?;
+    }
     if !target.value["ptr_widths_supported"]
         .as_array()
         .unwrap()
@@ -456,7 +460,15 @@ fn prepare(request: &Request) -> Result<Trace> {
     if f.kind == "oracle" {
         oracle_capacity_preflight(object, f, request, target, budget)?;
     }
-    Trace::build(object, &f.name, request.inherited_controls, params, budget)
+    Trace::build_with_token_ids(
+        object,
+        &f.name,
+        request.inherited_controls,
+        params,
+        budget,
+        false,
+        &token_ids,
+    )
 }
 fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Response> {
     let object = request.object.as_ref().expect("prepared object");
@@ -735,6 +747,11 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
         }
     }
     let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|integer_json(*n)).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":merged});
+    if request.token_aliases.is_some() {
+        schedule["bindings"]["token_aliases"] = json!(crate::token_aliases::partition(
+            &trace.invocations[0].token_ids
+        ));
+    }
     if let Some(placements) = root_placements {
         schedule["interface_vertices"] = json!(placements);
     }
@@ -811,6 +828,13 @@ fn oracle_history(identity: &str) -> bool {
     });
     index.is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
 }
+fn invocation_binding(inv: &crate::source::Invocation, aliases: bool) -> Value {
+    let mut value = json!({"args":inv.params,"budget":inv.budget.map(|n|n.to_string())});
+    if aliases {
+        value["token_aliases"] = json!(crate::token_aliases::partition(&inv.token_ids));
+    }
+    value
+}
 fn frame_record(trace: &Trace, owner: usize, allocator: &Allocator<'_>) -> Result<Value> {
     let slots = trace.invocations[owner]
         .slots
@@ -873,6 +897,7 @@ fn certificate(
         &request.epsilon.clone().unwrap_or_else(Rational::zero),
     )?;
     for (i, inv) in trace.invocations.iter().enumerate() {
+        let invocation = invocation_binding(inv, request.token_aliases.is_some());
         let key = format!("{variant}:{}", inv.controls.len());
         *multiplicities
             .entry(format!("{}:{key}", inv.hash))
@@ -930,7 +955,7 @@ fn certificate(
                 .map(|p| json!({"name":p.name,"cells":"all"}))
                 .collect::<Vec<_>>();
             let index = record["claims"].as_array().unwrap().len();
-            record["claims"].as_array_mut().unwrap().push(json!({"kind":"exhaustive","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"expected":"oracle","domain":{"bundles":bundles,"borrowed":[],"regions":interface_regions}}));
+            record["claims"].as_array_mut().unwrap().push(json!({"kind":"exhaustive","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"invocation":invocation,"expected":"oracle","domain":{"bundles":bundles,"borrowed":[],"regions":interface_regions}}));
             record["verification"]["oracle"] = json!(index);
             // The rate domain is a stated finite witness: omitted interfaces
             // are held at zero (K72), with every inherited control fixed at zero.
@@ -985,11 +1010,11 @@ fn certificate(
         }
         for proof in trace.borrow_proofs.iter().filter(|p| p.owner == i) {
             let mut index = record["claims"].as_array().unwrap().len();
-            record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"translation_lemma","invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"subclaims":[],"witness":proof.witness}));
+            record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"translation_lemma","invocation":invocation,"subclaims":[],"witness":proof.witness}));
             if proof.adjoint {
                 // §16.3 example 3: the inverse frame need not have the lemma's
                 // syntax. Its forward proof and the adjoint table establish it.
-                record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"adjoint_table","invocation":{"args":inv.params,"budget":inv.budget.map(|n|n.to_string())},"subclaims":[index],"witness":{}}));
+                record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"adjoint_table","invocation":invocation,"subclaims":[index],"witness":{}}));
                 index += 1;
             }
             record["verification"]["borrow_frames"]
@@ -1004,6 +1029,9 @@ fn certificate(
                 .unwrap()
                 .push(json!({"kind":"exhaustive","expected":"inverse_pair","domain":proof.domain}));
             let mut entry = json!({"g":proof.g,"ginv":proof.ginv,"claim":index,"budget":proof.budget.map(|n|n.to_string())});
+            if request.token_aliases.is_some() {
+                entry["token_aliases"] = json!(crate::token_aliases::partition(&proof.token_ids));
+            }
             if !proof.arg_tokens.as_object().unwrap().is_empty() {
                 entry["arg_tokens"] = proof.arg_tokens.clone();
             }
@@ -1124,7 +1152,7 @@ fn certificate(
         }
     }
     Ok((
-        json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":{"args":request.params.as_ref().unwrap(),"budget":request.budget.unwrap().iter().map(u64::to_string).collect::<Vec<_>>() }},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::exact(&(d::integer(2)*&bounds.declared_total))?},"method":"sum_over_multiplicities"}}),
+        json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":invocation_binding(root,request.token_aliases.is_some())},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::exact(&(d::integer(2)*&bounds.declared_total))?},"method":"sum_over_multiplicities"}}),
         bounds.exact_total,
     ))
 }

@@ -276,7 +276,7 @@ impl Emitter<'_> {
         backwards: bool,
     ) -> Result<()> {
         let original = &self.source.invocations[index];
-        let mut child = Trace::build_oriented(
+        let mut child = Trace::build_with_token_ids(
             &self.source.object,
             &original.name,
             u32::try_from(original.controls.len())
@@ -284,6 +284,7 @@ impl Emitter<'_> {
             &original.params,
             original.budget,
             original.adjoint ^ original.raw_inverse ^ backwards,
+            &original.token_ids,
         )?;
         let number = self.call_index;
         self.call_index += 1;

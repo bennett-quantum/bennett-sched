@@ -24,7 +24,8 @@ fn nested_recompute_is_selected_in_forward_space_before_raw_inverse_traversal() 
     );
     let object = Object::parse(&bytes).unwrap();
     for phase in ["fwd", "rev", "*"] {
-        let mut trace = Trace::build(&object, "outer", 1, &json!([]), [2, 0, 0, 0]).unwrap();
+        let mut trace =
+            common::trace_distinct_tokens(&object, "outer", 1, &json!([]), [2, 0, 0, 0]).unwrap();
         assert_eq!(trace.cleanups.len(), 4);
         let carrier = &trace.cleanups[0].carrier;
         let entry = parse_entry(&json!({"path":carrier.path.iter().map(|p|p.json()).collect::<Vec<_>>(),"step":"*","phase":phase,"generated":0,"kind":"cleanup","cleanup":{"realisation":"recompute"}})).unwrap();
@@ -106,7 +107,7 @@ fn nested_oracle_phase_selection_survives_forward_normalisation() {
     );
     let object = Object::parse(&bytes).unwrap();
     for phase in ["rev", "*"] {
-        let mut trace = Trace::build(
+        let mut trace = common::trace_distinct_tokens(
             &object,
             "outer",
             1,
@@ -167,7 +168,8 @@ fn raw_inverse_recompute_retains_empty_call_occurrences_at_their_rebuilt_boundar
     );
     let object = Object::parse(&bytes).unwrap();
     for point in ["entry:2", "entry:4"] {
-        let mut trace = Trace::build(&object, "outer", 1, &json!([]), [2, 0, 0, 0]).unwrap();
+        let mut trace =
+            common::trace_distinct_tokens(&object, "outer", 1, &json!([]), [2, 0, 0, 0]).unwrap();
         let carrier = &trace
             .cleanups
             .iter()

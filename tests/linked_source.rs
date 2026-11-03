@@ -56,6 +56,7 @@ fn setup() -> (Library, Env) {
                 symbol: hash.clone(),
                 values: vec![wires("x", 8), wires("t", 8), wires("f", 4)],
                 oracle_invocation: Some(context(b)),
+                oracle_identity: Some(b),
             },
         );
     }
@@ -200,6 +201,7 @@ fn oracle_context_is_required_typed_closed_and_never_a_positional_parameter() {
     let mut bad = env["A2"].clone();
     if let Binding::Arguments { values, .. } = &mut bad {
         values.push(Binding::Value {
+            token_identity: None,
             isa_type: json!("token"),
             value: json!(["2", "0", "0", "0"]),
         });
@@ -259,6 +261,7 @@ fn linked_source_arguments_preserve_typed_values_and_reject_wrong_widths_types_a
             .into_iter()
             .zip(params.as_array().unwrap())
             .map(|(isa_type, value)| Binding::Value {
+                token_identity: if isa_type == "token" { Some(99) } else { None },
                 isa_type,
                 value: value.clone(),
             }),
@@ -272,6 +275,7 @@ fn linked_source_arguments_preserve_typed_values_and_reject_wrong_widths_types_a
                 symbol: hash.clone(),
                 values,
                 oracle_invocation: Some(invocation),
+                oracle_identity: Some(1),
             },
         );
         lib.body(
@@ -294,6 +298,7 @@ fn linked_source_arguments_preserve_typed_values_and_reject_wrong_widths_types_a
     }
     let mut bad = values.clone();
     bad[3] = Binding::Value {
+        token_identity: None,
         isa_type: json!("i64"),
         value: json!("0"),
     };
@@ -325,6 +330,7 @@ fn argument_context_survives_an_additional_semantic_call_and_source_host_limits_
             symbol: wrapper,
             values: vec![env["S"].clone(), env["A2"].clone()],
             oracle_invocation: None,
+            oracle_identity: None,
         },
     );
     let leaves = lib
@@ -374,6 +380,7 @@ fn linked_action_regions_preserve_shape_role_and_physical_cells_without_an_oracl
             symbol: hash.clone(),
             values: values.clone(),
             oracle_invocation: None,
+            oracle_identity: None,
         },
     );
     let body = [json!({"invoke":"lift.perm_call","args":["S","A"]})];
@@ -401,6 +408,7 @@ fn linked_action_regions_preserve_shape_role_and_physical_cells_without_an_oracl
             symbol: hash.clone(),
             values: bad,
             oracle_invocation: None,
+            oracle_identity: None,
         },
     );
     assert!(
@@ -415,6 +423,7 @@ fn linked_action_regions_preserve_shape_role_and_physical_cells_without_an_oracl
             symbol: hash,
             values,
             oracle_invocation: Some(context(0)),
+            oracle_identity: Some(0),
         },
     );
     assert!(
@@ -447,6 +456,7 @@ fn zero_leaf_source_metadata_keeps_forward_call_numbers_during_raw_inverse() {
             symbol: hash,
             values: vec![wires("t", 1)],
             oracle_invocation: None,
+            oracle_identity: None,
         },
     );
     let call = json!({"call":"S","args":"A"});

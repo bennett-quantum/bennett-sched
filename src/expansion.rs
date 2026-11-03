@@ -22,6 +22,7 @@ pub enum Binding {
         symbol: String,
         values: Vec<Binding>,
         oracle_invocation: Option<crate::source_registry::OracleInvocation>,
+        oracle_identity: Option<u64>,
     },
     Event(Value),
     Image(String),
@@ -46,6 +47,7 @@ pub enum Binding {
     Value {
         isa_type: Value,
         value: Value,
+        token_identity: Option<u64>,
     },
 }
 #[derive(Clone, Debug)]
@@ -295,6 +297,7 @@ impl Library {
             remaining: 1_000_000,
             emitted: 0,
             source_calls: vec![],
+            token_tuples: BTreeMap::new(),
         };
         let mut frame = Frame::default();
         let bound = c.bind(array(&r["parameters"])?, array(args)?, caller, &[], true)?;
@@ -350,6 +353,7 @@ impl Library {
             remaining: max_leaves,
             emitted: 0,
             source_calls: vec![],
+            token_tuples: BTreeMap::new(),
         };
         let mut frame = Frame::default();
         let mut leaves = c.compile(body, &mut env.clone(), controls, &mut frame, false)?;
@@ -638,6 +642,7 @@ struct Compiler<'a> {
     remaining: usize,
     emitted: usize,
     source_calls: Vec<crate::source_registry::SourceCall>,
+    token_tuples: BTreeMap<u64, [u64; 4]>,
 }
 // Capture referenced lexical bindings, including K82 implicit helper wires.
 // Keeping unrelated State/Frames/template lists here recursively duplicates
@@ -676,6 +681,18 @@ fn capture_environment(library: &Library, body: &[Value], caller: &Env) -> Resul
         .collect())
 }
 impl Compiler<'_> {
+    fn register_token(&mut self, identity: u64, tuple: [u64; 4]) -> Result<()> {
+        if self
+            .token_tuples
+            .insert(identity, tuple)
+            .is_some_and(|previous| previous != tuple)
+        {
+            return Err(Error::arg(
+                "K91: resolved token identity changed its tuple across source bindings",
+            ));
+        }
+        Ok(())
+    }
     fn emit(&mut self, out: &mut Vec<Leaf>, op: Operation) -> Result<()> {
         self.remaining = self.remaining.checked_sub(1).ok_or_else(|| {
             Error::new(
@@ -852,6 +869,7 @@ impl Compiler<'_> {
                     symbol: s,
                     values,
                     oracle_invocation,
+                    oracle_identity,
                 }) = named
                 {
                     if s != symbol {
@@ -861,6 +879,7 @@ impl Compiler<'_> {
                         symbol: s.clone(),
                         values: values.clone(),
                         oracle_invocation: oracle_invocation.clone(),
+                        oracle_identity: *oracle_identity,
                     }
                 } else {
                     let sig = &self.library.symbols[symbol].parameters;
@@ -880,6 +899,7 @@ impl Compiler<'_> {
                         symbol: symbol.clone(),
                         values,
                         oracle_invocation: None,
+                        oracle_identity: None,
                     }
                 }
             }
@@ -1023,20 +1043,37 @@ impl Compiler<'_> {
             }
             "value" => {
                 let isa_type = p["isa_type"].clone();
-                let value = if let Some(Binding::Value {
+                let (value, token_identity) = if let Some(Binding::Value {
                     isa_type: t,
                     value: v,
+                    token_identity,
                 }) = named
                 {
                     if t != &isa_type {
                         return Err(Error::arg("value forwarding type mismatch"));
                     }
-                    v.clone()
+                    (v.clone(), *token_identity)
                 } else {
-                    a.clone()
+                    (a.clone(), None)
                 };
                 validate_value(&isa_type, &value)?;
-                Binding::Value { isa_type, value }
+                if let Some(id) = token_identity {
+                    if isa_type != "token" {
+                        return Err(Error::arg("token identity metadata on a non-token value"));
+                    }
+                    let tuple = crate::schedule::array(&value)?
+                        .iter()
+                        .map(crate::schedule::uint)
+                        .collect::<Result<Vec<_>>>()?
+                        .try_into()
+                        .expect("validated token tuple");
+                    self.register_token(id, tuple)?;
+                }
+                Binding::Value {
+                    isa_type,
+                    value,
+                    token_identity,
+                }
             }
             _ => return Err(Error::arg("unknown formal type")),
         })
@@ -1495,26 +1532,29 @@ impl Compiler<'_> {
                     return Err(Error::arg("unbound semantic-call symbol"));
                 };
                 let s = &self.library.symbols[&symbol];
-                let (mut local, oracle_invocation) = if let Some(Binding::Arguments {
-                    symbol: hash,
-                    values,
-                    oracle_invocation,
-                }) =
-                    c["args"].as_str().and_then(|s| env.get(s))
-                {
-                    if hash != &symbol {
-                        return Err(Error::arg("call arguments closure mismatch"));
-                    }
-                    (
-                        self.bind_resolved(&s.parameters, values, controls)?,
-                        oracle_invocation.clone(),
-                    )
-                } else {
-                    (
-                        self.bind(&s.parameters, array(&c["args"])?, env, controls, false)?,
-                        None,
-                    )
-                };
+                let (mut local, oracle_invocation, oracle_identity) =
+                    if let Some(Binding::Arguments {
+                        symbol: hash,
+                        values,
+                        oracle_invocation,
+                        oracle_identity,
+                    }) = c["args"].as_str().and_then(|s| env.get(s))
+                    {
+                        if hash != &symbol {
+                            return Err(Error::arg("call arguments closure mismatch"));
+                        }
+                        (
+                            self.bind_resolved(&s.parameters, values, controls)?,
+                            oracle_invocation.clone(),
+                            *oracle_identity,
+                        )
+                    } else {
+                        (
+                            self.bind(&s.parameters, array(&c["args"])?, env, controls, false)?,
+                            None,
+                            None,
+                        )
+                    };
                 let index = frame.calls;
                 frame.calls += 1;
                 let effective = environment_controls(&local, controls);
@@ -1528,8 +1568,16 @@ impl Compiler<'_> {
                         .collect::<Vec<_>>();
                     let identity = format!("source-call/{}", self.next);
                     self.next += 1;
-                    let trace =
-                        source.build(&values, oracle_invocation.as_ref(), &effective, &identity)?;
+                    if let (Some(context), Some(id)) = (&oracle_invocation, oracle_identity) {
+                        self.register_token(id, context.token())?;
+                    }
+                    let trace = source.build(
+                        &values,
+                        oracle_invocation.as_ref(),
+                        oracle_identity,
+                        &effective,
+                        &identity,
+                    )?;
                     if self.source_calls.len() >= 65_536 {
                         return Err(Error::new(
                             crate::Status::NoMem,
@@ -1578,7 +1626,7 @@ impl Compiler<'_> {
                     }
                     leaves
                 } else {
-                    if oracle_invocation.is_some() {
+                    if oracle_invocation.is_some() || oracle_identity.is_some() {
                         return Err(Error::arg(
                             "oracle_invocation requires a linked source-body builder",
                         ));

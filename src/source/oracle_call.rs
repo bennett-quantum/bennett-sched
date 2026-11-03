@@ -28,12 +28,16 @@ impl Builder<'_> {
         if callee.kind != "oracle" {
             return Err(Error::arg("oracle_call tier mismatch"));
         }
-        let Some(Binding::Value { isa_type, value }) = env.get(&operands[1]) else {
+        let Some(Binding::Value {
+            isa_type, value, ..
+        }) = env.get(&operands[1])
+        else {
             return Err(Error::arg("oracle_call requires a token value"));
         };
         if isa_type != &json!("token") {
             return Err(Error::arg("oracle_call requires a token value"));
         }
+        let mut token_ids = vec![crate::token_aliases::binding_identity(&env[&operands[1]])?];
         let tuple = value
             .as_array()
             .filter(|v| v.len() == 4)
@@ -112,19 +116,33 @@ impl Builder<'_> {
         }
         let mut values = Vec::new();
         for (p, actual) in callee.groups[4].iter().zip(args) {
-            let Some(Binding::Value { isa_type, value }) = env.get(&actual) else {
+            let Some(Binding::Value {
+                isa_type, value, ..
+            }) = env.get(&actual)
+            else {
                 return Err(Error::arg("unbound oracle classical argument"));
             };
             if isa_type != &json!(p.ty) {
                 return Err(Error::arg("oracle argument type mismatch"));
             }
             values.push(value.clone());
+            if p.ty == "token" {
+                token_ids.push(crate::token_aliases::binding_identity(&env[&actual])?);
+            }
         }
         let params = json!(values);
         self.object.validate_params(&callee.name, &params)?;
         let inherited = u32::try_from(controls.len())
             .map_err(|_| Error::new(Status::NoMem, "control count exceeds host size"))?;
-        let child = crate::oracle::build(self.object, &callee.name, inherited, &params, budget)?;
+        crate::token_aliases::validate_ids(callee, &params, budget, &token_ids)?;
+        let child = crate::oracle::build(
+            self.object,
+            &callee.name,
+            inherited,
+            &params,
+            budget,
+            &token_ids,
+        )?;
         if child.slots.len() != slots.len() || child.inherited.len() != controls.len() {
             return Err(Error::new(
                 Status::InvalidState,

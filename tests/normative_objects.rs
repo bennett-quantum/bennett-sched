@@ -1,3 +1,4 @@
+mod common;
 use bennett_sched::object::Object;
 #[test]
 fn every_printed_09_example_object_has_its_published_interface_hash() {
@@ -77,7 +78,7 @@ fn every_normative_quantum_region_has_an_audited_typed_scheduler_outcome() {
                 .set_params(&canonical::to_vec(&json!(args)).unwrap())
                 .unwrap();
             request.set_accuracy("0").unwrap();
-            let result = match request.schedule() {
+            let result = match common::schedule_distinct_tokens(&mut request) {
                 Err(error) if f.name == "sum_db" => {
                     assert_eq!(error.status, bennett_sched::Status::NoMem);
                     assert!(error.reason.contains("host workspace"));
@@ -87,7 +88,7 @@ fn every_normative_quantum_region_has_an_audited_typed_scheduler_outcome() {
                     // also exercise this exact object at B=0, including its full
                     // layout initialization, commit and release construction.
                     request.budget = Some([0, 0, 0, 0]);
-                    let zero = request.schedule().unwrap();
+                    let zero = common::schedule_distinct_tokens(&mut request).unwrap();
                     assert_eq!(zero.outcome, Outcome::Ok, "{:?}", zero.reason);
                     bennett_sched::schedule::Document::parse(
                         canonical::require_jcs(&zero.schedule).unwrap(),

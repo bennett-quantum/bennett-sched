@@ -616,6 +616,7 @@ pub fn build(
     inherited: u32,
     params: &Value,
     budget: [u64; 4],
+    token_ids: &[u64],
 ) -> Result<Trace> {
     let f = &object.functions[name];
     let plan = crate::oracle_state::Plan::form(object, name, budget)?;
@@ -722,12 +723,20 @@ pub fn build(
             wires,
         });
     }
+    let mut token_index = 1;
     for (p, value) in f.groups[4].iter().zip(params.as_array().unwrap()) {
         env.insert(
             format!("source.{}", p.name),
             Binding::Value {
                 isa_type: json!(p.ty),
                 value: value.clone(),
+                token_identity: if p.ty == "token" {
+                    let id = token_ids[token_index];
+                    token_index += 1;
+                    Some(id)
+                } else {
+                    None
+                },
             },
         );
     }
@@ -949,8 +958,14 @@ pub fn build(
         .iter()
         .enumerate()
         .filter(|(_, p)| p.ty == "token")
-        .map(|(i, p)| (format!("source.{}", p.name), i as u64))
-        .collect();
+        .map(|(_, p)| {
+            let name = format!("source.{}", p.name);
+            Ok((
+                name.clone(),
+                crate::token_aliases::binding_identity(&source_env[&name])?,
+            ))
+        })
+        .collect::<Result<BTreeMap<_, _>>>()?;
     let mut cleanup_rows =
         crate::oracle_pairs::validate(&nodes, &source_env, 0, &labels, &token_origins)?;
     for (i, node) in nodes.iter().enumerate() {
@@ -997,12 +1012,16 @@ pub fn build(
         let function = &object.functions[&instance.name];
         let prefix = format!("instance/{instance_index}/source.");
         let fixed = plan.index.resolve_bindings(object, instance, params)?;
-        for (parameter, value) in function.groups[2].iter().zip(fixed.tokens) {
+        for (i, (parameter, value)) in function.groups[2].iter().zip(fixed.tokens).enumerate() {
+            let root = &f.groups[4][instance.key[i] as usize];
+            let id =
+                crate::token_aliases::binding_identity(&env[&format!("source.{}", root.name)])?;
             env.insert(
                 format!("{prefix}{}", parameter.name),
                 Binding::Value {
                     isa_type: json!("token"),
                     value,
+                    token_identity: Some(id),
                 },
             );
         }
@@ -1014,7 +1033,11 @@ pub fn build(
             };
             env.insert(
                 format!("{prefix}{}", parameter.name),
-                Binding::Value { isa_type, value },
+                Binding::Value {
+                    isa_type,
+                    value,
+                    token_identity: None,
+                },
             );
         }
         for (parameter, position) in function.groups[4].iter().zip(fixed.regions) {
@@ -1070,8 +1093,14 @@ pub fn build(
         let token_origins = function.groups[2]
             .iter()
             .enumerate()
-            .map(|(i, p)| (format!("{prefix}{}", p.name), instance.key[i]))
-            .collect();
+            .map(|(_, p)| {
+                let name = format!("{prefix}{}", p.name);
+                Ok((
+                    name.clone(),
+                    crate::token_aliases::binding_identity(&source_env[&name])?,
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>>>()?;
         let matches = crate::oracle_pairs::validate(
             &nodes,
             &source_env,
@@ -1249,6 +1278,7 @@ pub fn build(
         parent: None,
         adjoint: false,
         raw_inverse: false,
+        token_ids: token_ids.to_vec(),
         path: vec![],
         containing: Coordinate::default(),
     }];

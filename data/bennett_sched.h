@@ -23,6 +23,7 @@ bennett_status bennett_sched_request_set_budget(bennett_sched_request_t *, uint6
 bennett_status bennett_sched_request_set_params(bennett_sched_request_t *, const uint8_t *, size_t);
 bennett_status bennett_sched_request_set_accuracy(bennett_sched_request_t *, const char *);
 bennett_status bennett_sched_request_set_capacity(bennett_sched_request_t *, const char *, uint64_t);
+bennett_status bennett_sched_request_set_token_aliases(bennett_sched_request_t *, const uint8_t *, size_t);
 void bennett_sched_request_free(bennett_sched_request_t *);
 bennett_status bennett_sched_schedule(const bennett_sched_request_t *, bennett_sched_response_t **out);
 bennett_sched_outcome bennett_sched_response_outcome(const bennett_sched_response_t *);

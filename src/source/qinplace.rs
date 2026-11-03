@@ -106,7 +106,10 @@ impl Builder<'_> {
             }
             inputs.extend(wires.clone());
         }
-        let Some(Binding::Value { isa_type, value }) = env.get(&args[2]) else {
+        let Some(Binding::Value {
+            isa_type, value, ..
+        }) = env.get(&args[2])
+        else {
             return Err(Error::arg("qinplace requires a token"));
         };
         if isa_type != &json!("token") {
@@ -119,28 +122,43 @@ impl Builder<'_> {
             .try_into()
             .map_err(|_| Error::arg("invalid qinplace token"))?;
         self.object.validate_budget(budget)?;
+        let mut token_ids = vec![crate::token_aliases::binding_identity(&env[&args[2]])?];
         let mut params = Vec::new();
         for (p, a) in g.groups[4].iter().zip(&actuals) {
-            let Some(Binding::Value { isa_type, value }) = env.get(a) else {
+            let Some(Binding::Value {
+                isa_type, value, ..
+            }) = env.get(a)
+            else {
                 return Err(Error::arg("qinplace classical argument is not a value"));
             };
             if isa_type != &json!(p.ty) {
                 return Err(Error::arg("qinplace classical type mismatch"));
             }
             params.push(value.clone());
+            if p.ty == "token" {
+                token_ids.push(crate::token_aliases::binding_identity(&env[a])?);
+            }
         }
         let params = json!(params);
         let gh = self.object.closure_hash(&g.name)?.to_owned();
         let hh = self.object.closure_hash(&h.name)?.to_owned();
-        let (domain, arg_tokens) = if let Some(p) = self
-            .trace
-            .qinplaces
-            .iter()
-            .find(|p| p.g == gh && p.ginv == hh && p.budget == budget && p.params == params)
-        {
+        let (domain, arg_tokens) = if let Some(p) = self.trace.qinplaces.iter().find(|p| {
+            p.g == gh
+                && p.ginv == hh
+                && p.budget == budget
+                && p.params == params
+                && p.token_ids == token_ids
+        }) {
             (p.domain.clone(), p.arg_tokens.clone())
         } else {
-            crate::qinplace::verify(self.object, &g.name, &h.name, budget, &params)?
+            crate::qinplace::verify_with_ids(
+                self.object,
+                &g.name,
+                &h.name,
+                budget,
+                &params,
+                &token_ids,
+            )?
         };
         let key = canonical::hash(&canonical::to_vec(&json!([
             chain.iter().map(Occurrence::json).collect::<Vec<_>>(),
@@ -301,6 +319,7 @@ impl Builder<'_> {
             params,
             domain,
             arg_tokens,
+            token_ids,
             target_id,
             fault_id,
             target: x,
