@@ -177,6 +177,7 @@ impl Builder<'_> {
             invocation.end += offset;
             invocation.parent = Some(invocation.parent.map_or(owner, |p| base + p));
             let mut full = path.clone();
+            full.last_mut().unwrap().entered_oracle = Some(invocation.containing);
             full.extend(invocation.path);
             invocation.path = full;
             invocation.containing = Coordinate::default();
@@ -232,7 +233,10 @@ impl Builder<'_> {
         for mut proof in child.borrow_proofs {
             proof.owner += base;
             for field in ["X", "B"] {
-                for w in proof.witness[field].as_array_mut().expect("translation wire set") {
+                for w in proof.witness[field]
+                    .as_array_mut()
+                    .expect("translation wire set")
+                {
                     *w = json!(wire(w.as_str().expect("translation wire")));
                 }
             }

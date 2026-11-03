@@ -44,7 +44,7 @@ EQUIVALENT = {
     "H-reproducibility": "pipeline::schedules_real_controlled_fixture_and_emits_bound_exact_certificate",
     "H-mbu-realisation-invalid": "schedule::parse_entry restricts unitary cleanup; selectors",
     "H-unknown-expansion-library": "selectors::a_schedule_cannot_bind_an_unavailable_expansion_library",
-    "H-unsupported": "pipeline::context_varying_frame_classes_are_explicitly_deferred_instead_of_misreported",
+    "H-unsupported": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
 }
 
 
@@ -130,7 +130,8 @@ def main():
         "normative_scheduler_audit":{"regions":sum(len(e["quantum_region_audit"]) for e in examples),"outcomes":dict(collections.Counter(r["outcome"] for e in examples for r in e["quantum_region_audit"])),"request":"B=3, heap=stack=depth=0; typed zero args, tokens=(3,0,0,0); universal exact target, unbounded capacity, no topology","meaning":"Producer schedule/document audit with tracked deferrals; no independent checker verdict."},
         "cases": records, "normative_objects": examples, "portable_manifests": portable,
         "inline_witnesses": [{"id":"K77-TWO-TOKEN", "source":"spec/Bennett-ISA-Spec-0.9.md", "section":"11.1 Two-token witness", "coverage":"published-source-expansion-witness", "test":"oracle_calls::published_k77_two_token_inc8_witness_covers_every_input_and_both_controls", "registry_adapter_test":"linked_source::source_registry_replays_the_actual_k77_two_token_witness_through_direct_and_captured_adapters", "capture_forms":["direct","manual-body","manual-template","typed-body","typed-template"], "input_values":256, "control_values":2, "initial_target":0, "initial_fault":0, "certificate_limit":"Combined differing-budget resource reports require bennett-sched-1na; no complete certificate claim."}],
-        "reference_schedule_execution": "not claimed; installed reference interpreter documents staged target/schedule execution",
+        "reference_schedule_execution": "not claimed; published reference interpreter documents staged target/schedule execution",
+        "reference_09_schedule_admission": {"test":"differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission","meaning":"Published debug CLI admits the emitted controlled-action schedule and certificate metadata; absent source point rejects. This is not certificate-claim replay or scheduled execution."},
     }
     if args.probe_reference:
         candidates = [Path(os.environ["BENNETT_REF_BIN"])] if "BENNETT_REF_BIN" in os.environ else [SPEC / "reference-interpreter/target" / mode / "bennett-isa-ref" for mode in ("release", "debug")]

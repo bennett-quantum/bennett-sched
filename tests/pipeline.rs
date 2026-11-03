@@ -147,7 +147,7 @@ fn mandatory_oracle_state_exceeding_target_capacity_is_infeasible_before_expansi
 }
 
 #[test]
-fn context_varying_frame_classes_are_explicitly_deferred_instead_of_misreported() {
+fn context_varying_frame_classes_emit_complete_canonical_descriptors() {
     let mut r = request();
     let flip = "7ff7153a2ad3b857ec9eb86ca99b9bcbc605f60093d28e99fb749ed16d13274b";
     let signature = json!({"abi":"0.9","args":[],"bounds":[],"in":[],"kind":"perm_action","mem":[],"mut":[1,1],"tier":"q"});
@@ -174,8 +174,25 @@ fn context_varying_frame_classes_are_explicitly_deferred_instead_of_misreported(
     target["gates"][0]["controls"] = json!({"min":0,"max":0});
     r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
     let response = r.schedule().unwrap();
-    assert_eq!(response.outcome, Outcome::Unsupported);
-    assert!(response.reason.to_str().unwrap().contains("frame"));
+    assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+    let c = canonical::require_jcs(&response.certificate).unwrap();
+    let region = &c["regions"][flip];
+    assert!(region.get("frame").is_none());
+    let frames = region["frame_contexts"].as_array().unwrap();
+    assert_eq!(frames.len(), 2);
+    for (i, class) in ["A", "B"].iter().enumerate() {
+        assert_eq!(
+            frames[i]["context_key"],
+            json!([{"symbol":hash,"point":format!("entry:{i}"),"iteration":[],"instance":[],"call_index":0}])
+        );
+        assert_eq!(
+            frames[i]["frame"]["slots"],
+            json!([{"id":"mut:0","role":"mut","class":class,"width":1}])
+        );
+        for name in ["scratch", "history", "borrow", "ancillae"] {
+            assert_eq!(frames[i]["frame"][name], json!([]));
+        }
+    }
 }
 
 #[test]
@@ -251,6 +268,10 @@ fn approximate_scheme_charges_each_native_leaf_and_composes_its_error() {
     let c = canonical::parse(&response.certificate).unwrap();
     let region = &c["regions"][&hash];
     assert_eq!(region["resources"]["gates"], "4");
+    assert_eq!(
+        region["gates_used"],
+        json!({"h":{"count":2},"s":{"count":2}})
+    );
     assert_eq!(region["resources"]["time"], "4");
     assert_eq!(
         region["error"]["forward:0"]["inclusive"]["operator_norm"],

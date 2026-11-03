@@ -265,7 +265,7 @@ fn action_oracle_request_binds_callee_history_and_every_concrete_selector() {
         certificate["composition"]["multiplicities"][format!("{child}:forward:1")],
         1
     );
-    for (second, outcome) in [("b3", Outcome::Ok), ("b2", Outcome::Unsupported)] {
+    for second in ["b3", "b2"] {
         let bytes = caller(&format!(
             "oracle_call @inc b3 (x) t f () ()\noracle_call @inc {second} (x) t f () ()"
         ));
@@ -288,37 +288,38 @@ fn action_oracle_request_binds_callee_history_and_every_concrete_selector() {
         repeated.budget = Some([0; 4]);
         repeated.set_accuracy("0").unwrap();
         let response = repeated.schedule().unwrap();
-        assert_eq!(response.outcome, outcome, "{:?}", response.reason);
-        if outcome == Outcome::Ok {
-            let c = canonical::require_jcs(&response.certificate).unwrap();
-            assert_eq!(
-                c["regions"][&child]["frame"]["history"]
-                    .as_array()
-                    .unwrap()
-                    .len(),
-                6
-            );
-            assert_eq!(c["regions"][&child]["resources"], region["resources"]);
-            let old_time =
-                bennett_sched::decimal::value(&certificate["regions"][&root]["resources"]["time"])
-                    .unwrap();
-            let new_time =
-                bennett_sched::decimal::value(&c["regions"][&hash]["resources"]["time"]).unwrap();
-            assert_eq!(new_time, bennett_sched::decimal::integer(2) * old_time);
-            assert_eq!(
-                c["regions"][&hash]["resources"]["peak_qubits[fast]"],
-                certificate["regions"][&root]["resources"]["peak_qubits[fast]"]
-            );
-        } else {
-            assert!(
-                response
-                    .reason
-                    .to_str()
-                    .unwrap()
-                    .contains("bennett-sched-1na")
-            );
-            assert!(response.schedule.is_empty() && response.certificate.is_empty());
+        assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+        let c = canonical::require_jcs(&response.certificate).unwrap();
+        let frames = c["regions"][&child]["frame_contexts"].as_array().unwrap();
+        let resources = c["regions"][&child]["resource_contexts"]
+            .as_array()
+            .unwrap();
+        assert_eq!(frames.len(), 2);
+        assert_eq!(resources.len(), 2);
+        let mut ids = std::collections::BTreeSet::new();
+        for (i, n) in [3, if second == "b3" { 3 } else { 2 }]
+            .into_iter()
+            .enumerate()
+        {
+            let history = frames[i]["frame"]["history"].as_array().unwrap();
+            assert_eq!(history.len(), n);
+            for h in history {
+                assert!(ids.insert(h["id"].as_str().unwrap()));
+            }
+            assert_eq!(frames[i]["context_key"], resources[i]["context_key"]);
         }
+        assert_eq!(c["regions"][&child]["resources"], region["resources"]);
+        let child_time = resources
+            .iter()
+            .map(|r| bennett_sched::decimal::value(&r["resources"]["time"]).unwrap())
+            .sum::<bennett_sched::decimal::Rational>();
+        let new_time =
+            bennett_sched::decimal::value(&c["regions"][&hash]["resources"]["time"]).unwrap();
+        assert_eq!(new_time, child_time);
+        assert_eq!(
+            c["regions"][&hash]["resources"]["peak_qubits[fast]"],
+            certificate["regions"][&root]["resources"]["peak_qubits[fast]"]
+        );
     }
 }
 

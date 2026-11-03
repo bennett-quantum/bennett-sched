@@ -69,21 +69,24 @@ fn repeated_identical_scratch_calls_have_complete_distinct_dynamic_frames() {
         );
         let c = canonical::require_jcs(&response.certificate).unwrap();
         let hash = r.object.as_ref().unwrap().closure_hash("sc").unwrap();
-        let scratch = c["regions"][hash]["frame"]["scratch"].as_array().unwrap();
-        assert_eq!(scratch.len(), repeats);
-        assert_eq!(
-            scratch
-                .iter()
-                .map(|s| s["id"].as_str().unwrap())
-                .collect::<BTreeSet<_>>()
-                .len(),
-            repeats
-        );
-        assert!(
-            scratch
-                .iter()
-                .all(|s| s["width"] == 1 && s["class"] == "fast" && s["state"] == "clean")
-        );
+        let region = &c["regions"][hash];
+        let frames = if repeats == 1 {
+            vec![&region["frame"]]
+        } else {
+            let frames = region["frame_contexts"].as_array().unwrap();
+            assert_eq!(frames.len(), repeats);
+            frames.iter().map(|r| &r["frame"]).collect::<Vec<_>>()
+        };
+        let mut ids = BTreeSet::new();
+        for frame in frames {
+            let scratch = frame["scratch"].as_array().unwrap();
+            assert_eq!(scratch.len(), 1);
+            assert!(ids.insert(scratch[0]["id"].as_str().unwrap()));
+            assert_eq!(scratch[0]["width"], 1);
+            assert_eq!(scratch[0]["class"], "fast");
+            assert_eq!(scratch[0]["state"], "clean");
+        }
+        assert_eq!(ids.len(), repeats);
         let resources = &c["regions"][r.region.as_ref().unwrap()]["resources"];
         assert_eq!(resources["peak_qubits[fast]"], "2");
         assert_eq!(resources["qubit_second[fast]"], (4 * repeats).to_string());
@@ -333,29 +336,24 @@ fn varying_callee_resource_contexts_are_not_silently_overwritten() {
         );
         let r = request(&bytes, "outer", &t);
         let response = r.schedule().unwrap();
-        if first == second {
-            assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
-            let cert = canonical::require_jcs(&response.certificate).unwrap();
-            let hash = r.object.as_ref().unwrap().closure_hash("flip").unwrap();
-            assert_eq!(cert["regions"][hash]["resources"]["time"], "1");
-            assert_eq!(
-                cert["regions"][r.region.as_ref().unwrap()]["resources"]["time"],
-                "2"
-            );
-        } else {
-            assert_eq!(
-                response.outcome,
-                Outcome::Unsupported,
-                "differing contexts cannot silently replace each other's scalar resource report"
-            );
-            assert!(
-                response
-                    .reason
-                    .to_str()
-                    .unwrap()
-                    .contains("bennett-sched-1na")
-            );
-            assert!(response.schedule.is_empty() && response.certificate.is_empty());
-        }
+        assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+        let cert = canonical::require_jcs(&response.certificate).unwrap();
+        let hash = r.object.as_ref().unwrap().closure_hash("flip").unwrap();
+        let child = &cert["regions"][hash];
+        let contexts = child["resource_contexts"].as_array().unwrap();
+        assert_eq!(contexts.len(), 2);
+        assert_eq!(
+            contexts[0]["resources"]["time"],
+            if first == plain { "1" } else { "100" }
+        );
+        assert_eq!(
+            contexts[1]["resources"]["time"],
+            if second == plain { "1" } else { "100" }
+        );
+        assert_eq!(child["resources"], contexts[0]["resources"]);
+        assert_eq!(
+            cert["regions"][r.region.as_ref().unwrap()]["resources"]["time"],
+            if first == second { "2" } else { "101" }
+        );
     }
 }

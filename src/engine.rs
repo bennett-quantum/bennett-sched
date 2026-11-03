@@ -535,6 +535,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
     let mut leaf_owners = Vec::new();
     let mut errors = Vec::new();
     let mut event_sources = Vec::new();
+    let mut native_ops = Vec::new();
     let mut event_orders = Vec::new();
     for (source_index, event) in trace.events.iter().enumerate() {
         event_times.push(now.clone());
@@ -643,6 +644,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
                     errors.push(cost.epsilon);
                     leaf_owners.push(event.owner);
                     event_sources.push(source_index);
+                    native_ops.push(Some(leaf.op));
                     events.push(TimedEvent {
                         start: now.clone(),
                         duration: cost.duration.clone(),
@@ -665,6 +667,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
                 });
                 leaf_owners.push(event.owner);
                 event_sources.push(source_index);
+                native_ops.push(None);
                 errors.push(Rational::zero());
                 now += duration;
                 allocator.order += 1;
@@ -754,7 +757,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
     }
     let schedule_bytes = canonical::to_vec(&schedule)?;
     let schedule_hash = canonical::hash(&schedule_bytes);
-    let certificate = certificate(
+    let (certificate, composed) = certificate(
         request,
         &trace,
         &allocator,
@@ -764,9 +767,17 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
         &errors,
         &leaf_owners,
         &event_sources,
+        &native_ops,
         &event_orders,
         &schedule_hash,
     )?;
+    if composed > epsilon {
+        allocator.search.required_divisor = (errors.iter().filter(|e| !e.is_zero()).count() as u64)
+            .saturating_mul(trace.invocations.len() as u64);
+        return Err(Error::infeasible(
+            "§12.1/§12.3: common context error composition exceeds requested accuracy",
+        ));
+    }
     Ok(Response {
         outcome: Outcome::Ok,
         reason: CString::new("OK").unwrap(),
@@ -798,6 +809,37 @@ fn oracle_history(identity: &str) -> bool {
     });
     index.is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
 }
+fn frame_record(trace: &Trace, owner: usize, allocator: &Allocator<'_>) -> Result<Value> {
+    let slots = trace.invocations[owner]
+        .slots
+        .iter()
+        .map(|s| slot_record(s, allocator))
+        .collect::<Result<Vec<_>>>()?;
+    let mut scratch = Vec::new();
+    let mut history = Vec::new();
+    let mut borrow = Vec::new();
+    let mut ancillae = Vec::new();
+    for a in allocator
+        .allocations
+        .iter()
+        .filter(|a| a.owner == Some(owner))
+    {
+        if a.scheme.is_some() {
+            ancillae.push(json!({"id":a.identity,"scheme":a.scheme,"class":a.class,"state":a.state,"width":a.wires.len()}));
+        } else if a.state == "borrowed" {
+            borrow.push(json!({"id":a.identity,"class":a.class,"width":a.wires.len()}));
+        } else if oracle_history(&a.identity) {
+            history.push(json!({"id":a.identity,"class":a.class,"width":a.wires.len()}));
+        } else {
+            scratch.push(
+                json!({"id":a.identity,"class":a.class,"state":"clean","width":a.wires.len()}),
+            );
+        }
+    }
+    Ok(
+        json!({"slots":slots,"scratch":scratch,"history":history,"borrow":borrow,"ancillae":ancillae}),
+    )
+}
 #[allow(clippy::too_many_arguments)]
 fn certificate(
     request: &Request,
@@ -809,32 +851,43 @@ fn certificate(
     errors: &[Rational],
     leaf_owners: &[usize],
     event_sources: &[usize],
+    native_ops: &[Option<String>],
     source_orders: &[u64],
     schedule_hash: &str,
-) -> Result<Value> {
+) -> Result<(Value, Rational)> {
     let object = request.object.as_ref().unwrap();
     let target = request.target.as_ref().unwrap();
     let variant = request.variant.as_ref().unwrap();
     let root = &trace.invocations[0];
     let mut regions = json!({});
     let mut multiplicities: BTreeMap<String, u64> = BTreeMap::new();
-    let mut context_frames: BTreeMap<String, Value> = BTreeMap::new();
-    let mut context_gates: BTreeMap<String, BTreeMap<String, u64>> = BTreeMap::new();
-    for inv in &trace.invocations {
-        let slots = json!(
-            inv.slots
-                .iter()
-                .map(|s| slot_record(s, allocator))
-                .collect::<Result<Vec<_>>>()?
+    let mut frames: BTreeMap<String, BTreeMap<Vec<u8>, Value>> = BTreeMap::new();
+    let mut gates_by_invocation = Vec::new();
+    let mut error_bounds = BTreeMap::<(String, String), (Rational, Rational)>::new();
+    for (i, inv) in trace.invocations.iter().enumerate() {
+        let local: Rational = errors
+            .iter()
+            .zip(leaf_owners)
+            .filter(|(_, owner)| **owner == i)
+            .map(|(error, _)| error.clone())
+            .sum();
+        let inclusive: Rational = errors
+            .iter()
+            .zip(event_sources)
+            .filter(|(_, source)| **source >= inv.start && **source < inv.end)
+            .map(|(error, _)| error.clone())
+            .sum();
+        let key = (
+            inv.hash.clone(),
+            format!("{variant}:{}", inv.controls.len()),
         );
-        if let Some(previous) = context_frames.insert(inv.hash.clone(), slots.clone()) {
-            if previous != slots {
-                return Err(Error::new(
-                    crate::Status::GateUnsupported,
-                    "§9.4/§12: context-varying interface slot classes need bennett-sched-lzv (source adapter tracked by bennett-sched-ark); no single-context frame is substituted",
-                ));
-            }
-        }
+        error_bounds
+            .entry(key)
+            .and_modify(|(l, total)| {
+                *l = l.clone().max(local.clone());
+                *total = total.clone().max(inclusive.clone());
+            })
+            .or_insert((local, inclusive));
     }
     for (i, inv) in trace.invocations.iter().enumerate() {
         let key = format!("{variant}:{}", inv.controls.len());
@@ -843,52 +896,26 @@ fn certificate(
             .or_default() += 1;
         if regions.get(&inv.hash).is_none() {
             let f = &object.functions[&inv.name];
-            let slots = inv
-                .slots
-                .iter()
-                .map(|s| slot_record(s, allocator))
-                .collect::<Result<Vec<_>>>()?;
-            // Dynamic workspace ids already carry their invocation identity.
-            // Include every realised allocation for this closure in allocation
-            // order; identical repeated calls are not a slot-schema conflict.
-            let scratch=allocator.allocations.iter().filter(|a|a.owner.is_some_and(|owner| trace.invocations[owner].hash==inv.hash)&&a.scheme.is_none()&&a.state!="borrowed"&&!oracle_history(&a.identity)).map(|a|json!({"id":a.identity,"class":a.class,"state":if a.state=="borrowed"{"dirty"}else{"clean"},"width":a.wires.len()})).collect::<Vec<_>>();
-            let ancillae=allocator.allocations.iter().filter(|a|a.owner.is_some_and(|owner| trace.invocations[owner].hash==inv.hash)&&a.scheme.is_some()).map(|a|json!({"id":a.identity,"scheme":a.scheme,"class":a.class,"state":a.state,"width":a.wires.len()})).collect::<Vec<_>>();
-            let borrowed = allocator
-                .allocations
-                .iter()
-                .filter(|a| {
-                    a.owner
-                        .is_some_and(|owner| trace.invocations[owner].hash == inv.hash)
-                        && a.state == "borrowed"
-                        && a.scheme.is_none()
-                })
-                .map(|a| json!({"id":a.identity,"class":a.class,"width":a.wires.len()}))
-                .collect::<Vec<_>>();
-            let history = allocator
-                .allocations
-                .iter()
-                .filter(|a| {
-                    a.owner
-                        .is_some_and(|owner| trace.invocations[owner].hash == inv.hash)
-                        && oracle_history(&a.identity)
-                        && a.scheme.is_none()
-                })
-                .map(|a| json!({"id":a.identity,"class":a.class,"width":a.wires.len()}))
-                .collect::<Vec<_>>();
-            regions[&inv.hash] = json!({"kind":f.kind,"signature":f.signature,"bounds":f.signature.get("bounds").cloned().unwrap_or(json!([])),"frame":{"slots":slots,"scratch":scratch,"history":history,"borrow":borrowed,"ancillae":ancillae},"resources":{},"gates_used":{},"claims":[],"verification":{"oracle":null,"borrow_frames":[],"inverse_pairs":[],"unitary":[],"channel":[],"fault_rate":{"domain":{"bundles":[],"borrowed":[],"regions":[]},"faults_by_code":{},"undefined_excluded":0,"layout_dependent_excluded":0}},"cleanup":{},"error":{},"definedness_assumptions":[]});
+            let frame = frame_record(trace, i, allocator)?;
+            regions[&inv.hash] = json!({"kind":f.kind,"signature":f.signature,"bounds":f.signature.get("bounds").cloned().unwrap_or(json!([])),"frame":frame,"resources":{},"gates_used":{},"claims":[],"verification":{"oracle":null,"borrow_frames":[],"inverse_pairs":[],"unitary":[],"channel":[],"fault_rate":{"domain":{"bundles":[],"borrowed":[],"regions":[]},"faults_by_code":{},"undefined_excluded":0,"layout_dependent_excluded":0}},"cleanup":{},"error":{},"definedness_assumptions":[]});
         }
-        let local: Rational = errors
-            .iter()
-            .zip(leaf_owners)
-            .filter(|(_, owner)| **owner == i)
-            .map(|(e, _)| e.clone())
-            .sum();
-        let inclusive: Rational = event_sources
-            .iter()
-            .zip(errors)
-            .filter(|(source, _)| **source >= inv.start && **source < inv.end)
-            .map(|(_, e)| e.clone())
-            .sum();
+        let context_key = inv.context_key();
+        let encoded_key = canonical::to_vec(&context_key)?;
+        if frames
+            .entry(inv.hash.clone())
+            .or_default()
+            .insert(
+                encoded_key,
+                json!({"context_key":context_key,"frame":frame_record(trace,i,allocator)?}),
+            )
+            .is_some()
+        {
+            return Err(Error::new(
+                crate::Status::InvalidState,
+                "duplicate realised invocation context key",
+            ));
+        }
+        let (local, inclusive) = &error_bounds[&(inv.hash.clone(), key.clone())];
         let record = &mut regions[&inv.hash];
         if record["cleanup"].get(&key).is_none() {
             record["cleanup"][&key] = json!([]);
@@ -990,28 +1017,32 @@ fn certificate(
             .unwrap()
             .push(json!(index));
         let mut counts: BTreeMap<String, u64> = BTreeMap::new();
-        for e in &trace.events[inv.start..inv.end] {
-            if let Operation::Gate(g) = &e.leaf.op {
-                *counts.entry(g.op.clone()).or_default() += 1;
+        for (source, op) in event_sources.iter().zip(native_ops) {
+            if *source >= inv.start && *source < inv.end {
+                if let Some(op) = op {
+                    *counts.entry(op.clone()).or_default() += 1;
+                }
             }
         }
-        if context_gates
-            .insert(inv.hash.clone(), counts.clone())
-            .is_some_and(|previous| previous != counts)
-        {
-            return Err(context_resource_error());
-        }
-        record["gates_used"] = Value::Object(
+        gates_by_invocation.push(Value::Object(
             counts
                 .into_iter()
                 .map(|(op, n)| (op, json!({"count":n})))
                 .collect(),
-        );
+        ));
     }
-    regions[&root.hash]["resources"] = root_rows.display_json();
-    regions[&root.hash]["estimate"] =
-        json!({"precision_digits":34,"exact_resources":root_rows.exact_json()});
-    let mut context_resources: BTreeMap<String, BTreeMap<String, Rational>> = BTreeMap::new();
+    let resource_record = |inv: &crate::source::Invocation, rows: &Rows, gates: &Value| {
+        json!({"context_key":inv.context_key(),"resources":rows.display_json(),"gates_used":gates,
+            "estimate":{"precision_digits":34,"exact_resources":rows.exact_json()}})
+    };
+    let mut resource_contexts: BTreeMap<String, BTreeMap<Vec<u8>, Value>> = BTreeMap::new();
+    resource_contexts
+        .entry(root.hash.clone())
+        .or_default()
+        .insert(
+            canonical::to_vec(&root.context_key())?,
+            resource_record(root, root_rows, &gates_by_invocation[0]),
+        );
     // Each subregion report charges its interface and controls for its invocation duration.
     for (inv_index, inv) in trace.invocations.iter().enumerate().skip(1) {
         let start = &times[inv.start];
@@ -1037,9 +1068,7 @@ fn certificate(
                     source_orders[inv.end].max(source_orders[inv.start] + 1),
                 ));
             } else if a.owner.is_some_and(|owner| {
-                owner >= inv_index
-                    && trace.invocations[owner].start >= inv.start
-                    && trace.invocations[owner].end <= inv.end
+                crate::source::is_descendant(owner, inv_index, &trace.invocations)
             }) {
                 live.push(LiveInterval {
                     class: a.class.clone(),
@@ -1066,23 +1095,39 @@ fn certificate(
             })
             .collect::<Vec<_>>();
         let rows = resources::aggregate_ordered(target, &subset, &live, &orders)?;
-        if context_resources
-            .insert(inv.hash.clone(), rows.exact.clone())
-            .is_some_and(|previous| previous != rows.exact)
-        {
-            return Err(context_resource_error());
-        }
-        regions[&inv.hash]["resources"] = rows.display_json();
+        resource_contexts
+            .entry(inv.hash.clone())
+            .or_default()
+            .insert(
+                canonical::to_vec(&inv.context_key())?,
+                resource_record(inv, &rows, &gates_by_invocation[inv_index]),
+            );
     }
-    let total: Rational = errors.iter().cloned().sum();
+    for (hash, contexts) in resource_contexts {
+        let first = contexts
+            .first_key_value()
+            .expect("region has an invocation")
+            .1;
+        for field in ["resources", "gates_used", "estimate"] {
+            regions[&hash][field] = first[field].clone();
+        }
+        let frames = frames
+            .remove(&hash)
+            .expect("frames cover every resource context");
+        assert!(frames.keys().eq(contexts.keys()));
+        if contexts.len() > 1 {
+            regions[&hash]["resource_contexts"] = json!(contexts.into_values().collect::<Vec<_>>());
+            regions[&hash].as_object_mut().unwrap().remove("frame");
+            regions[&hash]["frame_contexts"] = json!(frames.into_values().collect::<Vec<_>>());
+        }
+    }
+    let total: Rational = error_bounds
+        .iter()
+        .map(|((hash, key), (local, _))| {
+            local * d::integer(multiplicities[&format!("{hash}:{key}")])
+        })
+        .sum();
     Ok(
         json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":{"args":request.params.as_ref().unwrap(),"budget":request.budget.unwrap().iter().map(u64::to_string).collect::<Vec<_>>() }},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::upper(&(d::integer(2)*total))?},"method":"sum_over_multiplicities"}}),
-    )
-}
-
-fn context_resource_error() -> Error {
-    Error::new(
-        crate::Status::GateUnsupported,
-        "§12.3: differing per-invocation resources or gate counts require a context report schema (bennett-sched-1na); no last-invocation report is substituted",
     )
 }

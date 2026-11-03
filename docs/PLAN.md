@@ -1,7 +1,7 @@
 # ISA 0.9 scheduler implementation and evidence
 
 Contract: `bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md`, §11 and its
-dependencies. Source checkout observed at `ecb8551250bca5e0702c6c7894b603388b2e51bf`; K83 is now accepted. The catalog bytes/hash remain unchanged. SPEC_VERSIONS.toml records the observed specification digest.
+dependencies. Source checkout HEAD observed at `97e7b9f16977905be8308c2ca33b9d470f83756f`; live text includes accepted K84–K93. SPEC_VERSIONS.toml records that HEAD and the live file digest, with committed-content equality explicitly unverified. The catalog bytes/hash remain unchanged. New contract adoption is tracked by vt8; no complete conformance is claimed.
 The published `ref` JSON is specification data, vendored in `data/`; no sibling
 implementation code is linked or copied. Beads issue `bennett-sched-akl` owns
 implementation tracking. This document maps requirements and records evidence;
@@ -22,26 +22,26 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | Clause | Required behavior | Evidence / state |
 |---|---|---|
 | §11 C declarations | Opaque owned requests/responses, all setters, copied buffers, status and typed OK/INFEASIBLE/UNSUPPORTED, reasons, accessors and frees | Exported; Rust ownership/null tests and C11 cdylib consumer (`ffi`, `c_link`) |
-| ISA-11-P2 | Expand every row/instruction in specified source order; stable generated ordinals; removals only from library permission | Primitive action source expansion checked; memoryless oracle state/row/commit/history construction implemented; layout address/load/bounds-check root rows implemented; lproc call/return rows implemented; store/allocator/free rows implemented; nested semantic calls remain ark |
+| ISA-11-P2 | Expand every row/instruction in specified source order; stable generated ordinals; removals only from library permission | Primitive action source expansion checked; memoryless oracle state/row/commit/history construction implemented; layout address/load/bounds-check root rows implemented; lproc call/return rows implemented; store/allocator/free rows implemented; lifted semantic calls implemented with independent token contexts; general proofs remain ark |
 | ISA-11-P3 | JCS schedule; exact bindings; cleanup/gate/alloc/start entries, selectors and defaults | Strict schema and output binding tests; generated action schedules (`selectors`, `pipeline`) |
 | ISA-11-P4, §8.3 | Interface/control placements, per-class vertices, lifetimes, adjacency, no routing | Default class/vertex placement, capacity and adjacency implemented; finite class/per-bit vertex search implemented; cost optimisation remains open (ark) |
-| ISA-11-P5 / K52 | Invocation-chain prefixes; source-loop iteration, nested budget/step/phase; no `lift.call` edge | Nested coordinate resolver tested; action call source paths tested; memoryless oracle step/phase/support coordinates and reverse ordinals checked; action oracle-call contexts implemented; lifted semantic calls remain ark |
+| ISA-11-P5 / K52 | Invocation-chain prefixes; source-loop iteration, nested budget/step/phase; no `lift.call` edge | Nested coordinate resolver tested; action call source paths tested; memoryless oracle step/phase/support coordinates and reverse ordinals checked; action oracle-call contexts implemented; lifted calls retain independent source/step spaces (y0n) |
 | ISA-11-P6 | Lexicographic specificity, maximal ties independent of document order and entry kind; defaults replace rather than inherit fields | Per-operation maximal ties and independent kinds tested, including K63 specificity neutrality |
 | ISA-11-P7 / K55 | Admission/concrete validation stages, literal-only nested-budget derivation; exact rational decimal equivalence | Exact decimals implemented; linked source-path/request admission implemented; lproc concrete instance admission implemented; known generated domains checked; unresolved nested-budget domains remain ark |
 | K63 | Fixed-instance and semantic-call-occurrence identity and selectors, without extra specificity | Selectors and typed semantic-call occurrence spaces implemented; Finite positional lproc closure, row ranges, location IDs and activations formed; concrete selector keys and published call/return row emission tested |
 | K64 | `$construct/$step/$commit/$release`, separate support ordinal spaces, B=0 construction/commit/release | All four support points emitted for memoryless oracles, including B=0; forward/reverse step coordinates and shared Rows/Next ordinals checked (`oracle`) |
 | K83 | Action-local recursive declaration collection, unconditional entry/exit support, contiguous ordinals and adjoints | `regions` checks zero-trip loops, both qif arms, images, multiple declarations, source adjoints, calls, exact/empty selector domains and certificates; full 129-test gate passed |
-| K65 | Non-emitting ordinal-0 whole-cleanup carriers, reverse/recompute selection before leaf expansion | Carriers formed from source version matches; all selections stage before mutation; reverse and primitive/intrinsic recompute checked (`cleanup`) |
+| K65 | Non-emitting ordinal-0 whole-cleanup carriers, reverse/recompute selection before leaf expansion | Carriers formed from source version matches; all selections stage before mutation; reverse, primitive/intrinsic and lifted-uncall delta recompute checked (`cleanup`, `lifted_cleanup`); carriers retain each containing step/phase and lproc instance |
 | K81 | Source occurrence/version cleanup partition, indivisible joint inverses, intrinsic boundaries, first-release ownership | Semantic calls remain atomic; intrinsic boundaries and first-release ownership of joint inverses checked; broader source forms remain ark |
 | K80 | Reverse retains written points; recompute replacement owns carrier-point contiguous ordinals and fresh semantic-call occurrences | Primitive/intrinsic recompute owns contiguous carrier ordinals and omits original loop coordinates; Fresh semantic-call contexts and allocated input-history replay implemented (7va); general mutable-interface/borrowed history remains required |
 | ISA-11.1-P1–P3 / K11 | Complete 219-recipe `ref@0.9`, exact envelope/hash, no witness hash substituted | `tests/canonical_cost.rs` catalog identity test |
 | ISA-11.1-P4–P5 | Closed constructors, scalar expressions, loops, allocation identities, inverse traversal and retained ordinals | Constructor engine and inverse/identity tests; K82 named helpers implemented; 16 binding cases, 54 interfaces, 86 edge digests checked |
-| K19 | Typed formals, capture-free bodies, positional wire binding, controls, linked symbols, gate/width/cycle validation | Typed binding, strict invoke scope, captured bodies, wires/angles and dependency cycles implemented; linked parsed-source registry/interface and per-invocation body construction implemented (6qc); lifted row integration remains ark; K82 named interfaces import only declared by-name wire names |
+| K19 | Typed formals, capture-free bodies, positional wire binding, controls, linked symbols, gate/width/cycle validation | Typed binding, strict invoke scope, captured bodies, wires/angles and dependency cycles implemented; linked parsed-source registry/interface and per-invocation body construction implemented (6qc); lifted row binding/projection implemented (y0n); K82 named interfaces import only declared by-name wire names |
 | K82 | Named-interface recipes import exactly lexical wire bindings, typed recipes/templates stay closed, no non-wire fallback | All 16 published cases, 54 interfaces and 86 edge digests match (`named_interface`); catalog hash unchanged |
 | K21 | Data-image byte order and unconditional X leaves | 8102 unconditional image witness and inverse machinery tested (`expansion`) |
 | K22 | Indexed captured typed templates, apply-site controls, source row ordinals | Constructor support present; complete published template families remain unexercised (qnl) |
-| K24 | Closure-bound argument vectors, exact iN/f64/token encodings, no implicit conversions | Value encodings/hash witness checked; finite lproc keys and resolved token/classical/region forwarding checked independently of runtime values; nested constructor argument forwarding/captures checked (6qc); lifted row integration remains ark; pseudo-location storage requires r28 |
-| K77 | Explicit per-call oracle token context, captured across adapters, distinct from positional arguments | Action oracle_call and ref linked source builders capture explicit tuples. Five adapter forms and semantic forwarding preserve K77; published two-token inc8 witness checked; lifted rows remain ark |
+| K24 | Closure-bound argument vectors, exact iN/f64/token encodings, no implicit conversions | Value encodings/hash witness checked; finite lproc keys and resolved token/classical/region forwarding checked independently of runtime values; nested constructor argument forwarding/captures checked (6qc); lifted row binding/projection implemented (y0n); pseudo-location storage requires r28 |
+| K77 | Explicit per-call oracle token context, captured across adapters, distinct from positional arguments | Action oracle_call and ref linked source builders capture explicit tuples. Five adapter forms and semantic forwarding preserve K77; published two-token inc8 witness checked; lifted rows use the same captured channel; new K91 identities remain vt8 |
 | K25 | Ordered source-validated byte/activation/capture/state/frame descriptors | Generic typed records implemented; source-derived State/frame sizing and ordered byte/location maps implemented, including layout counters, sparse images and pinned table initialization; memoryless adapter consumes this plan; activation/capture metadata, concrete call targets and lproc call/return row emission implemented |
 | K26 | Region shape, role, origin and ordered cells; reject same-width shape substitutions | Generic and source shape/role/origin forwarding implemented; all K79 address cases and 128 complete forward/inverse tuples checked |
 | K27 | Class and allocation declarations, unconditional acquire/relinquish, shared lifetime state, fresh reacquisition | Acquire/relinquish, fresh reacquisition and inactive scope exit tests; translation-lemma source borrow frames and separate certificate records implemented; other T3 frame proofs remain open (ark) |
@@ -52,8 +52,8 @@ K identifiers disambiguate subsequently ratified paragraphs in §11/§11.1.
 | §8.2 / K12 | Count once per native leaf, makespan, per-class occupancy/peak, borrowed rate replacement, exact rows and upward 34-digit displays | `tests/canonical_cost.rs` decimal witnesses; designated owner alias/accounting needs qm2 |
 | §8.3–8.4 | First matching native entry/scheme, own+effective controls, ancillae, capacity, accuracy and topology | Native matching, exact/approximate scheme error composition, capacity, adjacency and sequential timing tested; finite class/per-bit vertex search implemented; cost optimisation remains open (ark) |
 | §9.1–9.2 | Canonical object parsing, signatures, semantic envelopes/SCC hashes and object/params/schedule identities | All ten normative object interface hashes, SCC envelopes and controlled fixture object hash checked; strict layout schema/ranges/images/mappings checked at load; complete source semantic admission remains partial |
-| §9.4 | Complete typed frame descriptor: slots/scratch/history/borrow/ancillae and live ranges | Supported action slot/scratch/borrow/ancilla records emitted; memoryless oracle history records emitted separately; varying context frames require lzv contract decision |
-| §12.1–12.3 | Bound certificate, realised multiplicities, claims with honest evidence, local/inclusive errors and diamond composition | Binding/resources/numerical claim emission tested for supported traces; differing context resource/gate maps need1na; rigorous checker replay and general composition proof remain open (ark/qnl) |
+| §9.4 | Complete typed frame descriptor: slots/scratch/history/borrow/ancillae and live ranges | Supported action slot/scratch/borrow/ancilla records emitted; memoryless oracle history records emitted separately; K90 now defines frame_contexts; implementation remains lzv/vt8 |
+| §12.1–12.3 | Bound certificate, realised multiplicities, claims with honest evidence, local/inclusive errors and diamond composition | Binding/resources/numerical claim emission tested for supported traces; accepted K87 resource_contexts implementation remains1na/vt8; rigorous checker replay and general composition proof remain open (ark/qnl) |
 | §17 items 7–9, 15, 18 | Published default ref library, cleanup defaults, accuracy defaults, placement, full history | Ref identity, exact finite shares and placement checked; memoryless oracle full-history expansion checked; layout/lproc call/return history checked on small full domains; materialized large sum_db requires2u4 |
 
 ## Gaps and evidence limits
@@ -76,20 +76,19 @@ binding case, interface and expansion digest. The tests also exposed inactive
 declaration use and stale inverse scratch reuse; both are fixed. The earlier
 free-wire diagnostic is no longer an expansion blocker.
 
-## Frame schema gap — bennett-sched-lzv
+## Accepted context repairs — lzv / 1na / awo
 
-One linked flip closure can be called with its mut:0 slot on class A and on
-class B in the same legal root. §12.3 currently supplies one concrete §9.4 frame
-per closure, so neither descriptor covers both invocations. The mixed-class
-regression returns explicit UNSUPPORTED instead of misreporting one frame.
-The exact proposed `frame_contexts` schema and complete-context selection rule
-are queued in `.tmp/cross-repo-beads.md` for upstream filing under COMMON rule 14.
-No unratified certificate field is emitted. Independent work continues.
+The live ISA now settles the earlier schema requests: K90 defines exclusive
+uniform frame or complete canonical frame_contexts, K87 defines complete
+resource_contexts and first-context projections, and K89 defines selected
+borrow_frame/workspace entry proofs. Their algorithms remain required and are
+tracked in lzv, 1na, awo and vt8. Existing named Unsupported diagnostics are
+implementation debt, not unresolved contract decisions. The earlier proposals
+remain in the local cross-repo queue as historical context.
 
 ## Postponed mechanics and conformance limits
 
-`bennett-sched-ark` tracks lifted semantic-call
-row construction and remaining budget admission, fresh semantic-call recompute and
+`bennett-sched-ark` tracks remaining budget/source admission,
 general mutable-interface/borrowed target history replay, general factorisation and non-translation
 borrow T3 proofs and objective
 optimisation. These are postponed algorithms with specific
@@ -107,11 +106,11 @@ peaks and child scheme ancilla accounting. The general algorithms above remain
 required. Structural and numerical certificate entries are producer claims;
 independent checker replay is not claimed.
 
-`bennett-sched-qnl` tracks the remaining conformance. The inventory has 533 A–H
+`bennett-sched-qnl` tracks the remaining conformance. The inventory has 536 A–H
 cases: 18 direct fixture mappings, 17 equivalent witness mappings, 20 partial ref
 families, 8 explicitly rebound K83 schedule fixtures, 5 other scheduler vectors,
-and 465 executor/checker vectors not replayed
-by this scheduler. Six portable manifests are recorded: K79's 12 source address
+and 468 executor/checker vectors not replayed
+by this scheduler. Seven portable manifests are recorded (K84 remains unexercised): K79's 12 source address
 cases (4 accepted, 8 rejected) and all 128 forward/inverse tuples, K82's 16 binding
 cases/54 interfaces/86 digests pass; K80 source trace fields and all 80 published basis tuples pass after version rebinding; K78/K81 direct manifest replay remains open. Original 0.8 source
 bodies in K79 are re-enveloped and rehashed for 0.9 without changing instructions.
@@ -123,9 +122,11 @@ catalog does not follow from its binding digests.
 All ten §16.3 object interface hashes are tested, including cyclic `sum` and the
 layout/path envelopes. The published controlled-action object hash, frame-bound
 resource rows, exact-scheme expansion and all four basis configurations are
-checked. Differential execution uses only the published reference binary and
-its 0.8 compatibility fixture. Its attempt to admit the actual 0.9 object exits
-1 with `§1: expected isa=0.8`. It supplies no 0.9 schedule/target/checker verdict.
+checked. Differential execution uses the published debug CLI and four-input
+compatibility fixture. That debug binary now admits the actual 0.9 object and
+our emitted schedule/certificate metadata; an absent source point rejects.
+The release binary still rejects 0.9. CLI metadata admission is distinct from
+scheduled execution and rigorous certificate-claim replay, both still unclaimed.
 Numerical certificate claims emitted here remain producer claims for independent
 checking; no proof/evidence label or rigorous interval-checker success is claimed.
 
@@ -367,7 +368,7 @@ in data/k83-target.json. This is labelled rebound admission, not verbatim
 acceptance of the incomplete positive documents. Exact fixture repair text is
 queued upstream under COMMON14; qnl retains that original-fixture gap.
 
-The inventory now records 533 cases and six manifests:18 direct fixture tests,
+The earlier K83 checkpoint recorded 533 cases and six manifests:18 direct fixture tests,
 17 equivalent witnesses,8 rebound schedule fixtures,20 partial reference
 families,5 remaining scheduler and465 remaining executor/checker cases.
 require-complete still exits2, including for rebound-only schedule evidence.
@@ -486,8 +487,17 @@ and intervening input/output writes, accepts stores and balanced loops, and
 restores versions on matched uncalls. Nine focused tests pass (r0u closed).
 The finite worklist has explicit 32 MiB/8,192-state host bounds; scalable proofs
 for unbounded pending stacks remain required (kbc), with a NoMem regression.
-Required remaining y0n mechanics include K65 lifted-uncall carriers/recompute
-and raw-inverse borrowed-frame proof rebinding. The latter currently has a
+K65 lifted-uncall carriers and fresh oracle-delta recompute are implemented
+(uwu): source matches survive into non-emitting ordinal-0 carriers, each containing
+step/phase/instance is selected independently, and Rows/Next retain a shared caller
+ordinal space. Recompute uses fresh oracle calls to compute the XOR delta on clean
+target/fault buffers, XORs it into the current targets and cleans the fresh buffers;
+this works for arbitrary prior targets because §5.5 calls are XOR involutions.
+Complete small domains, nonzero pre-call local history, one/all-step selection,
+fixed lproc instances, action callers, fresh call admission and maximal ties pass.
+Deep projection now preserves intermediate oracle coordinates in invocation
+metadata as well as native events. Required remaining y0n mechanics include
+raw-inverse borrowed-frame proof rebinding. The latter currently has a
 named diagnostic rather than an invented proof.
 
 Exactness propagates through every oracle and permutation-action descendant.
@@ -505,3 +515,19 @@ binary. A mixed fat binary may carry several such objects and request schedules
 per selected closure. Host entry points, host code inventory and host handles
 remain outside these records; no launch-ABI field or whole-binary assumption is
 introduced (standing constraint bennett-4ht).
+
+
+## Accepted K84–K93 additions — vt8
+
+| Clause | Scheduler obligation | Current evidence / remaining implementation |
+|---|---|---|
+| K84 | Treat nonmandated checker diagnostic names as implementation-defined | Three new checker cases and seventh portable manifest inventoried; direct replay remains qnl |
+| K85 | Fixed-image claim bindings and conditional proof/evidence distinctions over the selected device closure | Full quantum domain remains unchanged; fixed-image claim production remains vt8 |
+| K86 | Exact evaluated native-model binding, phase/control reconstruction and target identity | Existing target matching remains; new model schema/claim integration remains vt8 |
+| K87 | Canonical complete resource_contexts, first projection, native leaf counts and child-local exact accounting | 1na schema is now settled; producer implementation remains required |
+| K88 | Per-wire class vectors and canonical frame slot fragments without splitting source slots | Existing homogeneous slot placements remain; heterogeneous descriptors remain vt8 |
+| K89 | Selected maximal borrow_frame relations and workspace entry components/products | awo schema is now settled; general frame proof algorithm remains required |
+| K90 | Exclusive all-context-valid frame or canonical complete frame_contexts | lzv schema is now settled; producer implementation remains required |
+| K91 | token_aliases equality partitions, captured source identities and negotiated /1 estimation ABI | Current tuple bindings and lexical origins predate this feature; explicit ABI/source/cache identity upgrade remains vt8 |
+| K92 | Complete owner-local qinplace pair coverage over all reached contexts | Existing exhaustive pair checks cover supported traces; complete new context accounting remains vt8 |
+| K93 | Flatten ordered bundle MCX controls, check distinct wires and scalar target | Existing wire binding flattens operands; direct accepted witness replay remains qnl/vt8 |

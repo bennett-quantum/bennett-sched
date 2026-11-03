@@ -323,7 +323,11 @@ impl Emitter<'_> {
             for slot in &mut inv.slots {
                 slot.wires = slot.wires.iter().map(|w| mapped(w, &names)).collect();
             }
-            inv.path = with_prefix(&edge, &inv.path);
+            let mut prefix = edge.clone();
+            if oracle {
+                prefix.last_mut().unwrap().entered_oracle = Some(inv.containing);
+            }
+            inv.path = with_prefix(&prefix, &inv.path);
             inv.containing = self.pair.carrier.root;
         }
         for e in &mut child.events {
@@ -414,7 +418,11 @@ fn with_prefix(prefix: &[Occurrence], path: &[Occurrence]) -> Vec<Occurrence> {
     prefix.iter().chain(path).cloned().collect()
 }
 fn bind_location(l: &mut Location, prefix: &[Occurrence], root: crate::schedule::Coordinate) {
-    l.path = with_prefix(prefix, &l.path);
+    let mut prefix = prefix.to_vec();
+    if prefix.last().is_some_and(|p| p.entered_oracle.is_some()) {
+        prefix.last_mut().unwrap().entered_oracle = Some(l.root);
+    }
+    l.path = with_prefix(&prefix, &l.path);
     l.root = root;
 }
 fn map_witness(value: &mut serde_json::Value, names: &BTreeMap<String, String>) {

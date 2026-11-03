@@ -1,13 +1,13 @@
 {
   "schema": "bennett-sched.conformance-inventory.v1",
   "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
-  "spec_sha256": "7458b362d22d2b89912331da8866e334385686faf8e2b51d8d49684e522c3034",
-  "case_count": 533,
+  "spec_sha256": "bbd887c7841f4eed40f7b3518270a8f2cf781204c14ac4cc3eabca5c5b4b8c3b",
+  "case_count": 536,
   "suites": {
     "A": 22,
     "B": 35,
     "C": 340,
-    "D": 13,
+    "D": 16,
     "E": 38,
     "F": 43,
     "G": 24,
@@ -16,7 +16,7 @@
   "coverage_counts": {
     "direct-fixture-test": 18,
     "equivalent-witness-test": 17,
-    "not-exercised-executor-or-checker-vector": 465,
+    "not-exercised-executor-or-checker-vector": 468,
     "not-exercised-scheduler-vector": 5,
     "partial-reference-expansion": 20,
     "rebound-schedule-fixture-test": 8
@@ -4488,6 +4488,39 @@
       ]
     },
     {
+      "id": "D-k84-baseline",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k84-baseline/case.json",
+      "sha256": "2cce07a0d61f567bf1eb41bce8123dfdc0cb209c2256424c0127f415fcc1649a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k84-duplicate-component",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k84-duplicate-component/case.json",
+      "sha256": "783ce3061688087a8cff86a41646e2b03515c6ea5bb78629b6d3fa8c7e0880c3",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k84-missing-expected",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k84-missing-expected/case.json",
+      "sha256": "5633fb7e49c317b44213ff7f93a66b31d0d9c52fc504107e10351483cb754d33",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
       "id": "D-numerical-operator-norm",
       "suite": "D",
       "source": "conformance/cases/D/D-numerical-operator-norm/case.json",
@@ -5978,8 +6011,9 @@
           "interface_hash": "4ee502a2d517d53d229f2ae21346505af06a228a2f0d2967938d48683e16d9e7",
           "outcome": "UNSUPPORTED",
           "test": "normative_objects::every_normative_quantum_region_has_an_audited_typed_scheduler_outcome",
-          "reason": "nested oracle/permutation call row construction",
+          "reason": "classical pseudo-location wire binding in nested/lproc callee",
           "beads": [
+            "bennett-sched-r28",
             "bennett-sched-ark"
           ]
         },
@@ -6078,6 +6112,15 @@
       "original_missing_expansion": 8,
       "target_adapter_sha256": "cb549be29a6b7c237960c0d0b058bcf1be12d4a373f6769326680a14104a3123",
       "remaining": "Original positive schedule schema/bindings need upstream fixture repair; exact request queued under COMMON14."
+    },
+    {
+      "path": "conformance/fixtures/accepted-k84-09/k84.json",
+      "sha256": "242f01b12d3f95f720a6c1a6952667a081c738ef19ceda90ed181b037598d350",
+      "vectors": 3,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
     }
   ],
   "inline_witnesses": [
@@ -6102,16 +6145,20 @@
       "certificate_limit": "Combined differing-budget resource reports require bennett-sched-1na; no complete certificate claim."
     }
   ],
-  "reference_schedule_execution": "not claimed; installed reference interpreter documents staged target/schedule execution",
+  "reference_schedule_execution": "not claimed; published reference interpreter documents staged target/schedule execution",
+  "reference_09_schedule_admission": {
+    "test": "differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission",
+    "meaning": "Published debug CLI admits the emitted controlled-action schedule and certificate metadata; absent source point rejects. This is not certificate-claim replay or scheduled execution."
+  },
   "reference_09_admission_probe": {
     "command": [
-      "/home/tobias/Projects/bennett-workspace/bennett-isa-spec/reference-interpreter/target/release/bennett-isa-ref",
+      "/home/tobias/Projects/bennett-workspace/bennett-isa-spec/reference-interpreter/target/debug/bennett-isa-ref",
       "check",
       "/home/tobias/Projects/bennett-workspace/bennett-isa-spec/conformance/fixtures/controlled-action-09/controlled.bisa"
     ],
-    "exit": 1,
-    "stdout": "",
-    "stderr": "§1: expected isa=0.8\n"
+    "exit": 0,
+    "stdout": "{\"object_hash\":\"45bbb506541e3a8bb28a18e1bb0aef16ba01ee1e7cac74d5a190deb3ad36ef5a\",\"status\":\"ok\",\"symbols\":{\"controlled\":{\"closure_hash\":\"df131e972083b8d3b3b7d9341342b55252ca7a1963c4b7b6f702b9cdf3fbde12\",\"interface_hash\":\"df131e972083b8d3b3b7d9341342b55252ca7a1963c4b7b6f702b9cdf3fbde12\"},\"flip\":{\"closure_hash\":\"7ff7153a2ad3b857ec9eb86ca99b9bcbc605f60093d28e99fb749ed16d13274b\",\"interface_hash\":\"7ff7153a2ad3b857ec9eb86ca99b9bcbc605f60093d28e99fb749ed16d13274b\"}},\"unresolved_imports\":[]}\n",
+    "stderr": ""
   },
-  "recorded_at_utc": "2026-11-02T13:13:22Z"
+  "recorded_at_utc": "2026-11-03T10:53:20Z"
 }

@@ -155,13 +155,18 @@ fn a_nested_oracle_request_emits_a_shared_selector_per_address_and_all_history_r
     let document = Document::parse(canonical::require_jcs(&response.schedule).unwrap()).unwrap();
     document.validate_request(&request).unwrap();
     let certificate = canonical::require_jcs(&response.certificate).unwrap();
-    assert_eq!(
-        certificate["regions"][&nested]["frame"]["history"]
-            .as_array()
-            .unwrap()
-            .len(),
-        4
-    );
+    let contexts = certificate["regions"][&nested]["frame_contexts"]
+        .as_array()
+        .unwrap();
+    assert_eq!(contexts.len(), 4);
+    let mut ids = std::collections::BTreeSet::new();
+    for context in contexts {
+        let history = context["frame"]["history"].as_array().unwrap();
+        assert_eq!(history.len(), 1);
+        assert!(ids.insert(history[0]["id"].as_str().unwrap()));
+        assert!(context["context_key"][0]["step"].is_number());
+        assert!(context["context_key"][0]["phase"].is_string());
+    }
     let count = certificate["composition"]["multiplicities"]
         .as_object()
         .unwrap()

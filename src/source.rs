@@ -39,6 +39,33 @@ pub struct Invocation {
     /// Coordinate in the trace's root oracle, outside this invocation's path.
     pub containing: Coordinate,
 }
+impl Invocation {
+    pub fn context_key(&self) -> Value {
+        json!(
+            self.path
+                .iter()
+                .enumerate()
+                .map(|(index, point)| {
+                    let mut value = point.json();
+                    let coordinate = if index == 0 {
+                        self.containing
+                    } else {
+                        self.path[index - 1].entered_oracle.unwrap_or_default()
+                    };
+                    if let Some(step) = coordinate.step {
+                        value["step"] = json!(step);
+                        value["phase"] =
+                            json!(match coordinate.phase.expect("oracle step phase") {
+                                crate::schedule::Phase::Fwd => "fwd",
+                                crate::schedule::Phase::Rev => "rev",
+                            });
+                    }
+                    value
+                })
+                .collect::<Vec<_>>()
+        )
+    }
+}
 #[derive(Clone, Debug)]
 pub struct Trace {
     pub(crate) object: std::sync::Arc<Object>,

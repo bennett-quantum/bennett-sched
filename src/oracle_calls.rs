@@ -247,6 +247,10 @@ impl Projection {
             inv.parent = Some(old.parent.map_or(0, |p| base + p));
             inv.containing = parent.root;
             let mut path = edge.clone();
+            if oracle {
+                path.last_mut().unwrap().entered_oracle =
+                    Some(reversed_coordinate(old.containing, reverse));
+            }
             path.extend(inv.path);
             inv.path = path;
             for p in inv.path.iter_mut().skip(edge.len()) {

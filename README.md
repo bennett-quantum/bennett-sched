@@ -4,7 +4,7 @@ Scheduler and cost model targeting Bennett ISA 0.9 §11, built as a Rust
 `cdylib` and `rlib` for plugin and VM consumers across the C ABI.
 **Status: partial implementation.** The complete 0.9 contract remains the scope;
 this repository does not claim full §11 conformance. See [docs/PLAN.md](docs/PLAN.md)
-for the clause inventory, remaining algorithms and frame-schema decision.
+for the clause inventory, remaining algorithms and accepted contract additions.
 
 All §11 C functions are exported. Requests copy their object, target, parameter
 and string inputs; responses own their reason, schedule and certificate until
@@ -38,18 +38,15 @@ respect intrinsic boundaries and joint inverse ownership; primitive/intrinsic
 recompute preserves carrier coordinates. Fresh semantic-call replay keeps separate caller-leaf and call-occurrence counters, source callee adjoints and exact allocated pre-call histories. Finite class/vertex search finds a
 feasible assignment when an earlier assignment fails.
 
-Lifted semantic-call rows and remaining domain checks, general mutable-interface/borrowed input-history replay, general cleanup and borrow proofs,
+Lifted semantic-call rows now bind independent tokens and source coordinates. Matched lifted uncalls have per-step cleanup carriers and fresh oracle-delta recompute, including fixed lproc instances. Remaining domain checks, general mutable-interface/borrowed input-history replay, general cleanup and borrow proofs,
 and objective optimisation remain `bennett-sched-ark`. Accepted K83 action-region
 support coordinates and recursive declaration collection are implemented and
 verified under `bennett-sched-ecz`. Qinplace proofs currently use bounded exhaustive tables/replay; scalable proof methods remain `bennett-sched-a0v`. A host-workspace failure reports `BENNETT_E_NOMEM` and never substitutes a smaller domain. Bounded-memory
 streaming remains `bennett-sched-2u4`: normative sum_db at B=3 currently exhausts
 the explicit materialized leaf workspace and reports `BENNETT_E_NOMEM`.
-Varying invocation frame descriptors require the `bennett-sched-lzv` contract
-decision; restricted T3 borrow certificates require the `bennett-sched-awo`
-frame-domain decision. Classical pseudo-location initialization requires
+Accepted K90/K89 now specify varying invocation frames and restricted T3 borrow claims; their implementations remain `bennett-sched-lzv`/`bennett-sched-awo`. K87 settles resource-context reports (`1na`). New K84–K93 adoption is tracked by `vt8`, including K91 token identity bindings and ABI negotiation. Classical pseudo-location initialization requires
 `bennett-sched-r28`; its exact state/cost proposal is queued upstream. Borrow-owner
-designation (`qm2`), explicit interface class choices (`4tj`) and differing
-per-context resource reports (`1na`) also have queued contract proposals. Uniform
+designation (`qm2`), explicit interface class choices (`4tj`) also have queued contract proposals. Uniform
 repeated contexts work; differing reports are never silently overwritten. Encountered
 postponed features return `UNSUPPORTED` with a specific
 reason and issue; constraint failures return `INFEASIBLE`; malformed requests
@@ -71,8 +68,7 @@ unexercised. [docs/conformance-report.json](docs/conformance-report.json)
 inventories every published case and separates direct fixture tests,
 equivalent witnesses and remaining work. All ten normative object hashes are
 tested. The controlled-action trace is compared on its complete basis domain
-with the reference interpreter's published 0.8 compatibility fixture. That
-binary rejects 0.9 admission and cannot certify 0.9 schedule execution.
+with the published reference interpreter. Its debug CLI now admits the actual 0.9 fixture and our emitted schedule/certificate metadata, and rejects an absent source point. This is metadata admission; scheduled execution and rigorous certificate-claim replay remain unclaimed. Its release binary still requires the 0.8 compatibility fixture.
 
 The push hook delegates to the shared tool extracted from the meta repository's
 committed objects at the tool_sha in gate.toml. It checks the pushed SHA with

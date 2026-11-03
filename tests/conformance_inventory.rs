@@ -54,8 +54,36 @@ fn conformance_inventory_records_every_case_and_portable_manifest_without_stale_
         5
     );
     assert_eq!(report["normative_scheduler_audit"]["outcomes"]["ERROR"], 1);
+    let mut actual_manifests = BTreeSet::new();
+    for directory in std::fs::read_dir(spec.join("conformance/fixtures")).unwrap() {
+        let directory = directory.unwrap();
+        if !directory
+            .file_name()
+            .to_string_lossy()
+            .starts_with("accepted-")
+            || !directory.path().is_dir()
+        {
+            continue;
+        }
+        for file in std::fs::read_dir(directory.path()).unwrap() {
+            let path = file.unwrap().path();
+            if path
+                .extension()
+                .is_some_and(|extension| extension == "json")
+            {
+                actual_manifests.insert(
+                    path.strip_prefix(&spec)
+                        .unwrap()
+                        .to_string_lossy()
+                        .to_string(),
+                );
+            }
+        }
+    }
+    let mut recorded_manifests = BTreeSet::new();
     for manifest in report["portable_manifests"].as_array().unwrap() {
         let path = manifest["path"].as_str().unwrap();
+        assert!(recorded_manifests.insert(path.to_owned()));
         assert_eq!(
             manifest["sha256"],
             canonical::hash(&std::fs::read(spec.join(path)).unwrap())
@@ -98,4 +126,8 @@ fn conformance_inventory_records_every_case_and_portable_manifest_without_stale_
             _ => assert_eq!(manifest["coverage"], "not-exercised"),
         }
     }
+    assert_eq!(
+        actual_manifests, recorded_manifests,
+        "every published portable manifest must be inventoried"
+    );
 }

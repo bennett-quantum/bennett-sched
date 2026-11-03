@@ -2,7 +2,7 @@
 
 ISA 0.9 remains partial; the complete §11 deliverable is still required. The
 agent runs no git commands; the runner commits. No later commit SHA is claimed.
-The current observed ISA pin is ecb8551250bca5e0702c6c7894b603388b2e51bf (K83).
+The current observed ISA HEAD is 97e7b9f16977905be8308c2ca33b9d470f83756f (live K84–K93). SPEC_VERSIONS records the live file digest and explicitly does not claim committed-content equality.
 See docs/PLAN.md and SPEC_VERSIONS.toml for clauses, digests and evidence limits.
 
 The latest historical working-tree gate (2026-11-02) is timeout 660 scripts/pre-push --working-tree, exit 0,
@@ -35,23 +35,20 @@ and selector rules. K83 focused command timeout 180 cargo test --offline -j2 --t
 structure --test admission --test borrow -- --test-threads=2 passed 17 tests.
 The full 129-test checkpoint also passed.
 
-Main akl/ark/qnl remain in progress. Required mechanics include lifted semantic calls/budgets, general mutable-interface/borrowed prehistory, general cleanup/borrow proofs, objective optimization and streaming
+Main akl/ark/qnl remain in progress. Required mechanics include the remaining lifted borrow proof adapter, general mutable-interface/borrowed prehistory, general cleanup/borrow proofs, objective optimization and streaming
 2u4. Normative sum_db B=3 reports explicit NoMem at the materialized leaf
 workspace bound; B=0 has a successful schedule witness. No test domain is pruned.
 
-Contract decisions queued in .tmp/cross-repo-beads.md under COMMON14: lzv
-context-varying frames; awo restricted T3 workspace/frame domains; r28 classical
+K87/K89/K90 now settle the earlier 1na/awo/lzv schema gaps; implementation remains required under vt8 and those beads. Contract decisions still queued under COMMON14 include r28 classical
 pseudo-location wires;4tj root interface_classes; qm2 designated borrow owners;
-1na per-context resource/gate reports. Uniform repeated contexts work, while
+Uniform repeated contexts work, while
 incompatible concrete maps are not silently overwritten. No proposed field is
 emitted. Sandbox prevents sibling bead writes; continue independent work.
 
-The inventory covers533 cases/10 normative objects/13 quantum regions/6 manifests.
+The inventory covers536 cases/10 normative objects/13 quantum regions/7 manifests.
 Current B=3 audit:7 OK/5 Unsupported/1 NoMem. K79 covers 12 source cases and 128
 forward/inverse tuples; other partial/unexercised cases remain explicit. The
-published reference binary rejects 0.9 admission (expected isa=0.8); its published
-compatibility object supplies only a four-input differential. Certificates here
-contain producer claims, with no independent 0.9 checker verdict claimed.
+published debug reference CLI now admits the 0.9 object and our emitted schedule/certificate metadata; an absent source point rejects. Two focused differential tests pass, including all four compatibility-fixture inputs. The release CLI still rejects0.9. No rigorous independent certificate-claim replay or scheduled-execution result is claimed.
 
 The push hook now exactly uses the published pinned-tool stub (68k);
 tests/gate.rs checks its configuration and delegation contract rather than a
@@ -59,7 +56,7 @@ copied worktree protocol. scripts/check-working-tree is the optional git-free
 runner checkpoint. Focused gate test and bash syntax checks pass. Full gates and
 hook-check belong to the orchestrator under the new 2026-11-03 R3 instruction.
 Root gate.toml still pins ecaaac0/021d5df while SPEC_VERSIONS and the K83 tests
-target ecb8551/7458b36. It is outside the agent's write allowlist; its pin must be
+record observed HEAD97e7b9f/live digestbbd887c. It is outside the agent's write allowlist; its pin must be
 aligned before claiming a complete pinned push result. Hooks/worklog untouched.
 
 
@@ -107,11 +104,10 @@ captured K77 channel and retained source provenance. Actual inc8 two-token
 execution/inverse passes all 512 input/control tuples through five adapter forms.
 Typed values, semantic forwarding, mutable regions and invalid inputs have
 focused coverage. Catalog/hash unchanged. Full gate passed 175 tests; 6qc is closed. Lifted row binding
-and coordinate projection remain the next integration step, not implemented.
+and coordinate projection were implemented subsequently under y0n.
 
 Current y0n integration has focused passing coverage for lifted calls/uncalls,
 nested token coordinates, bound history certificates and zero-leaf call contexts.
 The non-emitting metadata channel retains empty-call multiplicity and raw inverse
-identities. Lproc/deeper binding checks and §5.5/K65/borrow proof mechanics remain
-in progress; no current full-gate result is claimed. The orchestrator owns full
+identities. Lproc token/branch domains pass; r0u source LIFO/version matching and uwu per-step K65 carriers/delta recompute now have focused coverage, including nonzero targets and deep metadata. Raw-inverse borrowed proof rebinding remains required; no current full-gate result is claimed. The orchestrator owns full
 gates and review under the 2026-11-03 policy.
