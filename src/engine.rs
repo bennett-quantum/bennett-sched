@@ -15,6 +15,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     ffi::CString,
 };
+mod error_bounds;
 #[derive(Clone, Debug)]
 struct Allocation {
     identity: String,
@@ -863,32 +864,13 @@ fn certificate(
     let mut multiplicities: BTreeMap<String, u64> = BTreeMap::new();
     let mut frames: BTreeMap<String, BTreeMap<Vec<u8>, Value>> = BTreeMap::new();
     let mut gates_by_invocation = Vec::new();
-    let mut error_bounds = BTreeMap::<(String, String), (Rational, Rational)>::new();
-    for (i, inv) in trace.invocations.iter().enumerate() {
-        let local: Rational = errors
-            .iter()
-            .zip(leaf_owners)
-            .filter(|(_, owner)| **owner == i)
-            .map(|(error, _)| error.clone())
-            .sum();
-        let inclusive: Rational = errors
-            .iter()
-            .zip(event_sources)
-            .filter(|(_, source)| **source >= inv.start && **source < inv.end)
-            .map(|(error, _)| error.clone())
-            .sum();
-        let key = (
-            inv.hash.clone(),
-            format!("{variant}:{}", inv.controls.len()),
-        );
-        error_bounds
-            .entry(key)
-            .and_modify(|(l, total)| {
-                *l = l.clone().max(local.clone());
-                *total = total.clone().max(inclusive.clone());
-            })
-            .or_insert((local, inclusive));
-    }
+    let bounds = error_bounds::form(
+        trace,
+        variant,
+        errors,
+        leaf_owners,
+        &request.epsilon.clone().unwrap_or_else(Rational::zero),
+    )?;
     for (i, inv) in trace.invocations.iter().enumerate() {
         let key = format!("{variant}:{}", inv.controls.len());
         *multiplicities
@@ -915,7 +897,7 @@ fn certificate(
                 "duplicate realised invocation context key",
             ));
         }
-        let (local, inclusive) = &error_bounds[&(inv.hash.clone(), key.clone())];
+        let (local, inclusive) = &bounds.values[&(inv.hash.clone(), key.clone())];
         let record = &mut regions[&inv.hash];
         if record["cleanup"].get(&key).is_none() {
             record["cleanup"][&key] = json!([]);
@@ -923,8 +905,8 @@ fn certificate(
         for pair in trace.cleanups.iter().filter(|p| p.owner == i) {
             record["cleanup"][&key].as_array_mut().unwrap().push(json!({"path":pair.carrier.path.iter().map(Occurrence::json).collect::<Vec<_>>(),"realisation":pair.realisation}));
         }
-        record["error"][&key] = json!({"local":{"operator_norm":d::upper(&local)?},"inclusive":{"operator_norm":d::upper(&inclusive)?}});
-        let claim = json!({"kind":"numerical","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"metric":"operator_norm","precision_bits":128,"bound":d::upper(&inclusive)?});
+        record["error"][&key] = json!({"local":{"operator_norm":d::exact(local)?},"inclusive":{"operator_norm":d::exact(inclusive)?}});
+        let claim = json!({"kind":"numerical","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"metric":"operator_norm","precision_bits":128,"bound":d::exact(inclusive)?});
         if object.functions[&inv.name].kind == "oracle" {
             let f = &object.functions[&inv.name];
             let mut bundles = inv
@@ -1121,13 +1103,8 @@ fn certificate(
             regions[&hash]["frame_contexts"] = json!(frames.into_values().collect::<Vec<_>>());
         }
     }
-    let total: Rational = error_bounds
-        .iter()
-        .map(|((hash, key), (local, _))| {
-            local * d::integer(multiplicities[&format!("{hash}:{key}")])
-        })
-        .sum();
-    Ok(
-        json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":{"args":request.params.as_ref().unwrap(),"budget":request.budget.unwrap().iter().map(u64::to_string).collect::<Vec<_>>() }},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::upper(&(d::integer(2)*total))?},"method":"sum_over_multiplicities"}}),
-    )
+    Ok((
+        json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":{"args":request.params.as_ref().unwrap(),"budget":request.budget.unwrap().iter().map(u64::to_string).collect::<Vec<_>>() }},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::exact(&(d::integer(2)*&bounds.declared_total))?},"method":"sum_over_multiplicities"}}),
+        bounds.exact_total,
+    ))
 }

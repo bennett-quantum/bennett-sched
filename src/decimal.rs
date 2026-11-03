@@ -78,6 +78,10 @@ fn ten_power(e: i64) -> Rational {
     }
 }
 pub fn upper(q: &Rational) -> Result<String> {
+    upper_digits(q, 34)
+}
+pub(crate) fn upper_digits(q: &Rational, digits: usize) -> Result<String> {
+    assert!(digits > 0);
     if q.is_negative() {
         return Err(Error::arg("resource value must be nonnegative"));
     }
@@ -91,7 +95,7 @@ pub fn upper(q: &Rational) -> Result<String> {
     while q >= &ten_power(e + 1) {
         e += 1;
     }
-    let scale = e - 33;
+    let scale = e - (digits as i64 - 1);
     let rounded = ceil(&(q / ten_power(scale))).to_str_radix(10);
     let mut text = if scale >= 0 {
         format!("{rounded}{}", "0".repeat(scale as usize))
@@ -116,6 +120,10 @@ pub fn upper(q: &Rational) -> Result<String> {
 }
 /// Exact spelling for a terminating rational, used for bindings and decisions.
 pub fn exact(q: &Rational) -> Result<String> {
+    exact_decimal(q)
+        .ok_or_else(|| Error::arg("nonterminating rational needs an explicit decimal enclosure"))
+}
+pub(crate) fn exact_decimal(q: &Rational) -> Option<String> {
     let mut denominator = q.denom().clone();
     let mut twos = 0;
     let mut fives = 0;
@@ -128,9 +136,7 @@ pub fn exact(q: &Rational) -> Result<String> {
         fives += 1;
     }
     if denominator != BigInt::one() {
-        return Err(Error::arg(
-            "nonterminating rational needs an explicit decimal enclosure",
-        ));
+        return None;
     }
     let scale = twos.max(fives);
     let n = q.numer() * BigInt::from(2).pow(scale - twos) * BigInt::from(5).pow(scale - fives);
@@ -156,7 +162,7 @@ pub fn exact(q: &Rational) -> Result<String> {
     if negative && s != "0" {
         s.insert(0, '-');
     }
-    Ok(s)
+    Some(s)
 }
 /// Choose a finite downward share; consumers evaluate exactly these same bytes.
 pub fn share(epsilon: &Rational, count: u64) -> Result<Rational> {

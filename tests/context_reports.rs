@@ -131,9 +131,47 @@ fn common_error_bounds_cover_every_context_independently_of_call_order() {
             assert_eq!(claim["bound"], "0.02");
         }
         assert_eq!(c["composition"]["epsilon_total"]["diamond"], "0.08");
+        assert_eq!(
+            c["regions"][object.closure_hash("root").unwrap()]["error"]["forward:0"]["inclusive"]["operator_norm"],
+            "0.04"
+        );
         r.set_accuracy("0.03").unwrap();
         let response = r.schedule().unwrap();
         assert_eq!(response.outcome, Outcome::Infeasible);
         assert!(response.schedule.is_empty() && response.certificate.is_empty());
     }
+}
+
+#[test]
+fn requested_accuracy_is_compared_exactly_and_error_displays_keep_sufficient_precision() {
+    let bytes = common::action(
+        "action",
+        "a",
+        json!({"abi":"0.9","tier":"q","kind":"action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]}),
+        "action @a (t:wire mut) () () () ()",
+        "x t",
+    );
+    let object = Object::parse(&bytes).unwrap();
+    let mut target: Value =
+        serde_json::from_slice(&std::fs::read("data/k83-target.json").unwrap()).unwrap();
+    target["gates"] = json!([{"op":"x","classes":["*"],"controls":{"min":0,"max":0},"epsilon":{"op":"/","args":[1,3]},"cost":{"time":1}}]);
+    let mut r = Request::default();
+    r.set_object(&bytes).unwrap();
+    r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+    r.set_region(object.closure_hash("a").unwrap(), "forward", 0)
+        .unwrap();
+    r.set_params(b"[]").unwrap();
+    r.budget = Some([0; 4]);
+    let epsilon = "0.33333333333333333333333333333333333333333333333333333333333333334";
+    r.set_accuracy(epsilon).unwrap();
+    let response = r.schedule().unwrap();
+    assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+    let c = canonical::require_jcs(&response.certificate).unwrap();
+    let local = &c["regions"][object.closure_hash("a").unwrap()]["error"]["forward:0"]["local"]["operator_norm"];
+    let bound = bennett_sched::decimal::value(local).unwrap();
+    assert!(bound >= bennett_sched::decimal::integer(1) / bennett_sched::decimal::integer(3));
+    assert!(bound <= bennett_sched::decimal::parse(epsilon).unwrap());
+    let total =
+        bennett_sched::decimal::value(&c["composition"]["epsilon_total"]["diamond"]).unwrap();
+    assert_eq!(total, bennett_sched::decimal::integer(2) * bound);
 }
