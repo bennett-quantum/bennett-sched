@@ -2,6 +2,7 @@
 name = "bennett-sched"
 version = "0.1.0"
 edition = "2024"
+autotests = false
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -16,9 +17,13 @@ num-traits = "0.2"
 crate-type = ["cdylib", "rlib"]
 
 # Exhaustive constructor simulations replay millions of Boolean gates. Keep
-# those witnesses in the normal gate with optimization and all debug checks.
+# those witnesses in the push gate with optimization and all debug checks.
 [profile.test]
 opt-level = 1
-debug = 0
+debug = "line-tables-only"
 debug-assertions = true
 overflow-checks = true
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"

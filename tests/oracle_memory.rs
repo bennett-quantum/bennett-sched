@@ -64,6 +64,7 @@ fn get(bits: &BTreeMap<String, bool>, name: &str, width: u64) -> u64 {
         .sum()
 }
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn mapped_byte_reads_use_input_cells_and_restore_the_entire_private_layout_state() {
     let object = mapped_reader();
     let trace = Trace::build(&object, "read", 1, &json!([]), [3, 0, 0, 0]).unwrap();
@@ -239,6 +240,7 @@ fn encoded_layout_request_emits_an_admitted_schedule_and_bound_frame_certificate
 }
 
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn store_then_load_covers_every_input_old_byte_pair_and_restores_mapped_memory() {
     let mut object = mapped_reader();
     let f = object.functions.get_mut("read").unwrap();

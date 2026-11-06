@@ -1,5 +1,6 @@
 #[path = "support/pins.rs"]
 mod pins;
+use crate::common;
 use bennett_sched::{
     Outcome, Request, canonical,
     expansion::{Operation, simulate_basis},
@@ -8,7 +9,6 @@ use bennett_sched::{
 };
 use serde_json::json;
 use std::collections::BTreeMap;
-mod common;
 
 fn example() -> Vec<u8> {
     let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();

@@ -1,5 +1,6 @@
 #[path = "support/pins.rs"]
 mod pins;
+use crate::common;
 use bennett_sched::{
     canonical,
     expansion::{Operation, simulate_basis},
@@ -8,7 +9,6 @@ use bennett_sched::{
 };
 use serde_json::json;
 use std::collections::BTreeMap;
-mod common;
 
 fn layout(mut bytes: Vec<u8>) -> Vec<u8> {
     bytes.extend_from_slice(b"\nsection layout\n{\"A_tab\":0,\"H\":0,\"S_cells\":0,\"globals\":{},\"heap_base\":1,\"heap_limit_max\":0,\"interface_regions\":{},\"null_size\":1,\"ptr_width\":32}\n");

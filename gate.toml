@@ -10,7 +10,11 @@ BENNETT_REF_BIN = "{sibling:bennett-isa-spec}/reference-interpreter/target/debug
 
 [[check]]
 name = "cargo test"
-argv = ["cargo", "test", "--offline", "-j4", "--", "--test-threads=4"]
+argv = ["cargo", "test", "--offline", "-j3", "--", "--test-threads=4"]
+
+[[check]]
+name = "slow exhaustive simulations"
+argv = ["cargo", "test", "--offline", "-j3", "--", "--ignored", "--test-threads=4"]
 
 [[check]]
 name = "cargo fmt"

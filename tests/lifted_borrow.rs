@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 #[path = "common/basis.rs"]
 mod basis;
 #[allow(dead_code)]
-mod common;
+use crate::common;
 
 fn borrowed_source() -> Vec<u8> {
     let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();

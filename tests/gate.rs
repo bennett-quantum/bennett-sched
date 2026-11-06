@@ -59,7 +59,7 @@ fn relative_reference_override_cannot_execute_path_decoy() {
     let output = Command::new(std::env::current_exe().unwrap())
         .args([
             "--exact",
-            "relative_reference_override_cannot_execute_path_decoy",
+            "gate::relative_reference_override_cannot_execute_path_decoy",
             "--nocapture",
         ])
         .env(PROBE, &binary)

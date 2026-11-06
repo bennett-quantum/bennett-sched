@@ -1,3 +1,4 @@
+use crate::common;
 use bennett_sched::{
     expansion::{Operation, simulate_basis},
     object::Object,
@@ -5,7 +6,6 @@ use bennett_sched::{
 };
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
-mod common;
 
 fn trace(body: &str, mutable_input: bool, memory: Option<&str>, adjoints: usize) -> Trace {
     let mem = memory.map_or_else(Vec::new, |role| vec![json!({"A":1,"W":2,"role":role})]);

@@ -5,7 +5,7 @@ use bennett_sched::{
 use serde_json::{Value, json};
 #[path = "common/basis.rs"]
 mod basis;
-mod common;
+use crate::common;
 
 fn program(nonzero_history: bool) -> Vec<u8> {
     let base = common::action(
@@ -92,6 +92,7 @@ fn lifted_uncall_carriers_are_non_emitting_and_ties_resolve_before_mutation() {
     }
 }
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn lifted_recompute_matches_reverse_for_complete_external_domains_and_keeps_step_scopes_separate() {
     use std::collections::{BTreeMap, BTreeSet};
     for (inner, all, history) in [

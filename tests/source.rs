@@ -1,5 +1,6 @@
 #[path = "support/pins.rs"]
 mod pins;
+use crate::common;
 use bennett_sched::{
     expansion::{Operation, simulate_basis},
     object::Object,
@@ -7,7 +8,6 @@ use bennett_sched::{
 };
 use serde_json::json;
 use std::collections::BTreeMap;
-mod common;
 
 #[test]
 fn published_nested_controlled_action_has_real_invocation_chain_and_one_leaf() {

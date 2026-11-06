@@ -2,7 +2,7 @@ use bennett_sched::{expansion::Operation, object::Object};
 use serde_json::json;
 #[path = "common/basis.rs"]
 mod basis;
-mod common;
+use crate::common;
 
 fn program(paired: bool) -> Object {
     let base = common::action(
@@ -23,6 +23,7 @@ fn program(paired: bool) -> Object {
 }
 
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn lifted_oracle_calls_and_intrinsic_uncalls_keep_independent_budgets_and_clean_complete_small_domains()
  {
     use std::collections::BTreeMap;
@@ -319,6 +320,7 @@ fn forwarded_lproc_program(coherent: bool) -> Object {
 }
 
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn fixed_lproc_token_forwarding_keeps_two_positional_instances_without_lift_call_edges() {
     use std::collections::{BTreeMap, BTreeSet};
     let object = forwarded_lproc_program(false);
@@ -407,6 +409,7 @@ fn fixed_lproc_token_forwarding_keeps_two_positional_instances_without_lift_call
 }
 
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn coherent_lproc_paths_execute_both_fixed_token_instances_over_the_complete_interface() {
     use std::collections::BTreeMap;
     let object = forwarded_lproc_program(true);

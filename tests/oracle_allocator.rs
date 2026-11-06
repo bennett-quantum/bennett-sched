@@ -123,6 +123,7 @@ fn check(object: &Object, budget: [u64; 4], expected: impl Fn(u64) -> (u64, u64)
 }
 
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn allocator_location_and_literal_lengths_cover_small_heap_budget_and_complete_interface_domains() {
     for length in ["x", "0", "1", "3"] {
         let object =
@@ -151,6 +152,7 @@ fn allocator_location_and_literal_lengths_cover_small_heap_budget_and_complete_i
 }
 
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn free_restores_live_bits_and_double_free_or_exhausted_table_faults_at_the_first_bad_row() {
     for (body, terminal, fault) in [
         ("p = lift.alloc x\nlift.free p\nlift.retval p", 3, 0),

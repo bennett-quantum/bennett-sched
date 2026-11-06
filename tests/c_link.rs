@@ -1,7 +1,7 @@
 #[path = "support/pins.rs"]
 mod pins;
+use crate::common;
 use std::{path::PathBuf, process::Command};
-mod common;
 #[test]
 fn c11_consumer_links_the_cdylib_across_the_binary_edge() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

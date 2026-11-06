@@ -2,7 +2,7 @@ use bennett_sched::{Outcome, Request, Status, canonical, object::Object};
 use serde_json::json;
 #[path = "common/basis.rs"]
 mod basis;
-mod common;
+use crate::common;
 
 fn paired_tokens() -> (Request, Object) {
     let oracle = common::action(

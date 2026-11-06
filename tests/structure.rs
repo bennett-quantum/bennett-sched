@@ -1,3 +1,4 @@
+use crate::common;
 use bennett_sched::{
     expansion::{Operation, simulate_basis},
     object::Object,
@@ -5,7 +6,6 @@ use bennett_sched::{
 };
 use serde_json::json;
 use std::collections::BTreeMap;
-mod common;
 
 #[test]
 fn adjoint_calls_preserve_caller_loop_coordinates_and_remap_only_the_callee() {

@@ -1,6 +1,6 @@
+use crate::common;
 use bennett_sched::{Outcome, Request, canonical, object::Object};
 use serde_json::{Value, json};
-mod common;
 
 #[test]
 fn published_resource_context_witness_preserves_exact_rationals_and_canonical_projection() {

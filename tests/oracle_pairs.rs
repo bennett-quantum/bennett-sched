@@ -1,6 +1,6 @@
+use crate::common;
 use bennett_sched::{Status, object::Object, source::Trace};
 use serde_json::json;
-mod common;
 
 fn object(body: &str) -> Object {
     let base = common::action(

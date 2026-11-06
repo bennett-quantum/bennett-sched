@@ -1,8 +1,8 @@
 #[path = "support/pins.rs"]
 mod pins;
+use crate::common;
 use bennett_sched::{Outcome, Request, canonical, decimal as d};
 use serde_json::json;
-mod common;
 
 fn request() -> Request {
     let mut r = Request::default();

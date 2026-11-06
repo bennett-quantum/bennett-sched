@@ -3,7 +3,7 @@ use serde_json::json;
 use std::collections::BTreeMap;
 #[path = "common/basis.rs"]
 mod basis;
-mod common;
+use crate::common;
 
 #[test]
 fn nested_recompute_is_selected_in_forward_space_before_raw_inverse_traversal() {

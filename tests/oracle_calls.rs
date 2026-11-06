@@ -5,7 +5,7 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 #[path = "common/basis.rs"]
 mod basis;
-mod common;
+use crate::common;
 
 fn increment() -> Vec<u8> {
     common::action(

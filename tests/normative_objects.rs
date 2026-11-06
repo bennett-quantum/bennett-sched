@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-mod common;
+use crate::common;
 #[path = "support/pins.rs"]
 mod pins;
 use bennett_sched::object::Object;
@@ -26,6 +26,7 @@ fn every_printed_09_example_object_has_its_published_interface_hash() {
 }
 
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn every_normative_quantum_region_has_an_audited_typed_scheduler_outcome() {
     use bennett_sched::{Outcome, Request, canonical};
     use serde_json::json;
