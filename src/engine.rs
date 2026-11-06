@@ -68,6 +68,11 @@ impl Search {
         false
     }
 }
+struct Realisation {
+    name: String,
+    ancilla_identity: Option<String>,
+    leaves: Vec<(crate::target::Gate, crate::target::NativeCost)>,
+}
 struct Allocator<'a> {
     target: &'a Target,
     limits: &'a BTreeMap<String, u64>,
@@ -81,6 +86,61 @@ struct Allocator<'a> {
     search: &'a mut Search,
 }
 impl Allocator<'_> {
+    fn realise(
+        &mut self,
+        g: &crate::target::Gate,
+        gate_share: &Rational,
+        source_index: usize,
+        now: &Rational,
+        owner: usize,
+    ) -> Result<Realisation> {
+        let classes = self.classes(&g.all_wires())?;
+        let realisation_prefix = self.class_prefix(&g.all_wires());
+        let native = self.target.native(g, &classes, gate_share)?;
+        let mut ancilla_identity = None;
+        let realisation;
+        let realized = if let Some(cost) = native {
+            realisation = "native".to_owned();
+            vec![(g.clone(), cost)]
+        } else {
+            let identity = format!("scheme/{source_index}");
+            let plan = self.target.scheme(g, &identity)?.ok_or_else(|| {
+                self.search.conflict_prefix = Some(realisation_prefix);
+                Error::infeasible(format!(
+                    "§8.3: no target entry or scheme covers {} at the requested accuracy",
+                    g.op
+                ))
+            })?;
+            if !plan.ancillae.is_empty() {
+                self.allocate(
+                    identity.clone(),
+                    plan.ancillae.clone(),
+                    &plan.class,
+                    &plan.state,
+                    now,
+                    Some(owner),
+                    Some(plan.name.clone()),
+                )?;
+                ancilla_identity = Some(identity);
+            }
+            let mut realized = Vec::new();
+            for leaf in plan.leaves {
+                let classes = self.classes(&leaf.all_wires())?;
+                let cost=self.target.native(&leaf,&classes,gate_share)?.ok_or_else(||{
+                    self.search.conflict_prefix=Some(realisation_prefix.max(self.class_prefix(&leaf.all_wires())));
+                    Error::infeasible("§8.3: scheme leaf does not match a native gates entry; schemes do not nest")
+                })?;
+                realized.push((leaf, cost));
+            }
+            realisation = plan.name;
+            realized
+        };
+        Ok(Realisation {
+            name: realisation,
+            ancilla_identity,
+            leaves: realized,
+        })
+    }
     fn capacity(&self, class: &str) -> Option<u64> {
         match (
             self.target.classes[class].capacity,
@@ -598,7 +658,6 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
                 } else {
                     &share
                 };
-                let classes = allocator.classes(&g.all_wires())?;
                 let realisation_prefix = allocator.class_prefix(&g.all_wires());
                 if let Some(n) = target.value["capabilities"]["max_predicate_depth"].as_u64() {
                     if g.controls.len() as u64 > n {
@@ -610,45 +669,11 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
                         "max_parallel is zero for a nonempty gate stream",
                     ));
                 }
-                let native = target.native(g, &classes, gate_share)?;
-                let mut ancilla_identity = None;
-                let realisation;
-                let realized = if let Some(cost) = native {
-                    realisation = "native".to_owned();
-                    vec![(g.clone(), cost)]
-                } else {
-                    let identity = format!("scheme/{source_index}");
-                    let plan = target.scheme(g, &identity)?.ok_or_else(|| {
-                        allocator.search.conflict_prefix = Some(realisation_prefix);
-                        Error::infeasible(format!(
-                            "§8.3: no target entry or scheme covers {} at the requested accuracy",
-                            g.op
-                        ))
-                    })?;
-                    if !plan.ancillae.is_empty() {
-                        allocator.allocate(
-                            identity.clone(),
-                            plan.ancillae.clone(),
-                            &plan.class,
-                            &plan.state,
-                            &now,
-                            Some(event.owner),
-                            Some(plan.name.clone()),
-                        )?;
-                        ancilla_identity = Some(identity);
-                    }
-                    let mut realized = Vec::new();
-                    for leaf in plan.leaves {
-                        let classes = allocator.classes(&leaf.all_wires())?;
-                        let cost=target.native(&leaf,&classes,gate_share)?.ok_or_else(||{
-                            allocator.search.conflict_prefix=Some(realisation_prefix.max(allocator.class_prefix(&leaf.all_wires())));
-                            Error::infeasible("§8.3: scheme leaf does not match a native gates entry; schemes do not nest")
-                        })?;
-                        realized.push((leaf, cost));
-                    }
-                    realisation = plan.name;
-                    realized
-                };
+                let Realisation {
+                    name: realisation,
+                    ancilla_identity,
+                    leaves: realized,
+                } = allocator.realise(g, gate_share, source_index, &now, event.owner)?;
                 if realisation != "native" || !epsilon.is_zero() {
                     entries.push(selector_entry(
                         event,

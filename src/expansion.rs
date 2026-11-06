@@ -773,6 +773,42 @@ impl Compiler<'_> {
             .collect::<Vec<_>>();
         self.bind(parameters, &args, &caller, controls, false)
     }
+    fn bind_templates(
+        &self,
+        p: &Value,
+        a: &Value,
+        caller: &Env,
+        earlier: &Env,
+        controls: &[String],
+    ) -> Result<Binding> {
+        let named = a.as_str().and_then(|s| caller.get(s));
+        let t = if let Some(Binding::Templates(t)) = named {
+            t.clone()
+        } else {
+            array(a)?
+                .iter()
+                .map(|t| {
+                    fields(t, &["parameters", "body"], &[])?;
+                    let parameters = array(&t["parameters"])?.clone();
+                    validate_formals(&parameters)?;
+                    let body = array(&t["body"])?.clone();
+                    validate_body(&body)?;
+                    Ok(Template {
+                        parameters,
+                        capture: Capture {
+                            env: capture_environment(self.library, &body, caller)?,
+                            body,
+                            controls: controls.to_vec(),
+                        },
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?
+        };
+        if t.len() != size(&p["length"], earlier)? {
+            return Err(Error::arg("§11.1: template length mismatch"));
+        }
+        Ok(Binding::Templates(t))
+    }
     fn actual(
         &mut self,
         ty: &str,
@@ -822,34 +858,7 @@ impl Compiler<'_> {
                     })
                 }
             }
-            "templates" => {
-                let t = if let Some(Binding::Templates(t)) = named {
-                    t.clone()
-                } else {
-                    array(a)?
-                        .iter()
-                        .map(|t| {
-                            fields(t, &["parameters", "body"], &[])?;
-                            let parameters = array(&t["parameters"])?.clone();
-                            validate_formals(&parameters)?;
-                            let body = array(&t["body"])?.clone();
-                            validate_body(&body)?;
-                            Ok(Template {
-                                parameters,
-                                capture: Capture {
-                                    env: capture_environment(self.library, &body, caller)?,
-                                    body,
-                                    controls: controls.to_vec(),
-                                },
-                            })
-                        })
-                        .collect::<Result<Vec<_>>>()?
-                };
-                if t.len() != size(&p["length"], earlier)? {
-                    return Err(Error::arg("§11.1: template length mismatch"));
-                }
-                Binding::Templates(t)
-            }
+            "templates" => self.bind_templates(p, a, caller, earlier, controls)?,
             "symbol" => {
                 let s = if let Some(Binding::Symbol(s)) = named {
                     s.clone()
@@ -1078,6 +1087,350 @@ impl Compiler<'_> {
             _ => return Err(Error::arg("unknown formal type")),
         })
     }
+    fn compile_call(
+        &mut self,
+        c: &Value,
+        env: &mut Env,
+        controls: &[String],
+        frame: &mut Frame,
+        inverse_scope: bool,
+    ) -> Result<Vec<Leaf>> {
+        let name = &c["call"];
+        let Some(Binding::Symbol(symbol)) = env.get(text(name)?).cloned() else {
+            return Err(Error::arg("unbound semantic-call symbol"));
+        };
+        let s = &self.library.symbols[&symbol];
+        let (mut local, oracle_invocation, oracle_identity) = if let Some(Binding::Arguments {
+            symbol: hash,
+            values,
+            oracle_invocation,
+            oracle_identity,
+        }) =
+            c["args"].as_str().and_then(|s| env.get(s))
+        {
+            if hash != &symbol {
+                return Err(Error::arg("call arguments closure mismatch"));
+            }
+            (
+                self.bind_resolved(&s.parameters, values, controls)?,
+                oracle_invocation.clone(),
+                *oracle_identity,
+            )
+        } else {
+            (
+                self.bind(&s.parameters, array(&c["args"])?, env, controls, false)?,
+                None,
+                None,
+            )
+        };
+        let index = frame.calls;
+        frame.calls += 1;
+        let effective = environment_controls(&local, controls);
+        let source_start = self.source_calls.len();
+        let mut child = Frame::default();
+        let mut leaves = if let Some(source) = s.source.clone() {
+            let values = s
+                .parameters
+                .iter()
+                .map(|p| local[formal_name(p)].clone())
+                .collect::<Vec<_>>();
+            let identity = format!("source-call/{}", self.next);
+            self.next += 1;
+            if let (Some(context), Some(id)) = (&oracle_invocation, oracle_identity) {
+                self.register_token(id, context.token())?;
+            }
+            let trace = source.build(
+                &values,
+                oracle_invocation.as_ref(),
+                oracle_identity,
+                &effective,
+                &identity,
+            )?;
+            if self.source_calls.len() >= 65_536 {
+                return Err(Error::new(
+                    crate::Status::NoMem,
+                    "source call metadata exhausts host workspace (bennett-sched-2u4)",
+                ));
+            }
+            self.source_calls.try_reserve(1).map_err(|_| {
+                Error::new(
+                    crate::Status::NoMem,
+                    "source call metadata exceeds host memory",
+                )
+            })?;
+            self.source_calls.push(crate::source_registry::SourceCall {
+                trace: trace.clone(),
+                start: self.emitted,
+                end: self.emitted + trace.events.len(),
+                reverse: false,
+                calls: vec![],
+                origin: vec![],
+            });
+            let mut leaves = Vec::new();
+            for (event, e) in trace.events.iter().enumerate() {
+                if let Operation::Gate(g) = &e.leaf.op {
+                    g.validate()?;
+                    if g.all_wires()
+                        .iter()
+                        .any(|w| self.owned.get(w).is_some_and(|id| !self.live.contains(id)))
+                    {
+                        return Err(Error::arg("linked source uses inactive allocation"));
+                    }
+                }
+                self.emit(&mut leaves, e.leaf.op.clone())?;
+                let leaf = leaves.last_mut().unwrap();
+                leaf.ordinal = e.location.generated;
+                leaf.calls = e.leaf.calls.clone();
+                leaf.origin = e.leaf.origin.clone();
+                leaf.origin.push(Origin {
+                    constructor: "source".into(),
+                    name: symbol.clone(),
+                    index: event,
+                    reverse: false,
+                    source: Some(crate::source_registry::SourceOrigin {
+                        trace: trace.clone(),
+                        event,
+                    }),
+                });
+            }
+            leaves
+        } else {
+            if oracle_invocation.is_some() || oracle_identity.is_some() {
+                return Err(Error::arg(
+                    "oracle_invocation requires a linked source-body builder",
+                ));
+            }
+            self.compile(&s.body, &mut local, &effective, &mut child, inverse_scope)?
+        };
+        number(&mut leaves);
+        for leaf in &mut leaves {
+            leaf.calls.insert(
+                0,
+                CallEdge {
+                    symbol: symbol.clone(),
+                    call_index: index,
+                },
+            );
+        }
+        for call in &mut self.source_calls[source_start..] {
+            call.calls.insert(
+                0,
+                CallEdge {
+                    symbol: symbol.clone(),
+                    call_index: index,
+                },
+            );
+        }
+        Ok(leaves)
+    }
+    fn compile_declaration(
+        &mut self,
+        c: &Value,
+        env: &mut Env,
+        controls: &[String],
+        frame: &mut Frame,
+        inverse_scope: bool,
+    ) -> Result<Vec<Leaf>> {
+        let name = &c["declare"];
+        let name = text(name)?;
+        if env.contains_key(name) {
+            return Err(Error::arg("allocation declaration shadows a binding"));
+        }
+        let width = size(&c["width"], env)?;
+        let class = match self.actual(
+            "class",
+            &Value::Null,
+            &c["class"],
+            env,
+            &Env::new(),
+            controls,
+            false,
+        )? {
+            Binding::Class(s) => s,
+            _ => unreachable!(),
+        };
+        let state = text(&c["state"])?.to_owned();
+        if !["clean", "borrowed"].contains(&state.as_str()) {
+            return Err(Error::arg("invalid declared allocation state"));
+        }
+        let identity = format!("declaration/{name}/{}", self.next);
+        self.next += 1;
+        let wires = (0..width)
+            .map(|i| format!("{identity}[{i}]"))
+            .collect::<Vec<_>>();
+        for w in &wires {
+            self.owned.insert(w.clone(), identity.clone());
+        }
+        let mut local = env.clone();
+        local.insert(
+            name.into(),
+            Binding::Allocation {
+                identity: identity.clone(),
+                wires,
+                class,
+                state,
+            },
+        );
+        let leaves = self.compile(
+            array(&c["body"])?,
+            &mut local,
+            controls,
+            frame,
+            inverse_scope,
+        )?;
+        let mut live = false;
+        for l in &leaves {
+            match &l.op {
+                Operation::Alloc { identity: id, .. } if id == &identity => {
+                    if live {
+                        return Err(Error::arg("double declaration acquisition"));
+                    }
+                    live = true;
+                }
+                Operation::Release { identity: id, .. } if id == &identity => {
+                    if !live {
+                        return Err(Error::arg("inactive declaration release"));
+                    }
+                    live = false;
+                }
+                _ => {}
+            }
+        }
+        if live {
+            return Err(Error::arg(
+                "§11.1: declaration exits with a live allocation",
+            ));
+        }
+        Ok(leaves)
+    }
+    fn compile_template(
+        &mut self,
+        c: &Value,
+        env: &mut Env,
+        controls: &[String],
+        frame: &mut Frame,
+        inverse_scope: bool,
+    ) -> Result<Vec<Leaf>> {
+        let name = &c["apply"];
+        let Some(Binding::Templates(ts)) = env.get(text(name)?).cloned() else {
+            return Err(Error::arg("unbound templates"));
+        };
+        let index = size(&c["index"], env)?;
+        let t = ts
+            .get(index)
+            .ok_or_else(|| Error::arg("template index out of bounds"))?;
+        let bound = self.bind(&t.parameters, array(&c["args"])?, env, controls, false)?;
+        let mut local = t.capture.env.clone();
+        local.extend(bound);
+        let mut eff = t.capture.controls.clone();
+        union(&mut eff, controls);
+        eff = environment_controls(&local, &eff);
+        let source_start = self.source_calls.len();
+        let mut leaves = self.compile(&t.capture.body, &mut local, &eff, frame, inverse_scope)?;
+        for leaf in &mut leaves {
+            leaf.origin.push(Origin {
+                constructor: "apply".into(),
+                name: text(name)?.into(),
+                index,
+                reverse: false,
+                source: None,
+            });
+        }
+        for call in &mut self.source_calls[source_start..] {
+            call.origin.push(Origin {
+                constructor: "apply".into(),
+                name: text(name)?.into(),
+                index,
+                reverse: false,
+                source: None,
+            });
+        }
+        Ok(leaves)
+    }
+    fn compile_records(
+        &mut self,
+        c: &Value,
+        env: &mut Env,
+        controls: &[String],
+        frame: &mut Frame,
+        inverse_scope: bool,
+    ) -> Result<Vec<Leaf>> {
+        let name = &c["visit"];
+        let mut out = Vec::new();
+        let Some(Binding::Records { records, .. }) = env.get(text(name)?).cloned() else {
+            return Err(Error::arg("unbound descriptor records"));
+        };
+        for (index, record) in records.into_iter().enumerate() {
+            let mut local = env.clone();
+            local.extend(record);
+            let source_start = self.source_calls.len();
+            let mut leaves = self.compile(
+                array(&c["body"])?,
+                &mut local,
+                controls,
+                frame,
+                inverse_scope,
+            )?;
+            for leaf in &mut leaves {
+                leaf.origin.push(Origin {
+                    constructor: "visit".into(),
+                    name: text(name)?.into(),
+                    index,
+                    reverse: false,
+                    source: None,
+                });
+            }
+            for call in &mut self.source_calls[source_start..] {
+                call.origin.push(Origin {
+                    constructor: "visit".into(),
+                    name: text(name)?.into(),
+                    index,
+                    reverse: false,
+                    source: None,
+                });
+            }
+            out.extend(leaves);
+        }
+        Ok(out)
+    }
+    fn compile_inverse(
+        &mut self,
+        c: &Value,
+        env: &mut Env,
+        controls: &[String],
+        frame: &mut Frame,
+    ) -> Result<Vec<Leaf>> {
+        let mut out = Vec::new();
+        let before = self.live.clone();
+        let native_start = self.emitted;
+        let source_start = self.source_calls.len();
+        let leaves = self.compile(array(&c["body"])?, &mut env.clone(), controls, frame, true)?;
+        let native_end = self.emitted;
+        for call in &mut self.source_calls[source_start..] {
+            let (start, end) = (call.start, call.end);
+            call.start = native_start + native_end - end;
+            call.end = native_start + native_end - start;
+            call.reverse = !call.reverse;
+            for origin in &mut call.origin {
+                origin.reverse = !origin.reverse;
+            }
+        }
+        self.source_calls[source_start..].reverse();
+        self.live = before;
+        for leaf in inverse(&leaves) {
+            match &leaf.op {
+                Operation::Alloc { identity, .. } => {
+                    self.live.insert(identity.clone());
+                }
+                Operation::Release { identity, .. } => {
+                    self.live.remove(identity);
+                }
+                _ => {}
+            }
+            out.push(leaf);
+        }
+        Ok(out)
+    }
     fn compile(
         &mut self,
         body: &[Value],
@@ -1192,35 +1545,7 @@ impl Compiler<'_> {
                     },
                 )?;
             } else if c.get("inverse").is_some() {
-                let before = self.live.clone();
-                let native_start = self.emitted;
-                let source_start = self.source_calls.len();
-                let leaves =
-                    self.compile(array(&c["body"])?, &mut env.clone(), controls, frame, true)?;
-                let native_end = self.emitted;
-                for call in &mut self.source_calls[source_start..] {
-                    let (start, end) = (call.start, call.end);
-                    call.start = native_start + native_end - end;
-                    call.end = native_start + native_end - start;
-                    call.reverse = !call.reverse;
-                    for origin in &mut call.origin {
-                        origin.reverse = !origin.reverse;
-                    }
-                }
-                self.source_calls[source_start..].reverse();
-                self.live = before;
-                for leaf in inverse(&leaves) {
-                    match &leaf.op {
-                        Operation::Alloc { identity, .. } => {
-                            self.live.insert(identity.clone());
-                        }
-                        Operation::Release { identity, .. } => {
-                            self.live.remove(identity);
-                        }
-                        _ => {}
-                    }
-                    out.push(leaf);
-                }
+                out.extend(self.compile_inverse(c, env, controls, frame)?);
             } else if let Some(name) = c.get("for") {
                 let from = scalar(&c["from"], env)?;
                 let to = scalar(&c["to"], env)?;
@@ -1323,148 +1648,12 @@ impl Compiler<'_> {
                         }
                     }
                 }
-            } else if let Some(name) = c.get("apply") {
-                let Some(Binding::Templates(ts)) = env.get(text(name)?).cloned() else {
-                    return Err(Error::arg("unbound templates"));
-                };
-                let index = size(&c["index"], env)?;
-                let t = ts
-                    .get(index)
-                    .ok_or_else(|| Error::arg("template index out of bounds"))?;
-                let bound = self.bind(&t.parameters, array(&c["args"])?, env, controls, false)?;
-                let mut local = t.capture.env.clone();
-                local.extend(bound);
-                let mut eff = t.capture.controls.clone();
-                union(&mut eff, controls);
-                eff = environment_controls(&local, &eff);
-                let source_start = self.source_calls.len();
-                let mut leaves =
-                    self.compile(&t.capture.body, &mut local, &eff, frame, inverse_scope)?;
-                for leaf in &mut leaves {
-                    leaf.origin.push(Origin {
-                        constructor: "apply".into(),
-                        name: text(name)?.into(),
-                        index,
-                        reverse: false,
-                        source: None,
-                    });
-                }
-                for call in &mut self.source_calls[source_start..] {
-                    call.origin.push(Origin {
-                        constructor: "apply".into(),
-                        name: text(name)?.into(),
-                        index,
-                        reverse: false,
-                        source: None,
-                    });
-                }
-                out.extend(leaves);
-            } else if let Some(name) = c.get("visit") {
-                let Some(Binding::Records { records, .. }) = env.get(text(name)?).cloned() else {
-                    return Err(Error::arg("unbound descriptor records"));
-                };
-                for (index, record) in records.into_iter().enumerate() {
-                    let mut local = env.clone();
-                    local.extend(record);
-                    let source_start = self.source_calls.len();
-                    let mut leaves = self.compile(
-                        array(&c["body"])?,
-                        &mut local,
-                        controls,
-                        frame,
-                        inverse_scope,
-                    )?;
-                    for leaf in &mut leaves {
-                        leaf.origin.push(Origin {
-                            constructor: "visit".into(),
-                            name: text(name)?.into(),
-                            index,
-                            reverse: false,
-                            source: None,
-                        });
-                    }
-                    for call in &mut self.source_calls[source_start..] {
-                        call.origin.push(Origin {
-                            constructor: "visit".into(),
-                            name: text(name)?.into(),
-                            index,
-                            reverse: false,
-                            source: None,
-                        });
-                    }
-                    out.extend(leaves);
-                }
-            } else if let Some(name) = c.get("declare") {
-                let name = text(name)?;
-                if env.contains_key(name) {
-                    return Err(Error::arg("allocation declaration shadows a binding"));
-                }
-                let width = size(&c["width"], env)?;
-                let class = match self.actual(
-                    "class",
-                    &Value::Null,
-                    &c["class"],
-                    env,
-                    &Env::new(),
-                    controls,
-                    false,
-                )? {
-                    Binding::Class(s) => s,
-                    _ => unreachable!(),
-                };
-                let state = text(&c["state"])?.to_owned();
-                if !["clean", "borrowed"].contains(&state.as_str()) {
-                    return Err(Error::arg("invalid declared allocation state"));
-                }
-                let identity = format!("declaration/{name}/{}", self.next);
-                self.next += 1;
-                let wires = (0..width)
-                    .map(|i| format!("{identity}[{i}]"))
-                    .collect::<Vec<_>>();
-                for w in &wires {
-                    self.owned.insert(w.clone(), identity.clone());
-                }
-                let mut local = env.clone();
-                local.insert(
-                    name.into(),
-                    Binding::Allocation {
-                        identity: identity.clone(),
-                        wires,
-                        class,
-                        state,
-                    },
-                );
-                let leaves = self.compile(
-                    array(&c["body"])?,
-                    &mut local,
-                    controls,
-                    frame,
-                    inverse_scope,
-                )?;
-                let mut live = false;
-                for l in &leaves {
-                    match &l.op {
-                        Operation::Alloc { identity: id, .. } if id == &identity => {
-                            if live {
-                                return Err(Error::arg("double declaration acquisition"));
-                            }
-                            live = true;
-                        }
-                        Operation::Release { identity: id, .. } if id == &identity => {
-                            if !live {
-                                return Err(Error::arg("inactive declaration release"));
-                            }
-                            live = false;
-                        }
-                        _ => {}
-                    }
-                }
-                if live {
-                    return Err(Error::arg(
-                        "§11.1: declaration exits with a live allocation",
-                    ));
-                }
-                out.extend(leaves);
+            } else if c.get("apply").is_some() {
+                out.extend(self.compile_template(c, env, controls, frame, inverse_scope)?);
+            } else if c.get("visit").is_some() {
+                out.extend(self.compile_records(c, env, controls, frame, inverse_scope)?);
+            } else if c.get("declare").is_some() {
+                out.extend(self.compile_declaration(c, env, controls, frame, inverse_scope)?);
             } else if c.get("acquire").is_some() || c.get("relinquish").is_some() {
                 let acquire = c.get("acquire").is_some();
                 let name = &c[if acquire { "acquire" } else { "relinquish" }];
@@ -1527,132 +1716,8 @@ impl Compiler<'_> {
                         event,
                     },
                 )?;
-            } else if let Some(name) = c.get("call") {
-                let Some(Binding::Symbol(symbol)) = env.get(text(name)?).cloned() else {
-                    return Err(Error::arg("unbound semantic-call symbol"));
-                };
-                let s = &self.library.symbols[&symbol];
-                let (mut local, oracle_invocation, oracle_identity) =
-                    if let Some(Binding::Arguments {
-                        symbol: hash,
-                        values,
-                        oracle_invocation,
-                        oracle_identity,
-                    }) = c["args"].as_str().and_then(|s| env.get(s))
-                    {
-                        if hash != &symbol {
-                            return Err(Error::arg("call arguments closure mismatch"));
-                        }
-                        (
-                            self.bind_resolved(&s.parameters, values, controls)?,
-                            oracle_invocation.clone(),
-                            *oracle_identity,
-                        )
-                    } else {
-                        (
-                            self.bind(&s.parameters, array(&c["args"])?, env, controls, false)?,
-                            None,
-                            None,
-                        )
-                    };
-                let index = frame.calls;
-                frame.calls += 1;
-                let effective = environment_controls(&local, controls);
-                let source_start = self.source_calls.len();
-                let mut child = Frame::default();
-                let mut leaves = if let Some(source) = s.source.clone() {
-                    let values = s
-                        .parameters
-                        .iter()
-                        .map(|p| local[formal_name(p)].clone())
-                        .collect::<Vec<_>>();
-                    let identity = format!("source-call/{}", self.next);
-                    self.next += 1;
-                    if let (Some(context), Some(id)) = (&oracle_invocation, oracle_identity) {
-                        self.register_token(id, context.token())?;
-                    }
-                    let trace = source.build(
-                        &values,
-                        oracle_invocation.as_ref(),
-                        oracle_identity,
-                        &effective,
-                        &identity,
-                    )?;
-                    if self.source_calls.len() >= 65_536 {
-                        return Err(Error::new(
-                            crate::Status::NoMem,
-                            "source call metadata exhausts host workspace (bennett-sched-2u4)",
-                        ));
-                    }
-                    self.source_calls.try_reserve(1).map_err(|_| {
-                        Error::new(
-                            crate::Status::NoMem,
-                            "source call metadata exceeds host memory",
-                        )
-                    })?;
-                    self.source_calls.push(crate::source_registry::SourceCall {
-                        trace: trace.clone(),
-                        start: self.emitted,
-                        end: self.emitted + trace.events.len(),
-                        reverse: false,
-                        calls: vec![],
-                        origin: vec![],
-                    });
-                    let mut leaves = Vec::new();
-                    for (event, e) in trace.events.iter().enumerate() {
-                        if let Operation::Gate(g) = &e.leaf.op {
-                            g.validate()?;
-                            if g.all_wires().iter().any(|w| {
-                                self.owned.get(w).is_some_and(|id| !self.live.contains(id))
-                            }) {
-                                return Err(Error::arg("linked source uses inactive allocation"));
-                            }
-                        }
-                        self.emit(&mut leaves, e.leaf.op.clone())?;
-                        let leaf = leaves.last_mut().unwrap();
-                        leaf.ordinal = e.location.generated;
-                        leaf.calls = e.leaf.calls.clone();
-                        leaf.origin = e.leaf.origin.clone();
-                        leaf.origin.push(Origin {
-                            constructor: "source".into(),
-                            name: symbol.clone(),
-                            index: event,
-                            reverse: false,
-                            source: Some(crate::source_registry::SourceOrigin {
-                                trace: trace.clone(),
-                                event,
-                            }),
-                        });
-                    }
-                    leaves
-                } else {
-                    if oracle_invocation.is_some() || oracle_identity.is_some() {
-                        return Err(Error::arg(
-                            "oracle_invocation requires a linked source-body builder",
-                        ));
-                    }
-                    self.compile(&s.body, &mut local, &effective, &mut child, inverse_scope)?
-                };
-                number(&mut leaves);
-                for leaf in &mut leaves {
-                    leaf.calls.insert(
-                        0,
-                        CallEdge {
-                            symbol: symbol.clone(),
-                            call_index: index,
-                        },
-                    );
-                }
-                for call in &mut self.source_calls[source_start..] {
-                    call.calls.insert(
-                        0,
-                        CallEdge {
-                            symbol: symbol.clone(),
-                            call_index: index,
-                        },
-                    );
-                }
-                out.extend(leaves);
+            } else if c.get("call").is_some() {
+                out.extend(self.compile_call(c, env, controls, frame, inverse_scope)?);
             } else {
                 return Err(Error::arg("unknown constructor"));
             }

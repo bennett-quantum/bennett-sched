@@ -288,6 +288,64 @@ fn control_range(v: &Value, c: u64) -> Result<bool> {
     }
     Ok(c >= min && max.is_none_or(|m| c <= m))
 }
+fn validate_native_entries(
+    v: &Value,
+    classes: &BTreeMap<String, Class>,
+    resources: &serde_json::Map<String, Value>,
+) -> Result<()> {
+    for g in array(&v["gates"])? {
+        fields(
+            g,
+            &["op", "classes", "controls", "epsilon", "cost"],
+            &["params"],
+        )?;
+        if !GATES.contains(&text(&g["op"])?) {
+            return Err(Error::target("unknown native gate"));
+        }
+        let pattern = array(&g["classes"])?;
+        if pattern.is_empty() {
+            return Err(Error::target("empty class pattern"));
+        }
+        for c in pattern {
+            if c != "*" && !classes.contains_key(text(c)?) {
+                return Err(Error::target("unknown native class"));
+            }
+        }
+        control_range(&g["controls"], 0)?;
+        expression(&g["epsilon"], &["k", "c", "eps"], &v["tables"])?;
+        let exact = g["epsilon"].is_number() && d::value(&g["epsilon"])?.is_zero();
+        if exact && (refs_eps(&g["epsilon"]) || refs_eps(&g["cost"])) {
+            return Err(Error::target("§8.1: exact entry references eps"));
+        }
+        let costs = g["cost"]
+            .as_object()
+            .ok_or_else(|| Error::target("cost must be object"))?;
+        if !costs.contains_key("time") {
+            return Err(Error::target("gate cost omits time"));
+        }
+        for (r, e) in costs {
+            if !resources.contains_key(r) {
+                return Err(Error::target("cost names unknown resource"));
+            }
+            expression(
+                e,
+                if exact {
+                    &["k", "c"]
+                } else {
+                    &["k", "c", "eps"]
+                },
+                &v["tables"],
+            )?;
+        }
+        if let Some(params) = g.get("params") {
+            if params != &json!(["theta"]) {
+                return Err(Error::target("invalid native gate params"));
+            }
+        }
+    }
+    Ok(())
+}
+
 impl Target {
     pub fn parse(bytes: &[u8]) -> Result<Self> {
         Self::from_value(canonical::require_jcs(bytes)?)
@@ -381,56 +439,7 @@ impl Target {
                 )));
             }
         }
-        for g in array(&v["gates"])? {
-            fields(
-                g,
-                &["op", "classes", "controls", "epsilon", "cost"],
-                &["params"],
-            )?;
-            if !GATES.contains(&text(&g["op"])?) {
-                return Err(Error::target("unknown native gate"));
-            }
-            let pattern = array(&g["classes"])?;
-            if pattern.is_empty() {
-                return Err(Error::target("empty class pattern"));
-            }
-            for c in pattern {
-                if c != "*" && !classes.contains_key(text(c)?) {
-                    return Err(Error::target("unknown native class"));
-                }
-            }
-            control_range(&g["controls"], 0)?;
-            expression(&g["epsilon"], &["k", "c", "eps"], &v["tables"])?;
-            let exact = g["epsilon"].is_number() && d::value(&g["epsilon"])?.is_zero();
-            if exact && (refs_eps(&g["epsilon"]) || refs_eps(&g["cost"])) {
-                return Err(Error::target("§8.1: exact entry references eps"));
-            }
-            let costs = g["cost"]
-                .as_object()
-                .ok_or_else(|| Error::target("cost must be object"))?;
-            if !costs.contains_key("time") {
-                return Err(Error::target("gate cost omits time"));
-            }
-            for (r, e) in costs {
-                if !resources.contains_key(r) {
-                    return Err(Error::target("cost names unknown resource"));
-                }
-                expression(
-                    e,
-                    if exact {
-                        &["k", "c"]
-                    } else {
-                        &["k", "c", "eps"]
-                    },
-                    &v["tables"],
-                )?;
-            }
-            if let Some(params) = g.get("params") {
-                if params != &json!(["theta"]) {
-                    return Err(Error::target("invalid native gate params"));
-                }
-            }
-        }
+        validate_native_entries(&v, &classes, resources)?;
         let mut names = BTreeSet::new();
         for s in array(&v["schemes"])? {
             fields(s, &["name", "realises", "ancillae", "template"], &[])?;

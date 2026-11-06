@@ -61,3 +61,18 @@ The FFI error/panic guard gets direct tests in the test quality pass. Other
 low coverage comes from validation/error paths and rare layout/capture cases;
 coverage includes actual token-alias C consumers and typed source binding tests.
 Slow full-domain tests remain gate obligations, not deleted coverage.
+
+Structural pass: source traversal now has separate loop, conditional, call,
+bundle, memory and gate phases. Expansion separates semantic calls, templates,
+record visits, declarations and inversion. Oracle construction separates
+interface binding, byte layout, fixed procedure rows and event projection;
+value rows and memory rows share operand validation. Target native-entry
+validation and allocator realisation are separate phases.
+
+The source scanner reports no function over 300 lines (maximum 298).
+The unchanged published trace/ordinal, basis, source adjoint, source registry,
+layout and target tests exercise these phases. The extracted value-row phase
+also has a literal frame-slice and invalid-width unit test. After splitting:
+four library tests pass; the default integration suite has 222 passes, the
+same one upstream reference failure, and ten ignored cases (64.42 seconds of
+test execution; 189.78 seconds including the full multi-file rebuild).
