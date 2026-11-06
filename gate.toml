@@ -17,10 +17,10 @@ name = "cargo fmt"
 argv = ["cargo", "fmt", "--", "--check"]
 
 [siblings."bennett-isa-spec"]
-sha = "ecaaac060c44e317d1181345fa6b8e38c096c099"
-note = "SPEC_VERSIONS.toml spec_commit; ISA main as gated by the 2026-11-02 push wave"
+sha = "97e7b9f16977905be8308c2ca33b9d470f83756f"
+note = "SPEC_VERSIONS.toml spec_commit (K83 fixtures, token_aliases metadata); re-pinned 2026-11-06 by pin-sched/orchestrator, on origin via wip/session-end-2026-11-03"
 [siblings."bennett-isa-spec".files]
-"spec/Bennett-ISA-Spec-0.9.md" = "021d5df978f293c36174b73de9facc0884f7502a4bc5c0ab7a621b0ca7071c25"
+"spec/Bennett-ISA-Spec-0.9.md" = "bbd887c7841f4eed40f7b3518270a8f2cf781204c14ac4cc3eabca5c5b4b8c3b"
 
 [[siblings."bennett-isa-spec".build]]
 name = "reference interpreter (debug)"
