@@ -36,3 +36,28 @@ Focused validation: `timeout 180 cargo test --offline -j3 --lib --test
 published_vectors --test oracle_pairs --test token_aliases --test ffi --test
 c_link -- --test-threads=4` passed 32 tests. `timeout 180 cargo test --offline
 -j3 --test conformance_inventory -- --test-threads=4` passed one test.
+
+
+Default test timing at 804eb15: 155.15 seconds including 59.73 seconds of build,
+95.19 seconds for the integration suite. Library tests: 2 passed. Integration:
+220 passed, 1 known upstream failure, 10 slow tests retained under --ignored.
+Command: timeout 600 cargo test --offline -j3 -- --test-threads=4.
+
+Coverage before structural refactoring (804eb15): **87.86% lines**.
+Command: timeout 600 cargo llvm-cov --offline -j3 --ignore-run-fail --json
+--summary-only --ignore-filename-regex "/tests/" --output-path
+.tmp/quality-sched/coverage.json -- --test-threads=4. The one known reference
+failure is present in the test log; --ignore-run-fail permits report generation
+and does not make that test pass. Ignored exhaustive cases are outside this
+default-suite coverage number.
+
+Five least-covered modules in this measurement:
+- src/lib.rs: 75.0% (18/24 lines).
+- src/ffi.rs: 75.41% (138/183 lines).
+- src/target.rs: 76.83% (567/738 lines).
+- src/cleanup/replay.rs: 81.86% (564/689 lines).
+- src/oracle.rs: 82.58% (1010/1223 lines).
+The FFI error/panic guard gets direct tests in the test quality pass. Other
+low coverage comes from validation/error paths and rare layout/capture cases;
+coverage includes actual token-alias C consumers and typed source binding tests.
+Slow full-domain tests remain gate obligations, not deleted coverage.
