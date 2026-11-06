@@ -1,14 +1,16 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{Status, canonical, object::Object, schedule::Document};
 use serde_json::{Value, json};
 
 fn controlled() -> (Object, Value) {
-    let root = "../bennett-isa-spec/conformance/fixtures/controlled-action-09";
+    let root = pins::spec("conformance/fixtures/controlled-action-09");
     // Explicit K91 rebinding of the pre-K91 token-free schedule template.
     let mut schedule =
-        canonical::parse(&std::fs::read(format!("{root}/schedule.json")).unwrap()).unwrap();
+        canonical::parse(&std::fs::read(root.join("schedule.json")).unwrap()).unwrap();
     schedule["bindings"]["token_aliases"] = json!([]);
     (
-        Object::parse(&std::fs::read(format!("{root}/controlled.bisa")).unwrap()).unwrap(),
+        Object::parse(&std::fs::read(root.join("controlled.bisa")).unwrap()).unwrap(),
         schedule,
     )
 }
@@ -41,7 +43,7 @@ fn every_path_is_checked_against_the_source_call_chain_and_loop_depth() {
 
 #[test]
 fn published_nonexistent_inc8_row_rejects_and_reserved_oracle_points_are_valid() {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let bytes = spec
         .split("### 16.3 Example objects")
         .nth(1)
@@ -57,8 +59,10 @@ fn published_nonexistent_inc8_row_rejects_and_reserved_oracle_points_are_valid()
     schedule["bindings"]["region"] = json!("inc8");
     schedule["entries"] = json!([{"path":[{"symbol":hash,"point":"entry:3","iteration":[]}],"step":"*","phase":"*","generated":"*","kind":"start","start":{"time":0}}]);
     let case: Value = canonical::parse(
-        &std::fs::read("../bennett-isa-spec/conformance/cases/H/H-path-not-in-object/case.json")
-            .unwrap(),
+        &std::fs::read(pins::spec(
+            "conformance/cases/H/H-path-not-in-object/case.json",
+        ))
+        .unwrap(),
     )
     .unwrap();
     schedule["entries"][0]["path"][0]["point"] = case["scenario"]["point"].clone();
@@ -89,7 +93,7 @@ fn published_nonexistent_inc8_row_rejects_and_reserved_oracle_points_are_valid()
 
 #[test]
 fn concrete_lproc_instance_selectors_use_the_finite_source_binding_closure() {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let text = spec
         .split("### 16.3 Example objects")
         .nth(1)

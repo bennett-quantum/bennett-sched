@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{
     Outcome, Request, canonical, expansion::Operation, object::Object, source::Trace,
 };
@@ -9,7 +11,7 @@ mod basis;
 mod common;
 
 fn borrowed_source() -> Vec<u8> {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     spec.split("**Example 3**")
         .nth(1)
         .unwrap()

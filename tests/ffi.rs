@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{Outcome, Status, ffi::*};
 use std::{
     ffi::{CStr, CString},
@@ -14,18 +16,18 @@ fn binary_api_rejects_nulls_and_preserves_owned_buffers() {
             bennett_sched_request_set_object(request, ptr::null(), 1),
             Status::Arg
         );
-        let mut object = std::fs::read(
-            "../bennett-isa-spec/conformance/fixtures/controlled-action-09/controlled.bisa",
-        )
+        let mut object = std::fs::read(pins::spec(
+            "conformance/fixtures/controlled-action-09/controlled.bisa",
+        ))
         .unwrap();
         assert_eq!(
             bennett_sched_request_set_object(request, object.as_ptr(), object.len()),
             Status::Ok
         );
         object.fill(0);
-        let mut target = std::fs::read(
-            "../bennett-isa-spec/conformance/fixtures/controlled-action-09/target.json",
-        )
+        let mut target = std::fs::read(pins::spec(
+            "conformance/fixtures/controlled-action-09/target.json",
+        ))
         .unwrap();
         assert_eq!(
             bennett_sched_request_set_target(request, target.as_ptr(), target.len()),

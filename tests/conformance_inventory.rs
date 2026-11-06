@@ -1,13 +1,20 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::canonical;
 use serde_json::Value;
 use std::{collections::BTreeSet, path::Path};
 #[test]
 fn conformance_inventory_records_every_case_and_portable_manifest_without_stale_hashes() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let spec = root.join("../bennett-isa-spec");
+    let spec = pins::spec("");
     let report: Value =
         serde_json::from_slice(&std::fs::read(root.join("docs/conformance-report.json")).unwrap())
             .unwrap();
+    assert_eq!(
+        report["isa_spec_sha"],
+        pins::sha(),
+        "inventory must record the gate.toml ISA pin"
+    );
     assert_eq!(
         report["spec_sha256"],
         canonical::hash(&std::fs::read(spec.join("spec/Bennett-ISA-Spec-0.9.md")).unwrap())

@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{Outcome, Request, canonical, decimal as d};
 use serde_json::json;
 mod common;
@@ -5,15 +7,17 @@ mod common;
 fn request() -> Request {
     let mut r = Request::default();
     r.set_object(
-        &std::fs::read(
-            "../bennett-isa-spec/conformance/fixtures/controlled-action-09/controlled.bisa",
-        )
+        &std::fs::read(pins::spec(
+            "conformance/fixtures/controlled-action-09/controlled.bisa",
+        ))
         .unwrap(),
     )
     .unwrap();
     r.set_target(
-        &std::fs::read("../bennett-isa-spec/conformance/fixtures/controlled-action-09/target.json")
-            .unwrap(),
+        &std::fs::read(pins::spec(
+            "conformance/fixtures/controlled-action-09/target.json",
+        ))
+        .unwrap(),
     )
     .unwrap();
     r.set_region(
@@ -113,7 +117,7 @@ fn exact_target_scheme_is_expanded_once_and_bound_in_schedule() {
 
 #[test]
 fn mandatory_oracle_state_exceeding_target_capacity_is_infeasible_before_expansion() {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let example = spec
         .split("**Example 2**")
         .nth(1)
@@ -337,7 +341,7 @@ fn placement_search_finds_adjacent_vertices_when_the_lowest_free_pair_is_disconn
 
 #[test]
 fn normative_inc8_schedules_through_the_abi_with_history_and_oracle_claim() {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let source = spec
         .split("### 16.3 Example objects")
         .nth(1)

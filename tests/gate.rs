@@ -3,6 +3,20 @@
 use serde_json::Value;
 use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf, process::Command};
 
+#[test]
+fn sibling_resolution_uses_pins_even_when_live_checkout_is_empty_or_drifted() {
+    let output = Command::new("python3")
+        .arg("-I")
+        .arg(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/pin_resolution.py"))
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 fn hex(value: &Value, width: usize) -> bool {
     value.as_str().is_some_and(|s| {
         s.len() == width

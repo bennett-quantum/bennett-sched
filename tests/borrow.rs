@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{
     Outcome, Request, canonical,
     expansion::{Operation, simulate_basis},
@@ -9,7 +11,7 @@ use std::collections::BTreeMap;
 mod common;
 
 fn example() -> Vec<u8> {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     spec.split("**Example 3**")
         .nth(1)
         .unwrap()
@@ -74,9 +76,9 @@ fn normative_translation_frame_is_universal_and_emits_a_separate_borrow_record()
         request.set_params(b"[]").unwrap();
         request.set_accuracy("0").unwrap();
         let mut target: serde_json::Value = serde_json::from_slice(
-            &std::fs::read(
-                "../bennett-isa-spec/conformance/fixtures/controlled-action-09/target.json",
-            )
+            &std::fs::read(pins::spec(
+                "conformance/fixtures/controlled-action-09/target.json",
+            ))
             .unwrap(),
         )
         .unwrap();

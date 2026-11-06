@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{
     canonical, decimal as d,
     resources::{LiveInterval, TimedEvent, aggregate},
@@ -9,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
 };
 fn cases() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../bennett-isa-spec/conformance/cases")
+    pins::spec("conformance/cases")
 }
 fn read(path: impl AsRef<Path>) -> Value {
     canonical::parse(&std::fs::read(path).unwrap()).unwrap()

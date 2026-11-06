@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{
     canonical,
     expansion::{Operation, simulate_basis},
@@ -384,8 +386,10 @@ fn interface_region_shape_role_and_cell_identity_are_preserved_across_calls() {
 #[test]
 fn every_k79_source_address_vector_is_admitted_or_rejected_before_ref_helper_expansion() {
     let manifest: serde_json::Value = canonical::parse(
-        &std::fs::read("../bennett-isa-spec/conformance/fixtures/accepted-k78-k80-09/k79.json")
-            .unwrap(),
+        &std::fs::read(pins::spec(
+            "conformance/fixtures/accepted-k78-k80-09/k79.json",
+        ))
+        .unwrap(),
     )
     .unwrap();
     let mut admitted = 0;

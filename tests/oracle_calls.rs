@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{canonical, object::Object, source::Trace};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -393,7 +395,7 @@ fn source_adjoints_remap_caller_loop_occurrences_without_reversing_oracle_steps(
 
 #[test]
 fn published_k77_two_token_inc8_witness_covers_every_input_and_both_controls() {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let inc = spec
         .split("### 16.3 Example objects")
         .nth(1)
