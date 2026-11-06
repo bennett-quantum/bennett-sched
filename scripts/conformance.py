@@ -28,7 +28,7 @@ DIRECT = {
     "E-epsilon-zero-exact": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
     "E-jcs-target-hash": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
     "E-mbu-must-be-false": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
-    "E-topology-grid-09": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
+    "E-topology-grid-09": "engine::tests::published_grid_placement_outcomes_match_scheduler_admission",
 }
 DIRECT.update({f"F-k83-{name}": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse" for name in ["zero-trip","qif-arms","image-01","image-81","controlled-image-81","repeated-image-81"]})
 EQUIVALENT = {

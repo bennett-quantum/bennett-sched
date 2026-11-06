@@ -1159,6 +1159,9 @@ fn certificate(
 }
 
 #[cfg(test)]
+#[path = "../tests/support/pins.rs"]
+mod pins;
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -1236,5 +1239,56 @@ mod tests {
             !search.advance(),
             "released choices cannot repair the fixed live capacity conflict"
         );
+    }
+    #[test]
+    fn published_grid_placement_outcomes_match_scheduler_admission() {
+        let dir = pins::spec("conformance/cases/E/E-topology-grid-09");
+        let case = canonical::parse(&std::fs::read(dir.join("case.json")).unwrap()).unwrap();
+        let target = Target::parse(&std::fs::read(dir.join("target.json")).unwrap()).unwrap();
+        assert_eq!(target.hash, case["expected_outcome"]["target_hash"]);
+        for (key, expected) in [
+            ("adjacent", "native_cx_adjacent"),
+            ("non_adjacent", "native_cx_non_adjacent"),
+        ] {
+            let mut search = Search::default();
+            let limits = BTreeMap::new();
+            let vertices = case["scenario"][key].as_array().unwrap();
+            let mut allocator = Allocator {
+                target: &target,
+                limits: &limits,
+                live: BTreeMap::from([
+                    ("c".into(), ("fast".into(), vertices[0].as_u64())),
+                    ("t".into(), ("fast".into(), vertices[1].as_u64())),
+                ]),
+                placement_prefixes: BTreeMap::new(),
+                class_prefixes: BTreeMap::new(),
+                allocations: vec![],
+                active: BTreeMap::new(),
+                counts: BTreeMap::new(),
+                order: 0,
+                search: &mut search,
+            };
+            let result = allocator.check_topology(&["c".into(), "t".into()], 0);
+            match case["expected_outcome"][expected].as_str().unwrap() {
+                "realisable" => result.unwrap(),
+                "E_SCHEDULE_INFEASIBLE: §17 item 15" => {
+                    let error = result.unwrap_err();
+                    assert_eq!(error.status, crate::Status::ScheduleInfeasible);
+                    assert!(error.reason.contains("§17 item 15"));
+                }
+                outcome => panic!("unrecognised published topology outcome {outcome}"),
+            }
+        }
+        assert_eq!(case["expected_outcome"]["absent_topology"], "all-to-all");
+        let mut value = target.value.clone();
+        value.as_object_mut().unwrap().remove("topology");
+        let all_to_all = Target::from_value(value).unwrap();
+        for a in 0..4 {
+            for b in 0..4 {
+                if a != b {
+                    assert!(all_to_all.adjacent(&[a, b]));
+                }
+            }
+        }
     }
 }
