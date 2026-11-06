@@ -91,6 +91,12 @@ impl Allocator<'_> {
             (None, b) => b,
         }
     }
+    fn capacity_conflict(&mut self) {
+        // Occupancy depends on the classes of live wires. Choices for released
+        // allocations and vertex permutations cannot repair a capacity failure.
+        self.search.conflict_prefix =
+            Some(self.class_prefixes.values().copied().max().unwrap_or(0));
+    }
     fn free_vertices(&self, class: &str) -> Vec<u64> {
         let used: BTreeSet<_> = self.live.values().filter_map(|(_, v)| *v).collect();
         self.target
@@ -138,6 +144,7 @@ impl Allocator<'_> {
                 .cloned()
                 .collect::<Vec<_>>();
             if names.is_empty() {
+                self.capacity_conflict();
                 return Err(Error::infeasible(format!(
                     "§8.4: capacity exhausted for allocation {identity} ({n} wires)"
                 )));
@@ -157,6 +164,7 @@ impl Allocator<'_> {
                 )));
             }
             if !self.fits(source_class, n) {
+                self.capacity_conflict();
                 return Err(Error::infeasible(format!(
                     "§8.4: capacity {source_class} exceeded by {identity}"
                 )));
@@ -1148,4 +1156,85 @@ fn certificate(
         json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":invocation_binding(root)},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::exact(&(d::integer(2)*&bounds.declared_total))?},"method":"sum_over_multiplicities"}}),
         bounds.exact_total,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capacity_conflict_ignores_choices_for_released_allocations() {
+        let mut target =
+            crate::canonical::parse(include_bytes!("../data/k83-target.json")).unwrap();
+        let class = target["classes"]
+            .as_object()
+            .unwrap()
+            .values()
+            .next()
+            .unwrap()
+            .clone();
+        target["classes"] = json!({"a":class,"b":class});
+        for gate in target["gates"].as_array_mut().unwrap() {
+            gate["classes"] = json!(["*"]);
+        }
+        target["classes"]["a"]["capacity"] = json!(2);
+        target["classes"]["b"]["capacity"] = json!("unbounded");
+        let target = Target::from_value(target).unwrap();
+        let mut search = Search::default();
+        let limits = BTreeMap::new();
+        let mut allocator = Allocator {
+            target: &target,
+            limits: &limits,
+            live: BTreeMap::new(),
+            placement_prefixes: BTreeMap::new(),
+            class_prefixes: BTreeMap::new(),
+            allocations: Vec::new(),
+            active: BTreeMap::new(),
+            counts: BTreeMap::new(),
+            order: 0,
+            search: &mut search,
+        };
+        allocator
+            .allocate(
+                "interface".into(),
+                vec!["t".into()],
+                "a",
+                "interface",
+                &d::integer(0),
+                None,
+                None,
+            )
+            .unwrap();
+        for i in 0..30 {
+            let name = format!("temporary-{i}");
+            allocator
+                .allocate(
+                    name.clone(),
+                    vec![name.clone()],
+                    "any",
+                    "clean",
+                    &d::integer(0),
+                    None,
+                    None,
+                )
+                .unwrap();
+            allocator.release(&name, &d::integer(0)).unwrap();
+        }
+        let error = allocator
+            .allocate(
+                "too-wide".into(),
+                vec!["x".into(), "y".into()],
+                "a",
+                "clean",
+                &d::integer(0),
+                None,
+                None,
+            )
+            .unwrap_err();
+        assert_eq!(error.status, crate::Status::ScheduleInfeasible);
+        assert!(
+            !search.advance(),
+            "released choices cannot repair the fixed live capacity conflict"
+        );
+    }
 }
