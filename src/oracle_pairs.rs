@@ -279,6 +279,13 @@ pub(crate) fn validate(
         calls.push(call);
         edges.push(successors(node, index, nodes.len(), first, labels)?);
     }
+    // Only joins (and the entry) need retained states. A cycle reachable
+    // from entry must revisit one of these checkpoints; linear paths can be
+    // consumed without retaining a separate copy for every source row.
+    let mut incoming = vec![0usize; nodes.len()];
+    for next in edges.iter().flatten() {
+        incoming[*next] += 1;
+    }
     let mut matches = BTreeMap::new();
     let initial = State {
         versions: (0..ids.len() as u32).collect(),
@@ -286,8 +293,12 @@ pub(crate) fn validate(
     };
     let mut visited = BTreeSet::from([(0, initial.clone())]);
     let mut pending = VecDeque::from([(0, initial)]);
-    let mut retained = 0usize;
+    const HOST_PROOF_BYTES: usize = 32 * 1024 * 1024;
+    const HOST_PROOF_STATES: usize = 8192;
+    let mut retained = pending[0].1.bytes();
+    let mut queued = retained;
     while let Some((index, mut state)) = pending.pop_front() {
+        queued -= state.bytes();
         let node = &nodes[index];
         if let Some(call) = &calls[index] {
             if node.op == "lift.oracle_uncall" {
@@ -342,18 +353,26 @@ pub(crate) fn validate(
         }
         state.canonicalize();
         for next in &edges[index] {
-            if visited.contains(&(*next, state.clone())) {
+            let checkpoint = *next == 0 || incoming[*next] > 1;
+            if checkpoint && visited.contains(&(*next, state.clone())) {
                 continue;
             }
-            // Two retained copies cover the queue and the visited-state set.
-            retained = retained.saturating_add(state.bytes().saturating_mul(2));
-            if retained > 32 * 1024 * 1024 || visited.len() >= 8192 {
+            let bytes = state.bytes();
+            queued = queued.saturating_add(bytes);
+            if checkpoint {
+                retained = retained.saturating_add(bytes);
+            }
+            if retained.saturating_add(queued) > HOST_PROOF_BYTES
+                || (checkpoint && visited.len() >= HOST_PROOF_STATES)
+            {
                 return Err(Error::new(
                     Status::NoMem,
                     "§5.5 source cleanup analysis exhausts host state workspace",
                 ));
             }
-            visited.insert((*next, state.clone()));
+            if checkpoint {
+                visited.insert((*next, state.clone()));
+            }
             pending.push_back((*next, state.clone()));
         }
     }

@@ -281,3 +281,14 @@ fn unbounded_pending_call_stacks_report_host_exhaustion_without_a_smaller_path_c
     assert_eq!(error.status, Status::NoMem, "{error}");
     assert!(error.reason.contains("source cleanup analysis"), "{error}");
 }
+
+#[test]
+fn long_straight_line_uncall_proof_is_not_limited_by_source_row_count() {
+    let mut body = String::from("lift.oracle_call @o b (x) r f () ()\n");
+    for _ in 0..9000 {
+        body.push_str("z = lift.mov x\n");
+    }
+    body.push_str("lift.oracle_uncall @o b (x) r f () ()\nlift.retval r");
+    let trace = check(&body).unwrap();
+    assert_eq!(trace.invocations[0].name, "outer");
+}
