@@ -6,6 +6,20 @@ use serde_json::Value;
 use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf, process::Command};
 
 #[test]
+fn installed_hook_obeys_committed_pin_and_propagates_tool_failure() {
+    let output = Command::new("python3")
+        .args(["-B", "tests/gate_stub.py"])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn sibling_resolution_uses_pins_even_when_live_checkout_is_empty_or_drifted() {
     let output = Command::new("python3")
         .arg("-I")

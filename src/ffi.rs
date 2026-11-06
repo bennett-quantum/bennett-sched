@@ -18,6 +18,21 @@ fn status(f: impl FnOnce() -> Result<()>) -> Status {
         Err(_) => Status::InvalidState,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn status_guard_preserves_errors_and_contains_panics_at_the_abi_boundary() {
+        assert_eq!(status(|| Ok(())), Status::Ok);
+        assert_eq!(status(|| Err(Error::arg("invalid request"))), Status::Arg);
+        assert_eq!(
+            status(|| panic!("foreign boundary panic")),
+            Status::InvalidState
+        );
+    }
+}
 unsafe fn request<'a>(r: *mut Request) -> Result<&'a mut Request> {
     unsafe { r.as_mut() }.ok_or_else(|| Error::arg("NULL request"))
 }
