@@ -13,6 +13,13 @@ NAME = "bennett-isa-spec"
 PIN = tomllib.loads((ROOT / "gate.toml").read_text())["siblings"][NAME]["sha"]
 
 
+def materialised_spec():
+    # Gate run worktrees have only their supplied layout, not a local cache.
+    if "BENNETT_GATE_LAYOUT" in os.environ:
+        return Path(os.environ["BENNETT_GATE_LAYOUT"]) / NAME
+    return ROOT / ".tmp/gate/cache" / f"{NAME}@{PIN[:12]}" / NAME
+
+
 class PinResolution(unittest.TestCase):
     def test_rust_readers_have_no_live_sibling_paths(self):
         readers = [p.name for p in (ROOT / "tests").glob("*.rs")
@@ -132,7 +139,7 @@ class PinResolution(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout)["sha"], PIN)
 
     def test_inventory_script_uses_pin_with_empty_live_sibling(self):
-        source = ROOT / ".tmp/gate/cache" / f"{NAME}@{PIN[:12]}" / NAME
+        source = materialised_spec()
         self.cache.parent.mkdir(parents=True)
         self.cache.symlink_to(source.resolve(), target_is_directory=True)
         shutil.copytree(ROOT / "scripts", self.root / "scripts")
@@ -146,6 +153,19 @@ class PinResolution(unittest.TestCase):
         self.assertEqual(report["isa_spec_sha"], PIN)
         self.assertEqual(report["case_count"], len(list((source / "conformance/cases").glob("*/*/case.json"))))
         self.assertEqual(report["reference_09_admission_probe"]["exit"], 0)
+
+    def test_inventory_regression_runs_in_gate_layout_without_local_cache(self):
+        source = materialised_spec()
+        shutil.copytree(ROOT / "scripts", self.root / "scripts")
+        (self.root / "tests").mkdir()
+        shutil.copyfile(ROOT / "tests/pin_resolution.py", self.root / "tests/pin_resolution.py")
+        (self.root / "data").symlink_to(ROOT / "data", target_is_directory=True)
+        env = dict(self.env, BENNETT_GATE_LAYOUT=str(source.parent.resolve()))
+        result = subprocess.run(
+            ["python3", "-I", str(self.root / "tests/pin_resolution.py"),
+             "PinResolution.test_inventory_script_uses_pin_with_empty_live_sibling"],
+            env=env, capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":
