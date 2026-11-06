@@ -37,7 +37,8 @@ def resolve(root, name, reference=False):
     if reference:
         candidates = ([Path(os.environ["BENNETT_REF_BIN"])] if "BENNETT_REF_BIN" in os.environ else
                       [path / "reference-interpreter/target" / mode / "bennett-isa-ref" for mode in ("debug", "release")])
-        binary = next((p for p in candidates if p.is_file() and p.resolve().is_relative_to(path.resolve())), None)
+        candidates = [candidate.resolve() for candidate in candidates]
+        binary = next((p for p in candidates if p.is_file() and p.is_relative_to(path.resolve())), None)
         if binary is None:
             fail("reference binary missing from pinned checkout or BENNETT_REF_BIN points outside it")
         result["binary"] = str(binary)

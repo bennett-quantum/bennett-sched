@@ -45,11 +45,11 @@ class PinResolution(unittest.TestCase):
         (path / ".git/HEAD").write_text(sha + "\n")
         return path
 
-    def resolve(self, *extra):
+    def resolve(self, *extra, cwd=None):
         return subprocess.run(
             ["python3", "-I", str(ROOT / "scripts/pinned_sibling.py"),
              str(self.root), NAME, *extra], env=self.env,
-            capture_output=True, text=True, timeout=30)
+            cwd=cwd, capture_output=True, text=True, timeout=30)
 
     def diagnostic(self, result, actual="unavailable"):
         self.assertNotEqual(result.returncode, 0)
@@ -114,6 +114,29 @@ class PinResolution(unittest.TestCase):
     def test_missing_reference_binary_is_loud(self):
         self.checkout(self.cache)
         self.diagnostic(self.resolve("--reference"))
+
+    def test_relative_reference_override_cannot_execute_path_decoy(self):
+        self.checkout(self.cache)
+        binary = self.cache / "reference-interpreter/target/debug/bennett-isa-ref"
+        binary.parent.mkdir(parents=True)
+        binary.write_text("#!/bin/sh\nprintf 'PINNED-REFERENCE\\n'\n")
+        binary.chmod(0o755)
+        decoy = self.workspace / "bin/bennett-isa-ref"
+        decoy.parent.mkdir()
+        decoy.write_text("#!/bin/sh\ntouch \"$0.executed\"\nprintf 'UNPINNED-REFERENCE\\n'\n")
+        decoy.chmod(0o755)
+        self.env["PATH"] = str(decoy.parent) + os.pathsep + self.env["PATH"]
+        self.env["BENNETT_REF_BIN"] = "./bennett-isa-ref"
+
+        result = self.resolve("--reference", cwd=binary.parent)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        chosen = json.loads(result.stdout)["binary"]
+        output = subprocess.run([chosen], cwd=binary.parent, env=self.env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertFalse(decoy.with_suffix(".executed").exists(), "PATH decoy was executed")
+        self.assertEqual(output.returncode, 0, output.stderr)
+        self.assertEqual(output.stdout, "PINNED-REFERENCE\n")
+        self.assertEqual(chosen, str(binary.resolve()))
 
     def test_reference_symlink_cannot_escape_pin(self):
         self.checkout(self.cache)

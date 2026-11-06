@@ -39,6 +39,14 @@ pub fn sha() -> &'static str {
 pub fn reference() -> PathBuf {
     static BINARY: OnceLock<PathBuf> = OnceLock::new();
     BINARY
-        .get_or_init(|| PathBuf::from(resolve(true)["binary"].as_str().unwrap()))
+        .get_or_init(|| {
+            let binary = PathBuf::from(resolve(true)["binary"].as_str().unwrap());
+            assert!(
+                binary.is_absolute(),
+                "pin resolver returned a relative reference binary: {}",
+                binary.display()
+            );
+            binary
+        })
         .clone()
 }

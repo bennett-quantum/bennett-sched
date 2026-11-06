@@ -1,5 +1,7 @@
 // The shared gate tool owns worktree, pin isolation and ref protocol tests.
 // This repository checks its own installed stub and declared check contract.
+#[path = "support/pins.rs"]
+mod pins;
 use serde_json::Value;
 use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf, process::Command};
 
@@ -13,6 +15,67 @@ fn sibling_resolution_uses_pins_even_when_live_checkout_is_empty_or_drifted() {
     assert!(
         output.status.success(),
         "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn relative_reference_override_cannot_execute_path_decoy() {
+    const PROBE: &str = "BENNETT_REFERENCE_PROBE_EXPECTED";
+    if let Some(expected) = std::env::var_os(PROBE) {
+        let chosen = pins::reference();
+        let output = Command::new(&chosen).output().unwrap();
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"PINNED-REFERENCE\n");
+        assert!(chosen.is_absolute(), "{}", chosen.display());
+        assert_eq!(chosen, PathBuf::from(expected).canonicalize().unwrap());
+        return;
+    }
+
+    // Run the resolver in a child to isolate cwd, environment and its OnceLock.
+    let tmp = std::env::temp_dir().join(format!("pinned-reference-{}", std::process::id()));
+    let layout = tmp.join("layout");
+    let checkout = layout.join("bennett-isa-spec");
+    fs::create_dir_all(checkout.join(".git/objects")).unwrap();
+    fs::create_dir(checkout.join(".git/refs")).unwrap();
+    fs::write(checkout.join(".git/HEAD"), format!("{}\n", pins::sha())).unwrap();
+    let binary = checkout.join("reference-interpreter/target/debug/bennett-isa-ref");
+    fs::create_dir_all(binary.parent().unwrap()).unwrap();
+    fs::write(&binary, "#!/bin/sh\nprintf 'PINNED-REFERENCE\\n'\n").unwrap();
+    fs::set_permissions(&binary, fs::Permissions::from_mode(0o755)).unwrap();
+    let decoy = tmp.join("bin/bennett-isa-ref");
+    fs::create_dir(decoy.parent().unwrap()).unwrap();
+    fs::write(
+        &decoy,
+        "#!/bin/sh\ntouch \"$0.executed\"\nprintf 'UNPINNED-REFERENCE\\n'\n",
+    )
+    .unwrap();
+    fs::set_permissions(&decoy, fs::Permissions::from_mode(0o755)).unwrap();
+    let path = std::env::join_paths(
+        std::iter::once(decoy.parent().unwrap().to_path_buf())
+            .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
+    )
+    .unwrap();
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "relative_reference_override_cannot_execute_path_decoy",
+            "--nocapture",
+        ])
+        .env(PROBE, &binary)
+        .env("BENNETT_GATE_LAYOUT", &layout)
+        .env("BENNETT_REF_BIN", "./bennett-isa-ref")
+        .env("PATH", path)
+        .current_dir(binary.parent().unwrap())
+        .output()
+        .unwrap();
+    let decoy_executed = decoy.with_extension("executed").exists();
+    fs::remove_dir_all(tmp).unwrap();
+    assert!(!decoy_executed, "PATH decoy was executed");
+    assert!(
+        output.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
 }
