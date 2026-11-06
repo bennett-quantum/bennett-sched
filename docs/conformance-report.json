@@ -4942,7 +4942,7 @@
       "source": "conformance/cases/E/E-topology-grid-09/case.json",
       "sha256": "0a93879e74035ef17e8752eb85711a807df8f5148416076c6382564eb4a27542",
       "coverage": "direct-fixture-test",
-      "test": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly"
+      "test": "engine::tests::published_grid_placement_outcomes_match_scheduler_admission"
     },
     {
       "id": "F-action-cycle",
@@ -6151,5 +6151,5 @@
     "test": "differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission",
     "meaning": "Published debug CLI admits the emitted controlled-action schedule and certificate metadata; absent source point rejects. This is not certificate-claim replay or scheduled execution."
   },
-  "recorded_at_utc": "2026-11-06T06:34:42Z"
+  "recorded_at_utc": "2026-11-06T13:35:53Z"
 }
