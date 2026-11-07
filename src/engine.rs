@@ -320,12 +320,18 @@ impl Allocator<'_> {
             })
             .collect::<Result<Vec<_>>>()?;
         if !self.target.adjacent(&vertices) {
-            let prefix = wires
-                .iter()
-                .map(|w| self.placement_prefixes.get(w).copied().unwrap_or(0))
-                .max()
-                .unwrap_or(0);
-            self.search.conflict_prefix = Some(prefix.max(realisation_prefix));
+            let prefix = wires.iter().try_fold(realisation_prefix, |prefix, wire| {
+                self.placement_prefixes
+                    .get(wire)
+                    .map(|dependency| prefix.max(*dependency))
+                    .ok_or_else(|| {
+                        Error::new(
+                            crate::Status::InvalidState,
+                            format!("live wire {wire} has no placement dependency"),
+                        )
+                    })
+            })?;
+            self.search.conflict_prefix = Some(prefix);
             return Err(Error::infeasible(
                 "§8.3 / §17 item 15: native leaf operands are not adjacent",
             ));
@@ -1285,7 +1291,7 @@ mod tests {
                     ("c".into(), ("fast".into(), vertices[0].as_u64())),
                     ("t".into(), ("fast".into(), vertices[1].as_u64())),
                 ]),
-                placement_prefixes: BTreeMap::new(),
+                placement_prefixes: BTreeMap::from([("c".into(), 0), ("t".into(), 0)]),
                 class_prefixes: BTreeMap::new(),
                 allocations: vec![],
                 active: BTreeMap::new(),
@@ -1302,6 +1308,17 @@ mod tests {
                     assert!(error.reason.contains("§17 item 15"));
                 }
                 outcome => panic!("unrecognised published topology outcome {outcome}"),
+            }
+            if key == "non_adjacent" {
+                allocator.placement_prefixes.remove("t");
+                let error = allocator
+                    .check_topology(&["c".into(), "t".into()], 0)
+                    .unwrap_err();
+                assert_eq!(
+                    error.status,
+                    crate::Status::InvalidState,
+                    "missing live-wire dependency is not an independent placement conflict"
+                );
             }
         }
         assert_eq!(case["expected_outcome"]["absent_topology"], "all-to-all");
