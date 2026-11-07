@@ -11,7 +11,9 @@ ROOT = Path(__file__).resolve().parent.parent
 MARKER = "<!-- quality-baseline -->"
 TOKEN = re.compile(r'//[^\n]*|/\*.*?\*/|r(\#*)".*?"\1|b?"(?:\\.|[^"\\])*"|b?\'(?:\\.|[^\'\\])\'', re.S)
 BRANCH = re.compile(r"\b(?:if|else|for|while|loop|match)\b|&&|\|\||=>|[{}]")
-PROCESS = re.compile(r"bennett-sched-[a-z0-9]+|\b(?:sol-sched|quality-sched)\b|\bshift \d+", re.I)
+PROCESS = re.compile(
+    r"(?:bennett-(?:sched|vm|driver|plugin|conformance|estimate|targets|circuits|arith|runtimes|dialect-spec)|b-isa-spec)-[a-z0-9]+"
+    r"|\b(?:sol-sched|quality-sched)\b|\b(?:job|wip)/[a-z0-9_-]+|\bshift \d+", re.I)
 LITTER = re.compile(r"(?:^|/)(?:__pycache__|PROGRESS[^/]*|LAST-RUN[^/]*|LOCK)(?:/|$)|\.(?:pyc|log|darc|lock|backup)$")
 
 

@@ -38,6 +38,14 @@ fn every_path_is_checked_against_the_source_call_chain_and_loop_depth() {
             .validate_paths(&object)
             .unwrap_err();
         assert_eq!(e.status, Status::ScheduleInfeasible, "{malformed}: {e}");
+        let reason = [
+            "path point entry:100",
+            "outside the source invocation",
+            "source iteration selector has wrong loop depth",
+            "call_index is not in the bound source expansion",
+            "non-lproc source point requires the empty instance key",
+        ][malformed];
+        assert!(e.reason.contains(reason), "{malformed}: {e}");
     }
 }
 

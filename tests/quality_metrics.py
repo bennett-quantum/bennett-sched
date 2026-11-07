@@ -66,6 +66,9 @@ fn actual() {
             self.assertIsNotNone(quality.LITTER.search(path), path)
         self.assertIsNone(quality.LITTER.search("src/oracle.rs"))
         self.assertIsNotNone(quality.PROCESS.search("postponed (bennett-sched-abc)"))
+        self.assertIsNotNone(quality.PROCESS.search("pending b-isa-spec-ab12"))
+        self.assertIsNotNone(quality.PROCESS.search("job/new-task"))
+        self.assertIsNone(quality.PROCESS.search("bennett-isa-spec"))
         self.assertIsNone(quality.PROCESS.search("§11.1 K62"))
 
 

@@ -37,9 +37,16 @@ fn adjoint_calls_preserve_caller_loop_coordinates_and_remap_only_the_callee() {
                 )
             })
             .collect::<Vec<_>>();
-        let expected = (0..3)
-            .flat_map(|caller| (0..2).map(move |callee| (vec![caller], vec![callee])))
-            .collect::<Vec<_>>();
+        // Source traversal addresses each caller occurrence before entering
+        // the callee's local ascending iteration space (§5.3).
+        let expected = vec![
+            (vec![0], vec![0]),
+            (vec![0], vec![1]),
+            (vec![1], vec![0]),
+            (vec![1], vec![1]),
+            (vec![2], vec![0]),
+            (vec![2], vec![1]),
+        ];
         assert_eq!(actual, expected, "{prefix}action_call");
     }
 }
@@ -88,13 +95,20 @@ fn nested_adjoint_calls_leave_every_outside_loop_coordinate_unchanged() {
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    let expected = (0..2)
-        .flat_map(|outer| {
-            (0..3).flat_map(move |middle| {
-                (0..2).map(move |inner| vec![vec![outer], vec![middle], vec![inner]])
-            })
-        })
-        .collect::<Vec<_>>();
+    let expected = vec![
+        vec![vec![0], vec![0], vec![0]],
+        vec![vec![0], vec![0], vec![1]],
+        vec![vec![0], vec![1], vec![0]],
+        vec![vec![0], vec![1], vec![1]],
+        vec![vec![0], vec![2], vec![0]],
+        vec![vec![0], vec![2], vec![1]],
+        vec![vec![1], vec![0], vec![0]],
+        vec![vec![1], vec![0], vec![1]],
+        vec![vec![1], vec![1], vec![0]],
+        vec![vec![1], vec![1], vec![1]],
+        vec![vec![1], vec![2], vec![0]],
+        vec![vec![1], vec![2], vec![1]],
+    ];
     assert_eq!(actual, expected);
     for invocation in trace.invocations.iter().skip(1) {
         let expected = invocation.path.iter().map(|p| p.json()).collect::<Vec<_>>();

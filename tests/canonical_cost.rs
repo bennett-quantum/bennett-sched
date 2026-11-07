@@ -60,7 +60,9 @@ fn published_k12_upward_34_digit_encodings_are_exact() {
 }
 
 #[test]
-fn expansion_envelope_is_the_published_complete_catalog() {
+fn published_expansion_catalog_identity_pins_packaging_bytes() {
+    // This is an integrity check. Named-interface and expansion tests execute
+    // the catalog separately; a digest does not establish semantic coverage.
     let bytes = include_bytes!("../data/ref-0.9.json");
     let v = canonical::require_jcs(bytes).unwrap();
     assert_eq!(v["recipes"].as_array().unwrap().len(), 219);
