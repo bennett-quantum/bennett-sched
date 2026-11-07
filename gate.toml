@@ -20,6 +20,10 @@ argv = ["cargo", "test", "--offline", "-j3", "--", "--ignored", "--test-threads=
 name = "cargo fmt"
 argv = ["cargo", "fmt", "--", "--check"]
 
+[[check]]
+name = "quality baseline"
+argv = ["python3", "-B", "scripts/quality.py", "--check"]
+
 [siblings."bennett-isa-spec"]
 sha = "97e7b9f16977905be8308c2ca33b9d470f83756f"
 note = "SPEC_VERSIONS.toml spec_commit (K83 fixtures, token_aliases metadata); re-pinned 2026-11-06 by pin-sched/orchestrator, on origin via wip/session-end-2026-11-03"

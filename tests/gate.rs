@@ -20,6 +20,20 @@ fn installed_hook_obeys_committed_pin_and_propagates_tool_failure() {
 }
 
 #[test]
+fn quality_measurement_rejects_each_independent_regression() {
+    let output = Command::new("python3")
+        .args(["-B", "tests/quality_metrics.py"])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn sibling_resolution_uses_pins_even_when_live_checkout_is_empty_or_drifted() {
     let output = Command::new("python3")
         .arg("-I")
@@ -142,6 +156,21 @@ fn push_gate_declares_pinned_siblings_and_runs_only_the_installed_tool_stub() {
         "{sibling:bennett-isa-spec}/reference-interpreter/target/debug/bennett-isa-ref"
     );
     let checks = config["check"].as_array().unwrap();
+    let quality = checks
+        .iter()
+        .filter(|c| c["name"] == "quality baseline")
+        .collect::<Vec<_>>();
+    assert_eq!(quality.len(), 1);
+    assert_eq!(
+        quality[0]["argv"],
+        serde_json::json!(["python3", "-B", "scripts/quality.py", "--check"])
+    );
+    assert!(
+        checks.iter().any(|c| c["argv"]
+            .as_array()
+            .is_some_and(|a| a.iter().any(|arg| arg == "--ignored"))),
+        "the gate must execute the retained exhaustive tests"
+    );
     assert!(
         checks
             .iter()

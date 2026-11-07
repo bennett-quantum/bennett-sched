@@ -91,3 +91,94 @@ The gate and SPEC_VERSIONS spec commit/file digest were checked against git show
 of the pinned commit. README and the conformance inventory now attribute the
 current reference failure instead of repeating the old successful-admission
 claim. Ten oracle-pair tests pass after diagnostic cleanup.
+
+The quality ratchet is one gate check: python3 -B scripts/quality.py --check.
+It compares this repo with the JSON baseline below, not a global threshold.
+Measurements cover Rust under src/ and Python under scripts/. Rust function
+lengths include signatures and comments; comments/strings are masked when
+finding braces. The cognitive-complexity mass is a documented lexical proxy:
+decisions cost one plus brace nesting, logical operators and match arms cost
+one; Python uses AST decision nesting. A wrapper is a function whose body is
+one forwarded call (independent of signature formatting). Increasing any
+length-tail count, maximum, per-file mass, wrapper count, process-identifier
+count or tracked litter fails. Function count alone is reported, not a limit.
+Litter is inspected across all tracked paths; process identifiers are searched
+in product Rust source. Eight hand-derived/mutation unit tests check measurement
+and regression directions, including raw strings, nested comments and array
+parameter semicolons. The installed gate launcher runs those tests.
+
+Reasons/tests for the five initially least-covered modules:
+- lib.rs: most uncovered lines are the compatibility probe and generic error
+  conversion/formatting, rather than an unexecuted semantic subsystem. Existing
+  C consumers exercise the binary interface; no coverage threshold is imposed.
+- ffi.rs: the new direct guard test covers panic containment, successful status
+  and preserved argument errors. Existing C consumers cover ownership and alias
+  copies; invalid non-null pointers remain the documented caller obligation.
+- target.rs: published exact-share and specific rejection tests were strengthened.
+  Native realisation-model support remains explicit unfinished work under vt8;
+  parsing a field without validating its model would provide misleading coverage.
+- cleanup/replay.rs: primitive/intrinsic and allocated pre-call history have
+  semantic tests. General arbitrary-interface/borrowed history is still ark;
+  synthetic success paths would not establish the missing restoration proof.
+- oracle.rs: the extracted value phase has direct literal-offset/error tests.
+  Existing full-domain oracle tests run in the slow gate; classical argument
+  storage remains the r28 contract gap. Host allocation/exponent error paths
+  are kept fail-loud rather than allocating unbounded fixtures for coverage.
+
+<!-- quality-baseline -->
+```json
+{
+  "complexity_mass": {
+    "scripts/conformance.py": 91,
+    "scripts/pinned_sibling.py": 15,
+    "scripts/quality.py": 78,
+    "src/admission.rs": 218,
+    "src/borrow.rs": 54,
+    "src/canonical.rs": 205,
+    "src/cleanup.rs": 184,
+    "src/cleanup/raw.rs": 49,
+    "src/cleanup/replay.rs": 268,
+    "src/decimal.rs": 57,
+    "src/engine.rs": 316,
+    "src/engine/error_bounds.rs": 21,
+    "src/expansion.rs": 930,
+    "src/expansion_env.rs": 0,
+    "src/ffi.rs": 35,
+    "src/layout.rs": 77,
+    "src/lib.rs": 0,
+    "src/lproc.rs": 219,
+    "src/object.rs": 576,
+    "src/oracle.rs": 270,
+    "src/oracle_activation.rs": 15,
+    "src/oracle_calls.rs": 124,
+    "src/oracle_memory.rs": 42,
+    "src/oracle_pairs.rs": 120,
+    "src/oracle_state.rs": 113,
+    "src/qinplace.rs": 35,
+    "src/ref_contract.rs": 75,
+    "src/request.rs": 16,
+    "src/resources.rs": 112,
+    "src/schedule.rs": 126,
+    "src/source.rs": 834,
+    "src/source/call_graph.rs": 102,
+    "src/source/oracle_call.rs": 83,
+    "src/source/qinplace.rs": 108,
+    "src/source_ir.rs": 188,
+    "src/source_registry.rs": 97,
+    "src/target.rs": 399,
+    "src/token_aliases.rs": 28
+  },
+  "function_lengths": {
+    "count": 423,
+    "maximum": 298,
+    "over_100": 42,
+    "over_30": 131,
+    "over_300": 0
+  },
+  "litter": [
+    ".beads/hooks/pre-push.backup"
+  ],
+  "process_identifiers": 0,
+  "trivial_wrappers": 58
+}
+```
