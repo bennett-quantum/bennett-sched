@@ -1,7 +1,7 @@
 # ISA 0.9 scheduler implementation and evidence
 
 Contract: `bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md`, §11 and its
-dependencies. Source checkout HEAD observed at `97e7b9f16977905be8308c2ca33b9d470f83756f`; live text includes accepted K84–K93. SPEC_VERSIONS.toml records that HEAD and the live file digest, with committed-content equality explicitly unverified. The catalog bytes/hash remain unchanged. New contract adoption is tracked by vt8; no complete conformance is claimed.
+dependencies. The published ISA pin is `3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1`, including accepted K84–K93 and the K91 token-alias reader. gate.toml and SPEC_VERSIONS.toml record that commit and its verified committed spec digest. The catalog bytes/hash remain unchanged. New contract adoption is tracked by vt8; no complete conformance is claimed.
 The published `ref` JSON is specification data, vendored in `data/`; no sibling
 implementation code is linked or copied. Beads issue `bennett-sched-akl` owns
 implementation tracking. This document maps requirements and records evidence;
@@ -104,11 +104,11 @@ peaks and child scheme ancilla accounting. The general algorithms above remain
 required. Structural and numerical certificate entries are producer claims;
 independent checker replay is not claimed.
 
-`bennett-sched-qnl` tracks the remaining conformance. The inventory has 536 A–H
+`bennett-sched-qnl` tracks the remaining conformance. The inventory has 557 A–H
 cases: 18 direct fixture mappings, 17 equivalent witness mappings, 20 partial ref
 families, 8 explicitly rebound K83 schedule fixtures, 5 other scheduler vectors,
-and 468 executor/checker vectors not replayed
-by this scheduler. Seven portable manifests are recorded (K84 remains unexercised): K79's 12 source address
+and 489 executor/checker vectors not replayed
+by this scheduler. Eight portable manifests are recorded (K84 and K91 remain unexercised): K79's 12 source address
 cases (4 accepted, 8 rejected) and all 128 forward/inverse tuples, K82's 16 binding
 cases/54 interfaces/86 digests pass; K80 source trace fields and all 80 published basis tuples pass after version rebinding; K78/K81 direct manifest replay remains open. Original 0.8 source
 bodies in K79 are re-enveloped and rehashed for 0.9 without changing instructions.
@@ -123,7 +123,7 @@ resource rows, exact-scheme expansion and all four basis configurations are
 checked. Differential execution uses the published debug CLI and four-input
 compatibility fixture. That debug binary now admits the actual 0.9 object and
 our emitted schedule/certificate metadata; an absent source point rejects.
-The release binary still rejects 0.9. CLI metadata admission is distinct from
+Only the pinned debug binary is exercised here. CLI metadata admission is distinct from
 scheduled execution and rigorous certificate-claim replay, both still unclaimed.
 Numerical certificate claims emitted here remain producer claims for independent
 checking; no proof/evidence label or rigorous interval-checker success is claimed.
@@ -137,10 +137,9 @@ checkpoint. Under the 2026-11-03 R3 note the agent runs focused tests only; the
 orchestrator runs full gates and hook-check. Earlier working-tree gate evidence
 below predates this adoption and does not prove pinned push verification.
 
-The root gate.toml currently has an older ISA commit/spec digest than
-SPEC_VERSIONS.toml and the K83 fixture inventory. That config is outside this
-job's write allowlist. The orchestrator must align the two pins and verify the
-pushed SHA; no test is relaxed to hide that mismatch.
+The root gate.toml and SPEC_VERSIONS.toml agree on the ISA commit and spec
+digest. The conformance inventory is regenerated from that gate pin, including
+the K91 cases and manifest. The orchestrator still verifies the pushed SHA.
 
 Memoryless oracle evidence now includes full-domain two-bit increment at every
 budget 0–4, arbitrary target/fault values and inherited control, and branching

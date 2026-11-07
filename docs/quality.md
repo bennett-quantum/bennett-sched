@@ -1,14 +1,18 @@
 # Scheduler quality evidence
 
 Evidence is against the ISA revision in `gate.toml`
-(`97e7b9f16977905be8308c2ca33b9d470f83756f`). This is a remediation record,
+(`3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1`). This is a remediation record,
 not a claim that all published capabilities or quality targets are complete.
 
-The reference metadata-admission differential remains active in the default
-suite. The reference interpreter at this pin rejects `bindings.token_aliases`;
-upstream **b-isa-spec-3wl9** owns that failure. Only the orchestrator advances
-the reviewed ISA pin. A coverage run that continues after this failure is
-measurement, not a successful test run.
+The reference metadata-admission differential passes unchanged at this pin:
+the emitted schedule and certificate are admitted, and an absent source point
+is rejected. The spec digest was checked against the committed bytes, and the
+reference catalog is byte-identical to the previous pin.
+
+The timing and coverage measurements below were recorded at the former
+`97e7b9f` pin. Its `token_aliases` rejection is historical; the new-pin
+verification is recorded separately below. Coverage runs that continued after
+that historical failure remain measurements, not successful test runs.
 
 Inherited review work:
 - **bennett-sched-fdu**: valid layout fixtures; three adjoint tests pass and
@@ -19,7 +23,7 @@ Inherited review work:
   and fixed grid placement verdicts are checked. A changed native duration
   fails the published literal-time assertion.
 - **bennett-sched-nsy**: inventory regenerated from the gate pin; its complete
-  case and manifest hash test passes (536 cases, seven manifests).
+  case and manifest hash test covers 557 cases and eight manifests.
 - **bennett-sched-xzv**: setter/identity tests and actual C linkage pass.
   Section 10.1 still needs the precise negotiation ABI (symbol/signature/result).
 - **bennett-sched-r28**: section 3.7 permits classical pseudo-location reads,
@@ -88,9 +92,9 @@ bytecode, logs, locks and backups. One previously tracked backup,
 orchestrator cleanup under bennett-sched-ogc.
 
 The gate and SPEC_VERSIONS spec commit/file digest were checked against git show
-of the pinned commit. README and the conformance inventory now attribute the
-current reference failure instead of repeating the old successful-admission
-claim. Ten oracle-pair tests pass after diagnostic cleanup.
+of the pinned commit. At the former pin, README and the conformance inventory
+attributed the reference failure instead of repeating an unsupported admission
+claim. Ten oracle-pair tests passed after diagnostic cleanup.
 
 The quality ratchet is one gate check: python3 -B scripts/quality.py --check.
 It compares this repo with the JSON baseline below, not a global threshold.
@@ -125,7 +129,7 @@ Reasons/tests for the five initially least-covered modules:
   storage remains the r28 contract gap. Host allocation/exponent error paths
   are kept fail-loud rather than allocating unbounded fixtures for coverage.
 
-Final verification (Rust source unchanged through d066757):
+Inherited verification record at the former ISA pin (not rerun for this change):
 
 - timeout 180 cargo test --offline -j3 -- --test-threads=4: four library tests
   pass; integration has 223 passes, one pinned-reference failure and ten ignored.
@@ -155,9 +159,34 @@ are alternative invalid binding/overlap checks and uncommon invocation contexts,
 rather than a wholly unexecuted source adapter.
 
 The residual work is linked under bennett-sched-ogc to r28, xzv, 2u4, kbc, a0v,
-ark and vt8. The known upstream reference issue is b-isa-spec-3wl9. Critical
-scheduler/gate review and the council round remain the orchestrator responsibility;
-this record does not claim CLEAR or a green push gate.
+ark and vt8. The reference metadata-admission failure no longer reproduces at
+the current pin. Critical scheduler/gate review and the council round remain
+the orchestrator responsibility; this record does not claim CLEAR or a green
+push gate.
+
+Current-pin verification (ISA `3b10907`; scheduler Rust source unchanged):
+
+- `timeout 120 cargo test --offline -j3 --test integration differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission -- --exact --test-threads=4`:
+  one pass. The identical command at scheduler `c6879dd` and ISA `97e7b9f`
+  failed with `unknown field token_aliases`.
+- `timeout 600 cargo test --offline -j3 -- --test-threads=4`: four library
+  tests and 224 integration tests pass; ten slow tests remain in the ignored
+  suite. Integration execution took 50.03 seconds. Comparing all 238 named
+  test outcomes against the previous pin shows only the intended admission
+  failure becoming a pass.
+- `timeout 600 cargo test --offline -j3 -- --ignored --test-threads=4`:
+  nine pass, one fails in 142.13 seconds. The normative-region audit fails at
+  `tests/normative_objects.rs:122` because its diagnostic assertion still
+  requires `bennett-sched-ark`. This contradicts the inherited slow-green
+  record above; no current green gate is claimed. The audit does not call the
+  reference interpreter, and its §16.3 source text is byte-identical at both
+  pins. The gate failure is tracked by **bennett-sched-el7**; this pin-only
+  change leaves product code and tests untouched.
+- `cargo fmt -- --check`, `python3 -B scripts/quality.py --check` and
+  `timeout 120 python3 -I tests/pin_resolution.py -v` pass (14 pin tests).
+- `timeout 120 python3 -B scripts/conformance.py --write` regenerated the
+  inventory from the new gate pin: 557 cases and eight portable manifests.
+  New K91 cases remain explicitly unexercised by direct fixture replay.
 
 <!-- quality-baseline -->
 ```json
