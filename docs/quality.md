@@ -125,6 +125,40 @@ Reasons/tests for the five initially least-covered modules:
   storage remains the r28 contract gap. Host allocation/exponent error paths
   are kept fail-loud rather than allocating unbounded fixtures for coverage.
 
+Final verification (Rust source unchanged through d066757):
+
+- timeout 180 cargo test --offline -j3 -- --test-threads=4: four library tests
+  pass; integration has 223 passes, one pinned-reference failure and ten ignored.
+  Measured command wall time is 53.01 seconds, integration test time 52.74 seconds.
+  The failure is still exactly unknown field token_aliases at the original ISA
+  pin; no test was skipped or re-pinned to conceal it.
+- timeout 600 cargo test --offline -j3 -- --ignored --test-threads=4: all ten
+  retained exhaustive simulations pass, in 181.62 seconds after phase splitting.
+- Final line coverage: **88.06%**, 13,218 / 15,011 measured source lines.
+  Command: timeout 600 cargo llvm-cov --offline -j3 --ignore-run-fail --json
+  --summary-only --ignore-filename-regex "/tests/" --output-path
+  .tmp/quality-sched/coverage-final.json -- --test-threads=4.
+  Its test run retains the same one known failure; report generation succeeds.
+- cargo fmt -- --check, python3 -B scripts/quality.py --check and all eight
+  metrics tests pass. An actual temporary new source file makes the CLI ratchet
+  fail for added mass and a process identifier; removing it restores the pass.
+- Five structure tests now use literal nested-coordinate tables where applicable;
+  three admission tests pin distinct rejection reasons, and the catalog digest
+  test is explicitly packaging integrity, with semantic catalog coverage kept
+  in named_interface and expansion.
+
+Final least-covered modules are ffi.rs (69.79%), lib.rs (75.00%), target.rs
+(77.08%), cleanup/replay.rs (81.86%) and source/oracle_call.rs (82.59%). The first
+four retain the tests/reasons above. Source oracle-call binding is exercised by
+the full small-domain/token-identity call tests; its remaining uncovered lines
+are alternative invalid binding/overlap checks and uncommon invocation contexts,
+rather than a wholly unexecuted source adapter.
+
+The residual work is linked under bennett-sched-ogc to r28, xzv, 2u4, kbc, a0v,
+ark and vt8. The known upstream reference issue is b-isa-spec-3wl9. Critical
+scheduler/gate review and the council round remain the orchestrator responsibility;
+this record does not claim CLEAR or a green push gate.
+
 <!-- quality-baseline -->
 ```json
 {
