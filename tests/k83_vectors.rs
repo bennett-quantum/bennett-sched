@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{
     Request, Status, canonical,
     expansion::{Leaf, Operation, inverse, simulate_basis},
@@ -6,8 +8,7 @@ use bennett_sched::{
     source::Trace,
 };
 use serde_json::{Value, json};
-use std::{collections::BTreeMap, path::Path};
-const ROOT: &str = "../bennett-isa-spec/conformance/fixtures/accepted-k83-09";
+use std::collections::BTreeMap;
 
 #[derive(Default)]
 struct Names {
@@ -75,7 +76,11 @@ impl Names {
     }
 }
 fn manifest() -> Value {
-    serde_json::from_slice(&std::fs::read(Path::new(ROOT).join("k83.json")).unwrap()).unwrap()
+    serde_json::from_slice(
+        &std::fs::read(pins::spec("conformance/fixtures/accepted-k83-09").join("k83.json"))
+            .unwrap(),
+    )
+    .unwrap()
 }
 fn reference(rows: &[Value], widths: &Value, bits: &mut BTreeMap<String, bool>) {
     for row in rows {
@@ -108,7 +113,11 @@ fn every_published_k83_source_trace_and_external_basis_value_matches_including_r
     assert_eq!(m["ref_hash"], bennett_sched::schedule::EXPANSION_HASH);
     assert_eq!(m["cases"].as_array().unwrap().len(), 6);
     for case in m["cases"].as_array().unwrap() {
-        let bytes = std::fs::read(Path::new(ROOT).join(case["object"].as_str().unwrap())).unwrap();
+        let bytes = std::fs::read(
+            pins::spec("conformance/fixtures/accepted-k83-09")
+                .join(case["object"].as_str().unwrap()),
+        )
+        .unwrap();
         assert_eq!(canonical::hash(&bytes), case["sha256"]);
         let object = Object::parse(&bytes).unwrap();
         let trace = Trace::build(
@@ -210,7 +219,11 @@ fn published_k83_schedule_polarities_hold_after_explicit_library_and_target_rebi
     let mut accepted = 0;
     let mut rejected = 0;
     for case in m["schedule_cases"].as_array().unwrap() {
-        let bytes = std::fs::read(Path::new(ROOT).join(case["object"].as_str().unwrap())).unwrap();
+        let bytes = std::fs::read(
+            pins::spec("conformance/fixtures/accepted-k83-09")
+                .join(case["object"].as_str().unwrap()),
+        )
+        .unwrap();
         assert_eq!(canonical::hash(&bytes), case["sha256"]);
         let text = std::str::from_utf8(&bytes).unwrap();
         let (source, document) = text.split_once("\nsection schedule\n").unwrap();

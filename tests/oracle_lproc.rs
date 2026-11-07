@@ -48,6 +48,7 @@ fn get(bits: &BTreeMap<String, bool>, name: &str, width: u64) -> u64 {
 }
 
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn complete_lproc_call_return_uses_reference_activation_and_restores_every_private_bit() {
     let object = object();
     for budget in 0..=5 {

@@ -1,3 +1,4 @@
+use crate::common;
 use bennett_sched::{
     expansion::{Operation, simulate_basis},
     object::Object,
@@ -5,7 +6,6 @@ use bennett_sched::{
 };
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
-mod common;
 
 fn trace(body: &str, mutable_input: bool, memory: Option<&str>, adjoints: usize) -> Trace {
     let mem = memory.map_or_else(Vec::new, |role| vec![json!({"A":1,"W":2,"role":role})]);
@@ -32,6 +32,17 @@ fn trace(body: &str, mutable_input: bool, memory: Option<&str>, adjoints: usize)
         )
     };
     let mut bytes = common::action("perm_action", "inner", sig.clone(), &header("inner"), body);
+    if memory.is_some() {
+        bytes.extend_from_slice(b"\nsection layout\n");
+        bytes.extend_from_slice(
+            &bennett_sched::canonical::to_vec(&json!({
+                "ptr_width":32, "H":2, "A_tab":0, "S_cells":0, "null_size":1,
+                "heap_base":5, "heap_limit_max":0, "globals":{}, "interface_regions":{}
+            }))
+            .unwrap(),
+        );
+        bytes.push(b'\n');
+    }
     let mut callee = "inner".to_owned();
     for depth in 0..adjoints {
         let name = format!("outer{depth}");

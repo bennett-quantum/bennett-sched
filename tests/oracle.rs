@@ -1,3 +1,4 @@
+use crate::common;
 use bennett_sched::{
     expansion::{Operation, simulate_basis},
     object::Object,
@@ -6,7 +7,6 @@ use bennett_sched::{
 };
 use serde_json::json;
 use std::collections::BTreeMap;
-mod common;
 fn increment(width: u64) -> Object {
     let sig = json!({"abi":"0.9","tier":"q","kind":"oracle","in":[width],"tgt":width,"fault":4,"mem":[],"args":[]});
     let function = format!(

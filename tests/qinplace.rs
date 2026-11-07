@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 #[path = "common/basis.rs"]
 mod basis;
-mod common;
+use crate::common;
 
 fn oracles(width: u64, ins: bool) -> Vec<u8> {
     oracles_arguments(width, ins, false)

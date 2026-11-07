@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::schedule::*;
 use serde_json::{Value, json};
 
@@ -127,9 +129,9 @@ fn independent_kinds_carriers_and_reserved_points_are_strict() {
 #[test]
 fn published_specificity_tuple_is_lexicographic_and_default_share_is_exact() {
     let fixture: Value = serde_json::from_slice(
-        &std::fs::read(
-            "../bennett-isa-spec/conformance/cases/H/H-specificity-incomparable/schedule.json",
-        )
+        &std::fs::read(pins::spec(
+            "conformance/cases/H/H-specificity-incomparable/schedule.json",
+        ))
         .unwrap(),
     )
     .unwrap();
@@ -166,9 +168,9 @@ fn published_specificity_tuple_is_lexicographic_and_default_share_is_exact() {
 #[test]
 fn a_schedule_cannot_bind_an_unavailable_expansion_library() {
     let mut v: Value = serde_json::from_slice(
-        &std::fs::read(
-            "../bennett-isa-spec/conformance/fixtures/controlled-action-09/schedule.json",
-        )
+        &std::fs::read(pins::spec(
+            "conformance/fixtures/controlled-action-09/schedule.json",
+        ))
         .unwrap(),
     )
     .unwrap();

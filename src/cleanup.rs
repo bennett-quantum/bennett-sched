@@ -297,7 +297,7 @@ impl crate::source::Trace {
                 let Some(allocation) = allocation else {
                     return Err(Error::new(
                         Status::GateUnsupported,
-                        "§11 K81: pre-call input history for an arbitrary interface target is postponed (bennett-sched-ark)",
+                        "§11 K81: pre-call input history for an arbitrary interface target is postponed",
                     ));
                 };
                 let at = self
@@ -305,7 +305,7 @@ impl crate::source::Trace {
                     .iter()
                     .position(|e| std::ptr::eq(e, allocation))
                     .unwrap();
-                if at<first&&self.events[at+1..first].iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if g.wires[g.own_controls()..].contains(target))){return Err(Error::new(Status::GateUnsupported,"§11 K81: replay of nonzero pre-call target history is postponed (bennett-sched-ark)"));}
+                if at<first&&self.events[at+1..first].iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if g.wires[g.own_controls()..].contains(target))){return Err(Error::new(Status::GateUnsupported,"§11 K81: replay of nonzero pre-call target history is postponed"));}
             }
             let internal = original
                 .iter()

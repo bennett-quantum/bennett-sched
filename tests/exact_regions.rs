@@ -1,6 +1,6 @@
+use crate::common;
 use bennett_sched::{Outcome, Request, canonical, object::Object};
 use serde_json::{Value, json};
-mod common;
 
 fn source(kind: &str, nested: bool) -> Vec<u8> {
     if kind == "oracle" {

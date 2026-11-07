@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{decimal as d, target::*};
 use serde_json::json;
 use std::collections::BTreeMap;
@@ -93,8 +95,10 @@ fn matching_continues_after_unachievable_accuracy_and_counts_effective_controls(
 fn published_scheme_repeat_emits_three_leaves_without_charging_a_parent() {
     let mut t = basic_target();
     t["schemes"] = json!([serde_json::from_slice::<serde_json::Value>(
-        &std::fs::read("../bennett-isa-spec/conformance/cases/E/E-scheme-expansion/scheme.json")
-            .unwrap()
+        &std::fs::read(pins::spec(
+            "conformance/cases/E/E-scheme-expansion/scheme.json"
+        ))
+        .unwrap()
     )
     .unwrap()]);
     let t = Target::from_value(t).unwrap();

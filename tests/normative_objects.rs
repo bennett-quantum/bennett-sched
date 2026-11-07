@@ -1,9 +1,11 @@
 #[allow(dead_code)]
-mod common;
+use crate::common;
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::object::Object;
 #[test]
 fn every_printed_09_example_object_has_its_published_interface_hash() {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let examples = spec
         .split("### 16.3 Example objects")
         .nth(1)
@@ -24,13 +26,14 @@ fn every_printed_09_example_object_has_its_published_interface_hash() {
 }
 
 #[test]
+#[ignore = "slow exhaustive simulation; run by the push gate with --ignored"]
 fn every_normative_quantum_region_has_an_audited_typed_scheduler_outcome() {
     use bennett_sched::{Outcome, Request, canonical};
     use serde_json::json;
     let gates=["x","cx","ccx","mcx","swap","h","s","sdg","t","tdg","cz"].iter().map(|op|json!({"op":op,"classes":["fast"],"controls":{"min":0,"max":"unbounded"},"epsilon":0,"cost":{"time":1}})).collect::<Vec<_>>();
     let target = json!({"ptr_widths_supported":[32,64],"resources":{"time":{"kind":"time","unit":"second"},"qubit_second":{"kind":"occupancy","unit":"qubit_second"},"peak_qubits":{"kind":"peak","unit":"qubit"}},"classes":{"fast":{"capacity":"unbounded","qubit_second":1,"dirty_rate":1}},"gates":gates,"schemes":[],"qram":null,"capabilities":{"measurement":{"mid_circuit":false,"feedforward_latency":0},"mbu":false,"max_parallel":"unbounded","max_predicate_depth":"unbounded","classical_step_time":0},"objective":{"weighted":{"time":1}},"tables":{},"imports":{}});
     let target = canonical::to_vec(&target).unwrap();
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let text = spec
         .split("### 16.3 Example objects")
         .nth(1)
@@ -116,12 +119,14 @@ fn every_normative_quantum_region_has_an_audited_typed_scheduler_outcome() {
                 result.reason
             );
             if postponed {
+                let reason = result.reason.to_str().unwrap();
+                assert!(reason.starts_with('§'), "{}: {reason}", f.name);
                 assert!(
-                    result
-                        .reason
-                        .to_str()
-                        .unwrap()
-                        .contains("bennett-sched-ark")
+                    reason.contains(
+                        "classical pseudo-location physical wire initialization requires a published contract"
+                    ),
+                    "{}: {reason}",
+                    f.name
                 );
                 assert!(result.schedule.is_empty() && result.certificate.is_empty());
                 unsupported += 1;

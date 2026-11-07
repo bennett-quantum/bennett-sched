@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{canonical, object::Object};
 use serde_json::json;
 
@@ -29,9 +31,9 @@ fn normative_inc8_identity_and_positional_arguments() {
 
 #[test]
 fn published_controlled_action_hash_and_object_metadata_exclusion() {
-    let fixture = std::fs::read(
-        "../bennett-isa-spec/conformance/fixtures/controlled-action-09/controlled.bisa",
-    )
+    let fixture = std::fs::read(pins::spec(
+        "conformance/fixtures/controlled-action-09/controlled.bisa",
+    ))
     .unwrap();
     let o = Object::parse(&fixture).unwrap();
     assert_eq!(

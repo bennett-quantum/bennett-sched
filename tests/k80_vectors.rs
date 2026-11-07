@@ -1,5 +1,8 @@
+#[path = "support/pins.rs"]
+mod pins;
 // The published bodies use 0.8 envelopes. Rehash them for 0.9 without
 // changing instructions, then compare all declared trace fields and tuples.
+use crate::common;
 use bennett_sched::{
     expansion::{Operation, inverse, simulate_basis},
     object::Object,
@@ -7,7 +10,6 @@ use bennett_sched::{
 };
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
-mod common;
 
 fn rebind(source: &str) -> Object {
     let symbols: Value = serde_json::from_str(
@@ -60,8 +62,10 @@ fn rebind(source: &str) -> Object {
 #[test]
 fn all_published_k80_trace_fields_and_complete_basis_tuples_match_after_version_rebinding() {
     let manifest: Value = serde_json::from_slice(
-        &std::fs::read("../bennett-isa-spec/conformance/fixtures/accepted-k78-k80-09/k80.json")
-            .unwrap(),
+        &std::fs::read(pins::spec(
+            "conformance/fixtures/accepted-k78-k80-09/k80.json",
+        ))
+        .unwrap(),
     )
     .unwrap();
     assert_eq!(manifest["vectors"].as_array().unwrap().len(), 5);

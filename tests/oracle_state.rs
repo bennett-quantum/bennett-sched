@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{
     object::Object,
     oracle_state::{ByteStorage, Plan},
@@ -5,7 +7,7 @@ use bennett_sched::{
 use num_bigint::BigUint;
 use serde_json::json;
 fn example(index: usize) -> Object {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let source = spec
         .split("### 16.3 Example objects")
         .nth(1)

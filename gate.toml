@@ -10,17 +10,25 @@ BENNETT_REF_BIN = "{sibling:bennett-isa-spec}/reference-interpreter/target/debug
 
 [[check]]
 name = "cargo test"
-argv = ["cargo", "test", "--offline", "-j4", "--", "--test-threads=4"]
+argv = ["cargo", "test", "--offline", "-j3", "--", "--test-threads=4"]
+
+[[check]]
+name = "slow exhaustive simulations"
+argv = ["cargo", "test", "--offline", "-j3", "--", "--ignored", "--test-threads=4"]
 
 [[check]]
 name = "cargo fmt"
 argv = ["cargo", "fmt", "--", "--check"]
 
+[[check]]
+name = "quality baseline"
+argv = ["python3", "-B", "scripts/quality.py", "--check"]
+
 [siblings."bennett-isa-spec"]
-sha = "ecaaac060c44e317d1181345fa6b8e38c096c099"
-note = "SPEC_VERSIONS.toml spec_commit; ISA main as gated by the 2026-11-02 push wave"
+sha = "3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1"
+note = "isa-spec main 3b10907, quality floor merge, K91 token_aliases reader"
 [siblings."bennett-isa-spec".files]
-"spec/Bennett-ISA-Spec-0.9.md" = "021d5df978f293c36174b73de9facc0884f7502a4bc5c0ab7a621b0ca7071c25"
+"spec/Bennett-ISA-Spec-0.9.md" = "54dde0c83ff31d0a76de1814ac00273c3bb63fbd9c91d71aea625ad714959c5f"
 
 [[siblings."bennett-isa-spec".build]]
 name = "reference interpreter (debug)"

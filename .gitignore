@@ -7,3 +7,11 @@ Cargo.lock
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+.tmp/
+__pycache__/
+*.pyc
+*.log
+.beads/**/LOCK
+*.darc
+*.backup

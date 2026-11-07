@@ -1,6 +1,8 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{lproc::IndexSpace, object::Object};
 fn example(index: usize) -> Object {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let text = spec
         .split("### 16.3 Example objects")
         .nth(1)

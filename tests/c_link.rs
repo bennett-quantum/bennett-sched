@@ -1,5 +1,7 @@
+#[path = "support/pins.rs"]
+mod pins;
+use crate::common;
 use std::{path::PathBuf, process::Command};
-mod common;
 #[test]
 fn c11_consumer_links_the_cdylib_across_the_binary_edge() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -16,7 +18,7 @@ fn c11_consumer_links_the_cdylib_across_the_binary_edge() {
         .join(format!("c-abi-{}", std::process::id()));
     std::fs::create_dir_all(&tmp).unwrap();
     let binary = tmp.join("consumer");
-    for include in [root.join("data"), root.join("../bennett-isa-spec/include")] {
+    for include in [root.join("data"), pins::spec("include")] {
         let result = Command::new("cc")
             .args(["-std=c11", "-Wall", "-Wextra", "-Werror"])
             .arg(root.join("tests/c_abi.c"))
@@ -36,7 +38,7 @@ fn c11_consumer_links_the_cdylib_across_the_binary_edge() {
             include.display(),
             String::from_utf8_lossy(&result.stderr)
         );
-        let fixtures = root.join("../bennett-isa-spec/conformance/fixtures/controlled-action-09");
+        let fixtures = pins::spec("conformance/fixtures/controlled-action-09");
         let run = Command::new("timeout")
             .arg("30")
             .arg(&binary)

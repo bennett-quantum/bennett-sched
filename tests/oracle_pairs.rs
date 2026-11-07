@@ -1,6 +1,6 @@
+use crate::common;
 use bennett_sched::{Status, object::Object, source::Trace};
 use serde_json::json;
-mod common;
 
 fn object(body: &str) -> Object {
     let base = common::action(
@@ -200,7 +200,10 @@ fn pairing_retains_the_classical_pseudo_location_contract_diagnostic() {
         .err()
         .expect("pseudo-location storage is not silently guessed");
     assert_eq!(error.status, Status::GateUnsupported);
-    assert!(error.reason.contains("bennett-sched-r28"), "{error}");
+    assert!(
+        error.reason.contains("physical wire initialization"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -280,4 +283,15 @@ fn unbounded_pending_call_stacks_report_host_exhaustion_without_a_smaller_path_c
         .expect("this analysis has a bounded host-state workspace");
     assert_eq!(error.status, Status::NoMem, "{error}");
     assert!(error.reason.contains("source cleanup analysis"), "{error}");
+}
+
+#[test]
+fn long_straight_line_uncall_proof_is_not_limited_by_source_row_count() {
+    let mut body = String::from("lift.oracle_call @o b (x) r f () ()\n");
+    for _ in 0..9000 {
+        body.push_str("z = lift.mov x\n");
+    }
+    body.push_str("lift.oracle_uncall @o b (x) r f () ()\nlift.retval r");
+    let trace = check(&body).unwrap();
+    assert_eq!(trace.invocations[0].name, "outer");
 }

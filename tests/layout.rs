@@ -1,8 +1,10 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{Status, canonical, object::Object};
 use serde_json::{Value, json};
 
 fn example(index: usize) -> String {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     spec.split("### 16.3 Example objects")
         .nth(1)
         .unwrap()

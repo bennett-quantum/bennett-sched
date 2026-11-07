@@ -1,7 +1,7 @@
+use crate::common;
 use bennett_sched::{Outcome, Request, canonical};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
-mod common;
 
 fn signature(mut_widths: &[u64], input_widths: &[u64], bounds: &[u64]) -> Value {
     json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":mut_widths,"in":input_widths,"mem":[],"args":[],"bounds":bounds})

@@ -1,6 +1,49 @@
 //! §4.5's literal sequence, with the K4 obligation discharged before emission.
 use super::*;
 impl Builder<'_> {
+    fn bind_qinplace_invocation(
+        &self,
+        g: &Function,
+        args: &[String],
+        actuals: &[String],
+        env: &Env,
+    ) -> Result<([u64; 4], Value, Vec<u64>)> {
+        let Some(Binding::Value {
+            isa_type, value, ..
+        }) = env.get(&args[2])
+        else {
+            return Err(Error::arg("qinplace requires a token"));
+        };
+        if isa_type != &json!("token") {
+            return Err(Error::arg("qinplace requires a token"));
+        }
+        let budget: [u64; 4] = crate::schedule::array(value)?
+            .iter()
+            .map(crate::schedule::uint)
+            .collect::<Result<Vec<_>>>()?
+            .try_into()
+            .map_err(|_| Error::arg("invalid qinplace token"))?;
+        self.object.validate_budget(budget)?;
+        let mut token_ids = vec![crate::token_aliases::binding_identity(&env[&args[2]])?];
+        let mut params = Vec::new();
+        for (p, a) in g.groups[4].iter().zip(actuals) {
+            let Some(Binding::Value {
+                isa_type, value, ..
+            }) = env.get(a)
+            else {
+                return Err(Error::arg("qinplace classical argument is not a value"));
+            };
+            if isa_type != &json!(p.ty) {
+                return Err(Error::arg("qinplace classical type mismatch"));
+            }
+            params.push(value.clone());
+            if p.ty == "token" {
+                token_ids.push(crate::token_aliases::binding_identity(&env[a])?);
+            }
+        }
+        let params = json!(params);
+        Ok((budget, params, token_ids))
+    }
     #[allow(clippy::too_many_arguments)]
     pub(super) fn qinplace(
         &mut self,
@@ -106,40 +149,7 @@ impl Builder<'_> {
             }
             inputs.extend(wires.clone());
         }
-        let Some(Binding::Value {
-            isa_type, value, ..
-        }) = env.get(&args[2])
-        else {
-            return Err(Error::arg("qinplace requires a token"));
-        };
-        if isa_type != &json!("token") {
-            return Err(Error::arg("qinplace requires a token"));
-        }
-        let budget: [u64; 4] = crate::schedule::array(value)?
-            .iter()
-            .map(crate::schedule::uint)
-            .collect::<Result<Vec<_>>>()?
-            .try_into()
-            .map_err(|_| Error::arg("invalid qinplace token"))?;
-        self.object.validate_budget(budget)?;
-        let mut token_ids = vec![crate::token_aliases::binding_identity(&env[&args[2]])?];
-        let mut params = Vec::new();
-        for (p, a) in g.groups[4].iter().zip(&actuals) {
-            let Some(Binding::Value {
-                isa_type, value, ..
-            }) = env.get(a)
-            else {
-                return Err(Error::arg("qinplace classical argument is not a value"));
-            };
-            if isa_type != &json!(p.ty) {
-                return Err(Error::arg("qinplace classical type mismatch"));
-            }
-            params.push(value.clone());
-            if p.ty == "token" {
-                token_ids.push(crate::token_aliases::binding_identity(&env[a])?);
-            }
-        }
-        let params = json!(params);
+        let (budget, params, token_ids) = self.bind_qinplace_invocation(g, &args, &actuals, env)?;
         let gh = self.object.closure_hash(&g.name)?.to_owned();
         let hh = self.object.closure_hash(&h.name)?.to_owned();
         let (domain, arg_tokens) = if let Some(p) = self.trace.qinplaces.iter().find(|p| {

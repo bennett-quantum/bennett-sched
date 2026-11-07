@@ -8,9 +8,13 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from pinned_sibling import resolve
 
 ROOT = Path(__file__).resolve().parent.parent
-SPEC = ROOT.parent / "bennett-isa-spec"
 
 DIRECT = {
     "E-imports": "published_vectors::published_import_quantity_is_mapped_exactly_and_bound_to_model_version",
@@ -24,7 +28,7 @@ DIRECT = {
     "E-epsilon-zero-exact": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
     "E-jcs-target-hash": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
     "E-mbu-must-be-false": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
-    "E-topology-grid-09": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly",
+    "E-topology-grid-09": "engine::tests::published_grid_placement_outcomes_match_scheduler_admission",
 }
 DIRECT.update({f"F-k83-{name}": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse" for name in ["zero-trip","qif-arms","image-01","image-81","controlled-image-81","repeated-image-81"]})
 EQUIVALENT = {
@@ -53,6 +57,8 @@ def sha(data):
 
 
 def main():
+    pin = resolve(ROOT, "bennett-isa-spec")
+    SPEC = Path(pin["path"])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="write docs/conformance-report.json")
     parser.add_argument("--probe-reference", action="store_true")
@@ -60,7 +66,7 @@ def main():
     args = parser.parse_args()
     for key in ["DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "BROWSER"]:
         os.environ.pop(key, None)
-    os.environ.setdefault("TMPDIR", str(ROOT / ".tmp/sol-sched/tmp"))
+    os.environ.setdefault("TMPDIR", str(ROOT / ".tmp/conformance/tmp"))
     Path(os.environ["TMPDIR"]).mkdir(parents=True, exist_ok=True)
     records = []
     suites = collections.Counter()
@@ -125,19 +131,17 @@ def main():
     report = {
         "schema": "bennett-sched.conformance-inventory.v1",
         "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
+        "isa_spec_sha": pin["sha"],
         "spec_sha256": sha(spec_bytes), "case_count": len(records), "suites": dict(sorted(suites.items())),
         "coverage_counts": dict(sorted(collections.Counter(r["coverage"] for r in records).items())),
         "normative_scheduler_audit":{"regions":sum(len(e["quantum_region_audit"]) for e in examples),"outcomes":dict(collections.Counter(r["outcome"] for e in examples for r in e["quantum_region_audit"])),"request":"B=3, heap=stack=depth=0; typed zero args, tokens=(3,0,0,0); universal exact target, unbounded capacity, no topology","meaning":"Producer schedule/document audit with tracked deferrals; no independent checker verdict."},
         "cases": records, "normative_objects": examples, "portable_manifests": portable,
         "inline_witnesses": [{"id":"K77-TWO-TOKEN", "source":"spec/Bennett-ISA-Spec-0.9.md", "section":"11.1 Two-token witness", "coverage":"published-source-expansion-witness", "test":"oracle_calls::published_k77_two_token_inc8_witness_covers_every_input_and_both_controls", "registry_adapter_test":"linked_source::source_registry_replays_the_actual_k77_two_token_witness_through_direct_and_captured_adapters", "capture_forms":["direct","manual-body","manual-template","typed-body","typed-template"], "input_values":256, "control_values":2, "initial_target":0, "initial_fault":0, "certificate_limit":"Combined differing-budget resource reports require bennett-sched-1na; no complete certificate claim."}],
         "reference_schedule_execution": "not claimed; published reference interpreter documents staged target/schedule execution",
-        "reference_09_schedule_admission": {"test":"differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission","meaning":"Published debug CLI admits the emitted controlled-action schedule and certificate metadata; absent source point rejects. This is not certificate-claim replay or scheduled execution."},
+        "reference_09_schedule_admission": {"test":"differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission","status":"active-differential-test","meaning":"The named default-suite test checks emitted schedule/certificate metadata admission and rejects an absent source point against the pinned reference. This mapping is not certificate-claim replay or scheduled execution."},
     }
     if args.probe_reference:
-        candidates = [Path(os.environ["BENNETT_REF_BIN"])] if "BENNETT_REF_BIN" in os.environ else [SPEC / "reference-interpreter/target" / mode / "bennett-isa-ref" for mode in ("release", "debug")]
-        binary = next((p for p in candidates if p.is_file()), None)
-        if binary is None:
-            raise RuntimeError("reference binary missing; set BENNETT_REF_BIN")
+        binary = Path(resolve(ROOT, "bennett-isa-spec", reference=True)["binary"])
         command = [str(binary), "check", str(SPEC / "conformance/fixtures/controlled-action-09/controlled.bisa")]
         result = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False)
         report["reference_09_admission_probe"] = {"command": command, "exit": result.returncode, "stdout": result.stdout, "stderr": result.stderr}
@@ -150,4 +154,7 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except RuntimeError as error:
+        raise SystemExit(str(error))

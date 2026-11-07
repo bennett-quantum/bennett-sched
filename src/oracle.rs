@@ -34,7 +34,7 @@ pub(crate) fn read(name: &str, env: &Env) -> Result<Vec<String>> {
         }
         Some(Binding::Value { .. }) => Err(Error::new(
             Status::GateUnsupported,
-            "§4.7/K25: classical pseudo-location wire initialization needs contract decision bennett-sched-r28; source adapter tracked by bennett-sched-ark",
+            "§4.7/K25: classical pseudo-location physical wire initialization requires a published contract",
         )),
         _ => Err(Error::arg(format!("§4.2: unbound oracle operand {name}"))),
     }
@@ -93,54 +93,57 @@ pub(crate) struct Source<'a> {
     pub budget: [u64; 4],
     pub first: u64,
 }
-fn row(
-    node: &Node,
-    index: u64,
-    n: u64,
-    p: u64,
-    f: u64,
-    t: u64,
-    slots: &[u64],
-    env: &Env,
-    locations: &BTreeMap<String, u64>,
-    labels: &BTreeMap<String, u64>,
-    source: &Source<'_>,
-    library: &mut Library,
-    bindings: &mut Env,
-) -> Result<(Vec<Value>, Vec<Value>)> {
-    let mut body = Vec::new();
-    let operands = &node.operands;
-    let written = widths(node, env, locations)?;
-    let destination = node.lhs.as_deref();
-    let mut successor = index + 1;
-    let flag = slice(p + slots.iter().sum::<u64>(), 1);
-    let succ = slice(p + slots.iter().sum::<u64>() + 1, p);
-    let mut flagged = false;
-    let mut dynamic = false;
-    let arity = |count: usize| {
-        if operands.len() == count {
+struct RowInput<'a> {
+    node: &'a Node,
+    env: &'a Env,
+    written: &'a [u64],
+    labels: &'a BTreeMap<String, u64>,
+}
+impl RowInput<'_> {
+    fn arity(&self, count: usize) -> Result<()> {
+        if self.node.operands.len() == count {
             Ok(())
         } else {
-            Err(Error::arg(format!("§4.2: {} operand count", node.op)))
+            Err(Error::arg(format!("§4.2: {} operand count", self.node.op)))
         }
-    };
-    let width = |name: &str| read(name, env).map(|w| w.len() as u64);
-    let label = |name: &str| {
-        name.strip_prefix('^')
-            .and_then(|s| labels.get(s))
-            .copied()
-            .ok_or_else(|| Error::arg("unknown oracle label"))
-    };
-    let dest = || destination.ok_or_else(|| Error::arg("missing assignment destination"));
-    let written_width = || {
-        written
+    }
+    fn width(&self, name: &str) -> Result<u64> {
+        read(name, self.env).map(|w| w.len() as u64)
+    }
+    fn dest(&self) -> Result<&str> {
+        self.node
+            .lhs
+            .as_deref()
+            .ok_or_else(|| Error::arg("missing assignment destination"))
+    }
+    fn written_width(&self) -> Result<u64> {
+        self.written
             .first()
             .copied()
             .ok_or_else(|| Error::arg("missing assignment width"))
-    };
+    }
+    fn label(&self, name: &str) -> Result<u64> {
+        name.strip_prefix('^')
+            .and_then(|s| self.labels.get(s))
+            .copied()
+            .ok_or_else(|| Error::arg("unknown oracle label"))
+    }
+}
+fn value_row(
+    input: &RowInput<'_>,
+    p: u64,
+    f: u64,
+    slots: &[u64],
+) -> Result<Option<(Vec<Value>, bool)>> {
+    let node = input.node;
+    let operands = &node.operands;
+    let written = input.written;
+    let mut body = Vec::new();
+    let mut flagged = false;
+    let flag = slice(p + slots.iter().sum::<u64>(), 1);
     if let Some(suffix) = node.op.strip_prefix("lift.const.i") {
-        arity(1)?;
-        let w = written_width()?;
+        input.arity(1)?;
+        let w = input.written_width()?;
         if crate::schedule::uint(&json!(suffix))? != w {
             return Err(Error::arg("lift.const suffix/destination width mismatch"));
         }
@@ -165,7 +168,7 @@ fn row(
                 json!(w),
                 serde_json::from_str(&constant.to_string())?,
                 slice(p, w),
-                json!(dest()?),
+                json!(input.dest()?),
             ],
         ));
     } else if [
@@ -182,10 +185,10 @@ fn row(
     .contains(&node.op.as_str())
         || node.op.starts_with("lift.icmp.")
     {
-        arity(2)?;
-        let w = width(&operands[0])?;
-        if width(&operands[1])? != w
-            || written_width()?
+        input.arity(2)?;
+        let w = input.width(&operands[0])?;
+        if input.width(&operands[1])? != w
+            || input.written_width()?
                 != if node.op.starts_with("lift.icmp.") {
                     1
                 } else {
@@ -202,14 +205,14 @@ fn row(
                 json!(w),
                 json!(operands[0]),
                 json!(operands[1]),
-                slice(p, written_width()?),
-                json!(dest()?),
+                slice(p, input.written_width()?),
+                json!(input.dest()?),
             ],
         ));
     } else if ["lift.udiv", "lift.urem", "lift.sdiv", "lift.srem"].contains(&node.op.as_str()) {
-        arity(2)?;
-        let w = width(&operands[0])?;
-        if width(&operands[1])? != w || written_width()? != w {
+        input.arity(2)?;
+        let w = input.width(&operands[0])?;
+        if input.width(&operands[1])? != w || input.written_width()? != w {
             return Err(Error::arg("division width mismatch"));
         }
         body.push(invoke(
@@ -220,7 +223,7 @@ fn row(
                 json!(operands[0]),
                 json!(operands[1]),
                 slice(p, w),
-                json!(dest()?),
+                json!(input.dest()?),
                 flag.clone(),
                 json!("faulted"),
                 json!("code"),
@@ -228,24 +231,31 @@ fn row(
         ));
         flagged = true;
     } else if node.op == "lift.mov" {
-        arity(1)?;
-        let w = width(&operands[0])?;
-        if written_width()? != w {
+        input.arity(1)?;
+        let w = input.width(&operands[0])?;
+        if input.written_width()? != w {
             return Err(Error::arg("lift.mov width mismatch"));
         }
         body.push(invoke(
             "lift.mov",
-            vec![json!(w), json!(operands[0]), slice(p, w), json!(dest()?)],
+            vec![
+                json!(w),
+                json!(operands[0]),
+                slice(p, w),
+                json!(input.dest()?),
+            ],
         ));
     } else if ["lift.zext.i", "lift.sext.i", "lift.trunc.i"]
         .iter()
         .any(|s| node.op.starts_with(s))
     {
-        arity(1)?;
+        input.arity(1)?;
         let (op, suffix) = node.op.rsplit_once(".i").unwrap();
         let m = crate::schedule::uint(&json!(suffix))?;
-        let w = width(&operands[0])?;
-        if m != written_width()? || (op == "lift.trunc" && m >= w) || (op != "lift.trunc" && m <= w)
+        let w = input.width(&operands[0])?;
+        if m != input.written_width()?
+            || (op == "lift.trunc" && m >= w)
+            || (op != "lift.trunc" && m <= w)
         {
             return Err(Error::arg("cast width mismatch"));
         }
@@ -256,13 +266,16 @@ fn row(
                 json!(m),
                 json!(operands[0]),
                 slice(p, m),
-                json!(dest()?),
+                json!(input.dest()?),
             ],
         ));
     } else if node.op == "lift.select" {
-        arity(3)?;
-        let w = width(&operands[1])?;
-        if width(&operands[0])? != 1 || width(&operands[2])? != w || written_width()? != w {
+        input.arity(3)?;
+        let w = input.width(&operands[1])?;
+        if input.width(&operands[0])? != 1
+            || input.width(&operands[2])? != w
+            || input.written_width()? != w
+        {
             return Err(Error::arg("lift.select width mismatch"));
         }
         body.push(invoke(
@@ -273,19 +286,19 @@ fn row(
                 json!(operands[2]),
                 json!(operands[0]),
                 slice(p, w),
-                json!(dest()?),
+                json!(input.dest()?),
             ],
         ));
     } else if node.op == "lift.parmov" {
-        arity(1)?;
+        input.arity(1)?;
         let sources = object::list(&operands[0])?;
-        let destinations = object::list(dest()?)?;
+        let destinations = object::list(input.dest()?)?;
         if sources.len() != written.len() || destinations.len() != sources.len() {
             return Err(Error::arg("parallel move list mismatch"));
         }
         let mut offset = p;
-        for ((src, w), slot_width) in sources.iter().zip(&written).zip(slots) {
-            if width(src)? != *w {
+        for ((src, w), slot_width) in sources.iter().zip(written).zip(slots) {
+            if input.width(src)? != *w {
                 return Err(Error::arg("parallel move width mismatch"));
             }
             for bit in 0..*w {
@@ -296,7 +309,7 @@ fn row(
             offset += slot_width;
         }
         offset = p;
-        for ((dst, w), slot_width) in destinations.iter().zip(&written).zip(slots) {
+        for ((dst, w), slot_width) in destinations.iter().zip(written).zip(slots) {
             for bit in 0..*w {
                 body.push(
                     json!({"gate":"swap","wires":[slice(offset+bit,1),format!("{dst}[{bit}]")]}),
@@ -305,8 +318,8 @@ fn row(
             offset += slot_width;
         }
     } else if node.op == "lift.label" {
-        arity(1)?;
-        let w = written_width()?;
+        input.arity(1)?;
+        let w = input.written_width()?;
         if w < p {
             return Err(Error::arg(
                 "label location cannot represent the index space",
@@ -316,14 +329,32 @@ fn row(
             "lift.label",
             vec![
                 json!(w),
-                json!(label(&operands[0])?),
+                json!(input.label(&operands[0])?),
                 slice(p, w),
-                json!(dest()?),
+                json!(input.dest()?),
             ],
         ));
-    } else if node.op == "lift.addr" {
-        arity(1)?;
-        let w = written_width()?;
+    } else {
+        return Ok(None);
+    }
+    Ok(Some((body, flagged)))
+}
+fn memory_row(
+    input: &RowInput<'_>,
+    source: &Source<'_>,
+    p: u64,
+    f: u64,
+    slots: &[u64],
+) -> Result<Option<(Vec<Value>, bool)>> {
+    let node = input.node;
+    let operands = &node.operands;
+    let mut body = Vec::new();
+    let mut flagged = false;
+    let flag = slice(p + slots.iter().sum::<u64>(), 1);
+    let env = input.env;
+    if node.op == "lift.addr" {
+        input.arity(1)?;
+        let w = input.written_width()?;
         if w != source.object.ptr_width {
             return Err(Error::arg("lift.addr destination must have pointer width"));
         }
@@ -353,21 +384,21 @@ fn row(
                 json!(w),
                 serde_json::from_str(&base.to_string())?,
                 slice(p, w),
-                json!(dest()?),
+                json!(input.dest()?),
             ],
         ));
     } else if node.op == "lift.boundscheck" {
-        arity(2)?;
+        input.arity(2)?;
         let layout = source
             .layout
             .ok_or_else(|| Error::arg("lift.boundscheck requires layout"))?;
         let ptr = source.object.ptr_width;
-        if width(&operands[0])? != ptr {
+        if input.width(&operands[0])? != ptr {
             return Err(Error::arg("boundscheck address requires pointer width"));
         }
         let mut literal = None;
         let (length, argument) = if env.contains_key(&operands[1]) {
-            (width(&operands[1])?, json!(operands[1]))
+            (input.width(&operands[1])?, json!(operands[1]))
         } else {
             let value = crate::oracle_memory::literal_length(&operands[1], ptr)?;
             let length = value.bits().max(1);
@@ -420,13 +451,13 @@ fn row(
         }
         flagged = true;
     } else if let Some(suffix) = node.op.strip_prefix("lift.load.i") {
-        arity(1)?;
+        input.arity(1)?;
         let w = crate::schedule::uint(&json!(suffix))?;
         if w == 0
             || w > 128
             || w % 8 != 0
-            || written_width()? != w
-            || width(&operands[0])? != source.object.ptr_width
+            || input.written_width()? != w
+            || input.width(&operands[0])? != source.object.ptr_width
         {
             return Err(Error::arg(
                 "lift.load requires a pointer and matching whole-byte result",
@@ -467,12 +498,53 @@ fn row(
                 flag.clone(),
                 json!("faulted"),
                 json!("code"),
-                json!(dest()?),
+                json!(input.dest()?),
                 slice(p, w),
                 json!("ByteLayout"),
             ],
         ));
         flagged = true;
+    } else {
+        return Ok(None);
+    }
+    Ok(Some((body, flagged)))
+}
+
+fn row(
+    node: &Node,
+    index: u64,
+    n: u64,
+    p: u64,
+    f: u64,
+    t: u64,
+    slots: &[u64],
+    env: &Env,
+    locations: &BTreeMap<String, u64>,
+    labels: &BTreeMap<String, u64>,
+    source: &Source<'_>,
+    library: &mut Library,
+    bindings: &mut Env,
+) -> Result<(Vec<Value>, Vec<Value>)> {
+    let mut body = Vec::new();
+    let operands = &node.operands;
+    let written = widths(node, env, locations)?;
+    let mut successor = index + 1;
+    let flag = slice(p + slots.iter().sum::<u64>(), 1);
+    let succ = slice(p + slots.iter().sum::<u64>() + 1, p);
+    let mut flagged = false;
+    let mut dynamic = false;
+    let input = RowInput {
+        node,
+        env,
+        written: &written,
+        labels,
+    };
+    if let Some((operations, uses_flag)) = value_row(&input, p, f, slots)? {
+        body = operations;
+        flagged = uses_flag;
+    } else if let Some((operations, uses_flag)) = memory_row(&input, source, p, f, slots)? {
+        body = operations;
+        flagged = uses_flag;
     } else if ["lift.alloc", "lift.free"].contains(&node.op.as_str())
         || node.op.starts_with("lift.store.i")
     {
@@ -489,8 +561,8 @@ fn row(
         if source.function.kind != "oracle" {
             return Err(Error::arg("lift.retval inside lproc"));
         }
-        arity(1)?;
-        if width(&operands[0])? != t {
+        input.arity(1)?;
+        if input.width(&operands[0])? != t {
             return Err(Error::arg("retval width does not match target"));
         }
         body.push(invoke(
@@ -499,28 +571,28 @@ fn row(
         ));
         successor = n;
     } else if node.op == "qjump" {
-        arity(1)?;
-        successor = label(&operands[0])?;
+        input.arity(1)?;
+        successor = input.label(&operands[0])?;
         body.push(invoke("qjump", vec![json!(successor)]));
     } else if node.op == "qbranch" {
-        arity(3)?;
-        if width(&operands[0])? != 1 {
+        input.arity(3)?;
+        if input.width(&operands[0])? != 1 {
             return Err(Error::arg("qbranch condition must be one bit"));
         }
         body.push(invoke(
             "qbranch",
             vec![
                 json!(p),
-                json!(label(&operands[1])?),
-                json!(label(&operands[2])?),
+                json!(input.label(&operands[1])?),
+                json!(input.label(&operands[2])?),
                 json!(operands[0]),
                 succ.clone(),
             ],
         ));
         dynamic = true;
     } else if node.op == "qjumpr" {
-        arity(1)?;
-        if width(&operands[0])? != p {
+        input.arity(1)?;
+        if input.width(&operands[0])? != p {
             return Err(Error::arg("qjumpr width must equal canonical P"));
         }
         body.push(invoke(
@@ -540,7 +612,7 @@ fn row(
         flagged = true;
         dynamic = true;
     } else if node.op == "fault" {
-        arity(1)?;
+        input.arity(1)?;
         let c = crate::schedule::uint(&json!(operands[0]))?;
         if u64::from(64 - c.leading_zeros()) > f {
             return Err(Error::arg(
@@ -553,8 +625,8 @@ fn row(
         ));
         successor = n;
     } else if node.op == "lift.faultif" {
-        arity(2)?;
-        if width(&operands[0])? != 1 {
+        input.arity(2)?;
+        if input.width(&operands[0])? != 1 {
             return Err(Error::arg("faultif condition width"));
         }
         let cause = crate::schedule::uint(&json!(operands[1]))?;
@@ -610,62 +682,51 @@ fn row(
     Ok((body, next))
 }
 
-pub fn build(
-    object: &Object,
-    name: &str,
-    inherited: u32,
+fn rename(value: &str, names: &std::collections::BTreeSet<String>, prefix: &str) -> Result<String> {
+    if names.contains(value) {
+        Ok(format!("{prefix}{value}"))
+    } else if value.starts_with('(') {
+        Ok(format!(
+            "({})",
+            object::list(value)?
+                .iter()
+                .map(|n| rename(n, names, prefix))
+                .collect::<Result<Vec<_>>>()?
+                .join(", ")
+        ))
+    } else {
+        Ok(value.into())
+    }
+}
+
+fn qualified_nodes(
+    body: &[Node],
+    names: &std::collections::BTreeSet<String>,
+    prefix: &str,
+) -> Result<Vec<Node>> {
+    body.iter()
+        .map(|original| {
+            let mut node = original.clone();
+            node.lhs = node
+                .lhs
+                .as_ref()
+                .map(|s| rename(s, names, prefix))
+                .transpose()?;
+            node.operands = node
+                .operands
+                .iter()
+                .map(|s| rename(s, names, prefix))
+                .collect::<Result<_>>()?;
+            Ok(node)
+        })
+        .collect()
+}
+
+fn bind_interfaces(
+    f: &object::Function,
     params: &Value,
-    budget: [u64; 4],
     token_ids: &[u64],
-) -> Result<Trace> {
-    let f = &object.functions[name];
-    let plan = crate::oracle_state::Plan::form(object, name, budget)?;
-    let layout = crate::layout::Layout::from_object(object)?;
-    if layout.is_none() && !f.groups[3].is_empty() {
-        return Err(Error::arg(
-            "memoryless oracle cannot declare interface memory",
-        ));
-    }
-    if layout.is_none() && budget[1..].iter().any(|n| *n != 0) {
-        return Err(Error::new(
-            Status::Budget,
-            "memoryless oracle requires zero memory/stack/depth limits",
-        ));
-    }
-    // Account for all interface and private wire strings before allocating any.
-    // The symbolic plan is available independently of this host workspace.
-    const HOST_STATE_BYTES: u64 = 64 * 1024 * 1024;
-    let mut wires = plan
-        .base
-        .iter()
-        .try_fold(u64::from(inherited), |a, r| a.checked_add(r.width))
-        .and_then(|a| {
-            plan.frame_width
-                .checked_mul(budget[0])
-                .and_then(|b| a.checked_add(b))
-        });
-    for param in f.groups[..3].iter().flatten() {
-        let width = object::wire_width(&param.ty)?;
-        wires = wires.and_then(|n| n.checked_add(width));
-    }
-    for param in &f.groups[3] {
-        let (address, cell) = object::region_shape(&param.ty)?;
-        let width = u32::try_from(address)
-            .ok()
-            .and_then(|a| 1u64.checked_shl(a))
-            .and_then(|n| n.checked_mul(cell));
-        wires = wires.and_then(|n| width.and_then(|w| n.checked_add(w)));
-    }
-    let estimate = wires
-        .and_then(|w| w.checked_mul(128))
-        .and_then(|w| budget[0].checked_mul(1024).and_then(|b| w.checked_add(b)));
-    if estimate.is_none_or(|n| n > HOST_STATE_BYTES) {
-        return Err(Error::new(
-            Status::NoMem,
-            "oracle construction exceeds 64 MiB host state workspace",
-        ));
-    }
-    let mut library = Library::published()?;
+) -> Result<(Env, Vec<Slot>)> {
     let mut env = Env::new();
     let mut slots = Vec::new();
     for (group, role) in [(0, "in"), (1, "tgt"), (2, "fault")] {
@@ -740,274 +801,29 @@ pub fn build(
             },
         );
     }
-    let n = plan.index.halt;
-    if n == 0 || f.body.iter().any(|r| !r.bodies.is_empty()) {
-        return Err(Error::arg("oracle rows must be nonempty and unstructured"));
-    }
-    let p = plan.index.pc_width;
+    Ok((env, slots))
+}
+
+fn compile_instances(
+    source: &Source<'_>,
+    params: &Value,
+    library: &mut Library,
+    env: &mut Env,
+    rows: &mut Vec<Value>,
+    next: &mut Vec<Value>,
+    row_points: &mut Vec<(String, String, Vec<u64>)>,
+    cleanup_rows: &mut BTreeMap<usize, usize>,
+) -> Result<()> {
+    let object = source.object;
+    let name = source.name;
+    let f = source.function;
+    let plan = source.plan;
+    let layout = source.layout;
+    let budget = source.budget;
+    let (n, p, q) = (plan.index.halt, plan.index.pc_width, plan.frame_width);
     let fault = object::wire_width(&f.groups[2][0].ty)?;
     let target = object::wire_width(&f.groups[1][0].ty)?;
-    let mut locations = BTreeMap::new();
-    for reg in &f.regs {
-        if !reg.ty.starts_with("reg[")
-            || locations
-                .insert(format!("source.{}", reg.name), object::wire_width(&reg.ty)?)
-                .is_some()
-            || env.contains_key(&format!("source.{}", reg.name))
-        {
-            return Err(Error::arg("invalid/duplicate oracle location"));
-        }
-    }
-    fn rename(
-        value: &str,
-        names: &std::collections::BTreeSet<String>,
-        prefix: &str,
-    ) -> Result<String> {
-        if names.contains(value) {
-            Ok(format!("{prefix}{value}"))
-        } else if value.starts_with('(') {
-            Ok(format!(
-                "({})",
-                object::list(value)?
-                    .iter()
-                    .map(|n| rename(n, names, prefix))
-                    .collect::<Result<Vec<_>>>()?
-                    .join(", ")
-            ))
-        } else {
-            Ok(value.into())
-        }
-    }
-    let names = f
-        .groups
-        .iter()
-        .flatten()
-        .chain(&f.regs)
-        .map(|p| p.name.clone())
-        .collect::<std::collections::BTreeSet<_>>();
-    fn qualified_nodes(
-        body: &[Node],
-        names: &std::collections::BTreeSet<String>,
-        prefix: &str,
-    ) -> Result<Vec<Node>> {
-        body.iter()
-            .map(|original| {
-                let mut node = original.clone();
-                node.lhs = node
-                    .lhs
-                    .as_ref()
-                    .map(|s| rename(s, names, prefix))
-                    .transpose()?;
-                node.operands = node
-                    .operands
-                    .iter()
-                    .map(|s| rename(s, names, prefix))
-                    .collect::<Result<_>>()?;
-                Ok(node)
-            })
-            .collect()
-    }
-    let nodes = qualified_nodes(&f.body, &names, "source.")?;
     let slot_widths = &plan.slot_widths;
-    let q = plan.frame_width;
-    let state_schema = library.recipes["oracle.construct"]["parameters"][13].clone();
-    let frames_schema = library.recipes["oracle.construct"]["parameters"][14].clone();
-    let mut state = Vec::new();
-    let mut frames = Vec::new();
-    let frame_count = usize::try_from(budget[0])
-        .map_err(|_| Error::new(Status::NoMem, "history count exceeds host size"))?;
-    state
-        .try_reserve_exact(plan.base.len() + frame_count)
-        .map_err(|_| Error::new(Status::NoMem, "state descriptors exceed host memory"))?;
-    frames
-        .try_reserve_exact(frame_count)
-        .map_err(|_| Error::new(Status::NoMem, "history descriptors exceed host memory"))?;
-    for record in plan.records() {
-        let storage = allocation(&record.name, record.width)?;
-        env.insert(record.name.clone(), storage.clone());
-        let image = if let Some(image) = record.image {
-            image
-                .materialize(HOST_STATE_BYTES as usize)?
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect()
-        } else {
-            String::new()
-        };
-        state.push(Env::from([
-            ("width".into(), Binding::Integer(record.width.into())),
-            ("initial".into(), Binding::Integer(record.initial.into())),
-            ("I".into(), Binding::Image(image)),
-            ("storage".into(), storage.clone()),
-        ]));
-        if let Some(index) = record.name.strip_prefix("history-") {
-            let index = index.parse::<u64>().expect("source-derived frame index");
-            frames.push(Env::from([
-                ("index".into(), Binding::Integer(index.into())),
-                ("frame".into(), storage),
-            ]));
-        }
-    }
-    if layout.is_some() {
-        let table = read("alloctab", &env)?;
-        let ptr = usize::try_from(object.ptr_width)
-            .map_err(|_| Error::new(Status::NoMem, "pointer exceeds host size"))?;
-        let entry = ptr
-            .checked_mul(2)
-            .and_then(|n| n.checked_add(2))
-            .ok_or_else(|| Error::new(Status::NoMem, "table entry exceeds host size"))?;
-        let mut base = Vec::new();
-        let mut size = Vec::new();
-        let mut live = Vec::new();
-        let mut pinned = Vec::new();
-        for cell in table.chunks_exact(entry) {
-            base.extend_from_slice(&cell[..ptr]);
-            size.extend_from_slice(&cell[ptr..2 * ptr]);
-            live.push(cell[2 * ptr].clone());
-            pinned.push(cell[2 * ptr + 1].clone());
-        }
-        for (name, wires) in [
-            ("table.base", base),
-            ("table.size", size),
-            ("table.live", live),
-            ("table.pinned", pinned),
-        ] {
-            env.insert(name.into(), Binding::Wires(wires));
-        }
-        let mut records = Vec::new();
-        for span in &plan.bytes {
-            let (wires, offset) = match span.storage {
-                crate::oracle_state::ByteStorage::Ordinary { offset } => {
-                    (read("mem", &env)?, offset)
-                }
-                crate::oracle_state::ByteStorage::Interface { position, offset } => {
-                    let Some(Binding::Region { wires, .. }) =
-                        env.get(&format!("source.{}", f.groups[3][position].name))
-                    else {
-                        return Err(Error::arg("missing mapped region binding"));
-                    };
-                    (wires.clone(), offset)
-                }
-            };
-            let first = usize::try_from(offset * 8)
-                .map_err(|_| Error::new(Status::NoMem, "byte slice exceeds host size"))?;
-            let last = usize::try_from((offset + span.extent) * 8)
-                .map_err(|_| Error::new(Status::NoMem, "byte slice exceeds host size"))?;
-            let cells = wires
-                .get(first..last)
-                .ok_or_else(|| Error::arg("byte layout does not match source storage"))?
-                .to_vec();
-            records.push(Env::from([
-                ("base".into(), Binding::Integer(span.base.into())),
-                ("extent".into(), Binding::Integer(span.extent.into())),
-                ("cells".into(), Binding::Wires(cells)),
-            ]));
-        }
-        let schema = library.recipes["lift.load"]["parameters"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|p| p["name"] == "Layout")
-            .unwrap()
-            .clone();
-        env.insert("ByteLayout".into(), Binding::Records { schema, records });
-    }
-    env.insert(
-        "State".into(),
-        Binding::Records {
-            schema: state_schema,
-            records: state,
-        },
-    );
-    env.insert(
-        "Frames".into(),
-        Binding::Records {
-            schema: frames_schema,
-            records: frames,
-        },
-    );
-    let mut labels = BTreeMap::new();
-    for (i, node) in nodes.iter().enumerate() {
-        labels
-            .entry(node.point.split(':').next().unwrap().to_owned())
-            .or_insert(i as u64);
-    }
-    for (i, node) in nodes.iter().enumerate() {
-        let block = node.point.split(':').next().unwrap();
-        if (i + 1 == f.body.len() || f.body[i + 1].point.split(':').next().unwrap() != block)
-            && !["qjump", "qbranch", "qjumpr", "lift.retval", "fault"].contains(&node.op.as_str())
-        {
-            return Err(Error::arg("§3.6: oracle block needs a terminator"));
-        }
-    }
-    let mut rows = Vec::new();
-    let mut next = Vec::new();
-    let readable = f.groups[0]
-        .iter()
-        .chain(&f.groups[4])
-        .chain(&f.groups[3])
-        .chain(&f.regs)
-        .map(|p| format!("source.{}", p.name))
-        .collect::<std::collections::BTreeSet<_>>();
-    let source_env = env
-        .iter()
-        .filter(|(name, _)| readable.contains(*name))
-        .map(|(name, binding)| (name.clone(), binding.clone()))
-        .collect::<Env>();
-    let token_origins = f.groups[4]
-        .iter()
-        .enumerate()
-        .filter(|(_, p)| p.ty == "token")
-        .map(|(_, p)| {
-            let name = format!("source.{}", p.name);
-            Ok((
-                name.clone(),
-                crate::token_aliases::binding_identity(&source_env[&name])?,
-            ))
-        })
-        .collect::<Result<BTreeMap<_, _>>>()?;
-    let mut cleanup_rows =
-        crate::oracle_pairs::validate(&nodes, &source_env, 0, &labels, &token_origins)?;
-    for (i, node) in nodes.iter().enumerate() {
-        let (body, successor) = row(
-            node,
-            i as u64,
-            n,
-            p,
-            fault,
-            target,
-            slot_widths,
-            &source_env,
-            &locations,
-            &labels,
-            &Source {
-                object,
-                name,
-                layout: layout.as_ref(),
-                plan: &plan,
-                function: f,
-                instance: None,
-                original: &f.body[i],
-                budget,
-                first: 0,
-            },
-            &mut library,
-            &mut env,
-        )?;
-        rows.push(json!({"parameters":[{"name":"frame","type":"wire","width":q}],"body":body}));
-        next.push(json!({"parameters":[{"name":"frame","type":"wire","width":q},{"name":"next","type":"wire","width":p}],"body":successor}));
-    }
-    let mut row_points = f
-        .body
-        .iter()
-        .map(|node| {
-            (
-                object.symbols[name].interface_hash.clone(),
-                node.point.clone(),
-                Vec::<u64>::new(),
-            )
-        })
-        .collect::<Vec<_>>();
     for (instance_index, instance) in plan.index.instances.iter().enumerate() {
         let function = &object.functions[&instance.name];
         let prefix = format!("instance/{instance_index}/source.");
@@ -1129,7 +945,7 @@ pub fn build(
                 &Source {
                     object,
                     name,
-                    layout: layout.as_ref(),
+                    layout,
                     plan: &plan,
                     function,
                     instance: Some(instance_index),
@@ -1137,8 +953,8 @@ pub fn build(
                     budget,
                     first: instance.first,
                 },
-                &mut library,
-                &mut env,
+                library,
+                env,
             )?;
             rows.push(json!({"parameters":[{"name":"frame","type":"wire","width":q}],"body":body}));
             next.push(json!({"parameters":[{"name":"frame","type":"wire","width":q},{"name":"next","type":"wire","width":p}],"body":successor}));
@@ -1149,33 +965,20 @@ pub fn build(
             ));
         }
     }
-    let args = json!([
-        p,
-        n,
-        q,
-        budget[0],
-        fault,
-        target,
-        "pc",
-        "next",
-        "faulted",
-        "code",
-        "result",
-        format!("source.{}", f.groups[1][0].name),
-        format!("source.{}", f.groups[2][0].name),
-        "State",
-        "Frames",
-        rows,
-        next
-    ]);
-    let inherited = (0..inherited)
-        .map(|i| format!("control:{i}"))
-        .collect::<Vec<_>>();
-    let expanded = library.body_with_sources(
-        &[json!({"invoke":"oracle.construct","args":args})],
-        &env,
-        &inherited,
-    )?;
+    Ok(())
+}
+
+fn project_expansion(
+    source: &Source<'_>,
+    params: &Value,
+    token_ids: &[u64],
+    slots: Vec<Slot>,
+    inherited: Vec<String>,
+    expanded: crate::source_registry::Expanded,
+    row_points: &[(String, String, Vec<u64>)],
+    cleanup_rows: &BTreeMap<usize, usize>,
+) -> Result<Trace> {
+    let (object, name, budget) = (source.object, source.name, source.budget);
     let leaves = expanded.leaves;
     let mut counts = BTreeMap::<(u64, usize), u64>::new();
     for leaf in &leaves {
@@ -1294,4 +1097,413 @@ pub fn build(
         qinplaces: projection.qinplaces,
         replaced_invocations: Default::default(),
     })
+}
+
+const HOST_STATE_BYTES: u64 = 64 * 1024 * 1024;
+fn check_workspace(
+    f: &object::Function,
+    plan: &crate::oracle_state::Plan,
+    inherited: u32,
+    budget: [u64; 4],
+) -> Result<()> {
+    let mut wires = plan
+        .base
+        .iter()
+        .try_fold(u64::from(inherited), |a, r| a.checked_add(r.width))
+        .and_then(|a| {
+            plan.frame_width
+                .checked_mul(budget[0])
+                .and_then(|b| a.checked_add(b))
+        });
+    for param in f.groups[..3].iter().flatten() {
+        let width = object::wire_width(&param.ty)?;
+        wires = wires.and_then(|n| n.checked_add(width));
+    }
+    for param in &f.groups[3] {
+        let (address, cell) = object::region_shape(&param.ty)?;
+        let width = u32::try_from(address)
+            .ok()
+            .and_then(|a| 1u64.checked_shl(a))
+            .and_then(|n| n.checked_mul(cell));
+        wires = wires.and_then(|n| width.and_then(|w| n.checked_add(w)));
+    }
+    let estimate = wires
+        .and_then(|w| w.checked_mul(128))
+        .and_then(|w| budget[0].checked_mul(1024).and_then(|b| w.checked_add(b)));
+    if estimate.is_none_or(|n| n > HOST_STATE_BYTES) {
+        return Err(Error::new(
+            Status::NoMem,
+            "oracle construction exceeds 64 MiB host state workspace",
+        ));
+    }
+    Ok(())
+}
+
+fn bind_byte_layout(
+    object: &Object,
+    f: &object::Function,
+    plan: &crate::oracle_state::Plan,
+    library: &Library,
+    env: &mut Env,
+) -> Result<()> {
+    let table = read("alloctab", &env)?;
+    let ptr = usize::try_from(object.ptr_width)
+        .map_err(|_| Error::new(Status::NoMem, "pointer exceeds host size"))?;
+    let entry = ptr
+        .checked_mul(2)
+        .and_then(|n| n.checked_add(2))
+        .ok_or_else(|| Error::new(Status::NoMem, "table entry exceeds host size"))?;
+    let mut base = Vec::new();
+    let mut size = Vec::new();
+    let mut live = Vec::new();
+    let mut pinned = Vec::new();
+    for cell in table.chunks_exact(entry) {
+        base.extend_from_slice(&cell[..ptr]);
+        size.extend_from_slice(&cell[ptr..2 * ptr]);
+        live.push(cell[2 * ptr].clone());
+        pinned.push(cell[2 * ptr + 1].clone());
+    }
+    for (name, wires) in [
+        ("table.base", base),
+        ("table.size", size),
+        ("table.live", live),
+        ("table.pinned", pinned),
+    ] {
+        env.insert(name.into(), Binding::Wires(wires));
+    }
+    let mut records = Vec::new();
+    for span in &plan.bytes {
+        let (wires, offset) = match span.storage {
+            crate::oracle_state::ByteStorage::Ordinary { offset } => (read("mem", &env)?, offset),
+            crate::oracle_state::ByteStorage::Interface { position, offset } => {
+                let Some(Binding::Region { wires, .. }) =
+                    env.get(&format!("source.{}", f.groups[3][position].name))
+                else {
+                    return Err(Error::arg("missing mapped region binding"));
+                };
+                (wires.clone(), offset)
+            }
+        };
+        let first = usize::try_from(offset * 8)
+            .map_err(|_| Error::new(Status::NoMem, "byte slice exceeds host size"))?;
+        let last = usize::try_from((offset + span.extent) * 8)
+            .map_err(|_| Error::new(Status::NoMem, "byte slice exceeds host size"))?;
+        let cells = wires
+            .get(first..last)
+            .ok_or_else(|| Error::arg("byte layout does not match source storage"))?
+            .to_vec();
+        records.push(Env::from([
+            ("base".into(), Binding::Integer(span.base.into())),
+            ("extent".into(), Binding::Integer(span.extent.into())),
+            ("cells".into(), Binding::Wires(cells)),
+        ]));
+    }
+    let schema = library.recipes["lift.load"]["parameters"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["name"] == "Layout")
+        .unwrap()
+        .clone();
+    env.insert("ByteLayout".into(), Binding::Records { schema, records });
+    Ok(())
+}
+
+pub fn build(
+    object: &Object,
+    name: &str,
+    inherited: u32,
+    params: &Value,
+    budget: [u64; 4],
+    token_ids: &[u64],
+) -> Result<Trace> {
+    let f = &object.functions[name];
+    let plan = crate::oracle_state::Plan::form(object, name, budget)?;
+    let layout = crate::layout::Layout::from_object(object)?;
+    if layout.is_none() && !f.groups[3].is_empty() {
+        return Err(Error::arg(
+            "memoryless oracle cannot declare interface memory",
+        ));
+    }
+    if layout.is_none() && budget[1..].iter().any(|n| *n != 0) {
+        return Err(Error::new(
+            Status::Budget,
+            "memoryless oracle requires zero memory/stack/depth limits",
+        ));
+    }
+    // Account for all interface and private wire strings before allocating any.
+    // The symbolic plan is available independently of this host workspace.
+    check_workspace(f, &plan, inherited, budget)?;
+    let mut library = Library::published()?;
+    let (mut env, slots) = bind_interfaces(f, params, token_ids)?;
+    let n = plan.index.halt;
+    if n == 0 || f.body.iter().any(|r| !r.bodies.is_empty()) {
+        return Err(Error::arg("oracle rows must be nonempty and unstructured"));
+    }
+    let p = plan.index.pc_width;
+    let fault = object::wire_width(&f.groups[2][0].ty)?;
+    let target = object::wire_width(&f.groups[1][0].ty)?;
+    let mut locations = BTreeMap::new();
+    for reg in &f.regs {
+        if !reg.ty.starts_with("reg[")
+            || locations
+                .insert(format!("source.{}", reg.name), object::wire_width(&reg.ty)?)
+                .is_some()
+            || env.contains_key(&format!("source.{}", reg.name))
+        {
+            return Err(Error::arg("invalid/duplicate oracle location"));
+        }
+    }
+
+    let names = f
+        .groups
+        .iter()
+        .flatten()
+        .chain(&f.regs)
+        .map(|p| p.name.clone())
+        .collect::<std::collections::BTreeSet<_>>();
+
+    let nodes = qualified_nodes(&f.body, &names, "source.")?;
+    let slot_widths = &plan.slot_widths;
+    let q = plan.frame_width;
+    let state_schema = library.recipes["oracle.construct"]["parameters"][13].clone();
+    let frames_schema = library.recipes["oracle.construct"]["parameters"][14].clone();
+    let mut state = Vec::new();
+    let mut frames = Vec::new();
+    let frame_count = usize::try_from(budget[0])
+        .map_err(|_| Error::new(Status::NoMem, "history count exceeds host size"))?;
+    state
+        .try_reserve_exact(plan.base.len() + frame_count)
+        .map_err(|_| Error::new(Status::NoMem, "state descriptors exceed host memory"))?;
+    frames
+        .try_reserve_exact(frame_count)
+        .map_err(|_| Error::new(Status::NoMem, "history descriptors exceed host memory"))?;
+    for record in plan.records() {
+        let storage = allocation(&record.name, record.width)?;
+        env.insert(record.name.clone(), storage.clone());
+        let image = if let Some(image) = record.image {
+            image
+                .materialize(HOST_STATE_BYTES as usize)?
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect()
+        } else {
+            String::new()
+        };
+        state.push(Env::from([
+            ("width".into(), Binding::Integer(record.width.into())),
+            ("initial".into(), Binding::Integer(record.initial.into())),
+            ("I".into(), Binding::Image(image)),
+            ("storage".into(), storage.clone()),
+        ]));
+        if let Some(index) = record.name.strip_prefix("history-") {
+            let index = index.parse::<u64>().expect("source-derived frame index");
+            frames.push(Env::from([
+                ("index".into(), Binding::Integer(index.into())),
+                ("frame".into(), storage),
+            ]));
+        }
+    }
+    if layout.is_some() {
+        bind_byte_layout(object, f, &plan, &library, &mut env)?;
+    }
+    env.insert(
+        "State".into(),
+        Binding::Records {
+            schema: state_schema,
+            records: state,
+        },
+    );
+    env.insert(
+        "Frames".into(),
+        Binding::Records {
+            schema: frames_schema,
+            records: frames,
+        },
+    );
+    let mut labels = BTreeMap::new();
+    for (i, node) in nodes.iter().enumerate() {
+        labels
+            .entry(node.point.split(':').next().unwrap().to_owned())
+            .or_insert(i as u64);
+    }
+    for (i, node) in nodes.iter().enumerate() {
+        let block = node.point.split(':').next().unwrap();
+        if (i + 1 == f.body.len() || f.body[i + 1].point.split(':').next().unwrap() != block)
+            && !["qjump", "qbranch", "qjumpr", "lift.retval", "fault"].contains(&node.op.as_str())
+        {
+            return Err(Error::arg("§3.6: oracle block needs a terminator"));
+        }
+    }
+    let mut rows = Vec::new();
+    let mut next = Vec::new();
+    let readable = f.groups[0]
+        .iter()
+        .chain(&f.groups[4])
+        .chain(&f.groups[3])
+        .chain(&f.regs)
+        .map(|p| format!("source.{}", p.name))
+        .collect::<std::collections::BTreeSet<_>>();
+    let source_env = env
+        .iter()
+        .filter(|(name, _)| readable.contains(*name))
+        .map(|(name, binding)| (name.clone(), binding.clone()))
+        .collect::<Env>();
+    let token_origins = f.groups[4]
+        .iter()
+        .enumerate()
+        .filter(|(_, p)| p.ty == "token")
+        .map(|(_, p)| {
+            let name = format!("source.{}", p.name);
+            Ok((
+                name.clone(),
+                crate::token_aliases::binding_identity(&source_env[&name])?,
+            ))
+        })
+        .collect::<Result<BTreeMap<_, _>>>()?;
+    let mut cleanup_rows =
+        crate::oracle_pairs::validate(&nodes, &source_env, 0, &labels, &token_origins)?;
+    for (i, node) in nodes.iter().enumerate() {
+        let (body, successor) = row(
+            node,
+            i as u64,
+            n,
+            p,
+            fault,
+            target,
+            slot_widths,
+            &source_env,
+            &locations,
+            &labels,
+            &Source {
+                object,
+                name,
+                layout: layout.as_ref(),
+                plan: &plan,
+                function: f,
+                instance: None,
+                original: &f.body[i],
+                budget,
+                first: 0,
+            },
+            &mut library,
+            &mut env,
+        )?;
+        rows.push(json!({"parameters":[{"name":"frame","type":"wire","width":q}],"body":body}));
+        next.push(json!({"parameters":[{"name":"frame","type":"wire","width":q},{"name":"next","type":"wire","width":p}],"body":successor}));
+    }
+    let mut row_points = f
+        .body
+        .iter()
+        .map(|node| {
+            (
+                object.symbols[name].interface_hash.clone(),
+                node.point.clone(),
+                Vec::<u64>::new(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let source = Source {
+        object,
+        name,
+        layout: layout.as_ref(),
+        plan: &plan,
+        function: f,
+        instance: None,
+        original: &f.body[0],
+        budget,
+        first: 0,
+    };
+    compile_instances(
+        &source,
+        params,
+        &mut library,
+        &mut env,
+        &mut rows,
+        &mut next,
+        &mut row_points,
+        &mut cleanup_rows,
+    )?;
+
+    let args = json!([
+        p,
+        n,
+        q,
+        budget[0],
+        fault,
+        target,
+        "pc",
+        "next",
+        "faulted",
+        "code",
+        "result",
+        format!("source.{}", f.groups[1][0].name),
+        format!("source.{}", f.groups[2][0].name),
+        "State",
+        "Frames",
+        rows,
+        next
+    ]);
+    let inherited = (0..inherited)
+        .map(|i| format!("control:{i}"))
+        .collect::<Vec<_>>();
+    let expanded = library.body_with_sources(
+        &[json!({"invoke":"oracle.construct","args":args})],
+        &env,
+        &inherited,
+    )?;
+    project_expansion(
+        &source,
+        params,
+        token_ids,
+        slots,
+        inherited,
+        expanded,
+        &row_points,
+        &cleanup_rows,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn value_row_keeps_frame_slice_and_rejects_a_mismatched_destination_width() {
+        let node = Node {
+            point: "entry:0".into(),
+            line: "r = lift.mov x".into(),
+            lhs: Some("r".into()),
+            op: "lift.mov".into(),
+            operands: vec!["x".into()],
+            bodies: vec![],
+        };
+        let env = Env::from([(
+            "x".into(),
+            Binding::Wires(vec!["x[0]".into(), "x[1]".into()]),
+        )]);
+        let labels = BTreeMap::new();
+        let input = RowInput {
+            node: &node,
+            env: &env,
+            written: &[2],
+            labels: &labels,
+        };
+        assert_eq!(
+            value_row(&input, 2, 4, &[2]).unwrap(),
+            Some((
+                vec![json!({
+                    "invoke":"lift.mov", "args":[2,"x",{"range":"frame","from":2,"to":4},"r"]
+                })],
+                false
+            ))
+        );
+        let invalid = RowInput {
+            written: &[1],
+            ..input
+        };
+        let error = value_row(&invalid, 2, 4, &[2]).unwrap_err();
+        assert_eq!(error.status, Status::Arg);
+        assert!(error.reason.contains("lift.mov width mismatch"));
+    }
 }

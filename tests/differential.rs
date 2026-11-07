@@ -1,30 +1,16 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{canonical, expansion::simulate_basis, object::Object, source::Trace};
 use serde_json::json;
-use std::{
-    collections::BTreeMap,
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::{collections::BTreeMap, path::PathBuf, process::Command};
 fn oracle() -> PathBuf {
-    if let Some(p) = std::env::var_os("BENNETT_REF_BIN") {
-        return p.into();
-    }
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../bennett-isa-spec/reference-interpreter/target");
-    for mode in ["debug", "release"] {
-        let p = root.join(mode).join("bennett-isa-ref");
-        if p.is_file() {
-            return p;
-        }
-    }
-    panic!("reference-interpreter binary missing; set BENNETT_REF_BIN");
+    pins::reference()
 }
 
 #[test]
 fn emitted_09_schedule_and_certificate_pass_reference_metadata_admission() {
     use bennett_sched::{Outcome, Request};
-    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../bennett-isa-spec/conformance/fixtures/controlled-action-09");
+    let fixtures = pins::spec("conformance/fixtures/controlled-action-09");
     let source = std::fs::read_to_string(fixtures.join("controlled.bisa")).unwrap();
     let object = Object::parse(source.as_bytes()).unwrap();
     let mut request = Request::default();
@@ -80,8 +66,7 @@ fn emitted_09_schedule_and_certificate_pass_reference_metadata_admission() {
 }
 #[test]
 fn every_basis_tuple_of_published_controlled_action_agrees_with_reference_binary() {
-    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../bennett-isa-spec/conformance/fixtures/controlled-action-09");
+    let fixtures = pins::spec("conformance/fixtures/controlled-action-09");
     let object = Object::parse(&std::fs::read(fixtures.join("controlled.bisa")).unwrap()).unwrap();
     let trace = Trace::build(&object, "controlled", 0, &json!([]), [0; 4]).unwrap();
     let leaves = trace

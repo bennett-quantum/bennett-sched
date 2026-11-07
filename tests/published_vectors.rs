@@ -1,7 +1,9 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{
     canonical, decimal as d,
     resources::{LiveInterval, TimedEvent, aggregate},
-    target::{self, Target},
+    target::{self, Gate, Target},
 };
 use serde_json::{Value, json};
 use std::{
@@ -9,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
 };
 fn cases() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../bennett-isa-spec/conformance/cases")
+    pins::spec("conformance/cases")
 }
 fn read(path: impl AsRef<Path>) -> Value {
     canonical::parse(&std::fs::read(path).unwrap()).unwrap()
@@ -76,17 +78,59 @@ fn published_target_hash_and_topology_vectors_are_checked_directly() {
         if let Some(h) = case["expected_outcome"]["target_hash"].as_str() {
             assert_eq!(t.hash, h, "{id}");
         }
-        if id == "E-topology-grid-09" {
-            assert!(t.adjacent(&[0, 1]));
-            assert!(!t.adjacent(&[0, 3]));
+        if id == "E-epsilon-zero-exact" {
+            let scenario = &case["scenario"];
+            let expected = &case["expected_outcome"];
+            assert_eq!(expected["load"], "accept");
+            assert_eq!(expected["matches_every_eps"], true);
+            let gate = Gate {
+                op: scenario["op"].as_str().unwrap().into(),
+                wires: vec!["control".into(), "target".into()],
+                controls: vec![],
+                theta: None,
+            };
+            assert_eq!(
+                gate.control_wires().len() as u64,
+                scenario["c"].as_u64().unwrap()
+            );
+            for share in scenario["epsilon_shares"].as_array().unwrap() {
+                let cost = t
+                    .native(
+                        &gate,
+                        &["fast".into(), "fast".into()],
+                        &d::value(share).unwrap(),
+                    )
+                    .unwrap()
+                    .expect("exact entry must match every published share");
+                assert_eq!(cost.duration, d::value(&expected["time"]).unwrap());
+                assert_eq!(cost.epsilon, d::value(&expected["epsilon"]).unwrap());
+            }
         }
     }
     for id in ["E-epsilon-zero-entry", "E-mbu-must-be-false"] {
         let dir = cases().join("E").join(id);
-        assert!(
-            Target::parse(&std::fs::read(dir.join("target.json")).unwrap()).is_err(),
-            "{id}"
-        );
+        let case = read(dir.join("case.json"));
+        assert_eq!(case["expected_outcome"]["load"], "reject", "{id}");
+        let error = Target::parse(&std::fs::read(dir.join("target.json")).unwrap()).unwrap_err();
+        assert_eq!(error.status, bennett_sched::Status::Target, "{id}: {error}");
+        let reason = match id {
+            "E-epsilon-zero-entry" => {
+                assert_eq!(
+                    case["expected_outcome"]["reason"],
+                    "epsilon zero entry references eps"
+                );
+                "exact entry references eps"
+            }
+            "E-mbu-must-be-false" => {
+                assert_eq!(
+                    case["expected_outcome"]["reason"],
+                    "capabilities.mbu must be false"
+                );
+                "mbu"
+            }
+            _ => unreachable!(),
+        };
+        assert!(error.reason.contains(reason), "{id}: {error}");
     }
 }
 #[test]

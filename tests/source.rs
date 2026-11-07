@@ -1,3 +1,6 @@
+#[path = "support/pins.rs"]
+mod pins;
+use crate::common;
 use bennett_sched::{
     expansion::{Operation, simulate_basis},
     object::Object,
@@ -5,13 +8,12 @@ use bennett_sched::{
 };
 use serde_json::json;
 use std::collections::BTreeMap;
-mod common;
 
 #[test]
 fn published_nested_controlled_action_has_real_invocation_chain_and_one_leaf() {
-    let bytes = std::fs::read(
-        "../bennett-isa-spec/conformance/fixtures/controlled-action-09/controlled.bisa",
-    )
+    let bytes = std::fs::read(pins::spec(
+        "conformance/fixtures/controlled-action-09/controlled.bisa",
+    ))
     .unwrap();
     let o = Object::parse(&bytes).unwrap();
     let trace = Trace::build(&o, "controlled", 0, &json!([]), [0; 4]).unwrap();

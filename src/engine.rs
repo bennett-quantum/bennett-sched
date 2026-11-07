@@ -68,6 +68,11 @@ impl Search {
         false
     }
 }
+struct Realisation {
+    name: String,
+    ancilla_identity: Option<String>,
+    leaves: Vec<(crate::target::Gate, crate::target::NativeCost)>,
+}
 struct Allocator<'a> {
     target: &'a Target,
     limits: &'a BTreeMap<String, u64>,
@@ -81,6 +86,61 @@ struct Allocator<'a> {
     search: &'a mut Search,
 }
 impl Allocator<'_> {
+    fn realise(
+        &mut self,
+        g: &crate::target::Gate,
+        gate_share: &Rational,
+        source_index: usize,
+        now: &Rational,
+        owner: usize,
+    ) -> Result<Realisation> {
+        let classes = self.classes(&g.all_wires())?;
+        let realisation_prefix = self.class_prefix(&g.all_wires());
+        let native = self.target.native(g, &classes, gate_share)?;
+        let mut ancilla_identity = None;
+        let realisation;
+        let realized = if let Some(cost) = native {
+            realisation = "native".to_owned();
+            vec![(g.clone(), cost)]
+        } else {
+            let identity = format!("scheme/{source_index}");
+            let plan = self.target.scheme(g, &identity)?.ok_or_else(|| {
+                self.search.conflict_prefix = Some(realisation_prefix);
+                Error::infeasible(format!(
+                    "§8.3: no target entry or scheme covers {} at the requested accuracy",
+                    g.op
+                ))
+            })?;
+            if !plan.ancillae.is_empty() {
+                self.allocate(
+                    identity.clone(),
+                    plan.ancillae.clone(),
+                    &plan.class,
+                    &plan.state,
+                    now,
+                    Some(owner),
+                    Some(plan.name.clone()),
+                )?;
+                ancilla_identity = Some(identity);
+            }
+            let mut realized = Vec::new();
+            for leaf in plan.leaves {
+                let classes = self.classes(&leaf.all_wires())?;
+                let cost=self.target.native(&leaf,&classes,gate_share)?.ok_or_else(||{
+                    self.search.conflict_prefix=Some(realisation_prefix.max(self.class_prefix(&leaf.all_wires())));
+                    Error::infeasible("§8.3: scheme leaf does not match a native gates entry; schemes do not nest")
+                })?;
+                realized.push((leaf, cost));
+            }
+            realisation = plan.name;
+            realized
+        };
+        Ok(Realisation {
+            name: realisation,
+            ancilla_identity,
+            leaves: realized,
+        })
+    }
     fn capacity(&self, class: &str) -> Option<u64> {
         match (
             self.target.classes[class].capacity,
@@ -90,6 +150,12 @@ impl Allocator<'_> {
             (a, None) => a,
             (None, b) => b,
         }
+    }
+    fn capacity_conflict(&mut self) {
+        // Occupancy depends on the classes of live wires. Choices for released
+        // allocations and vertex permutations cannot repair a capacity failure.
+        self.search.conflict_prefix =
+            Some(self.class_prefixes.values().copied().max().unwrap_or(0));
     }
     fn free_vertices(&self, class: &str) -> Vec<u64> {
         let used: BTreeSet<_> = self.live.values().filter_map(|(_, v)| *v).collect();
@@ -138,6 +204,7 @@ impl Allocator<'_> {
                 .cloned()
                 .collect::<Vec<_>>();
             if names.is_empty() {
+                self.capacity_conflict();
                 return Err(Error::infeasible(format!(
                     "§8.4: capacity exhausted for allocation {identity} ({n} wires)"
                 )));
@@ -157,6 +224,7 @@ impl Allocator<'_> {
                 )));
             }
             if !self.fits(source_class, n) {
+                self.capacity_conflict();
                 return Err(Error::infeasible(format!(
                     "§8.4: capacity {source_class} exceeded by {identity}"
                 )));
@@ -252,12 +320,18 @@ impl Allocator<'_> {
             })
             .collect::<Result<Vec<_>>>()?;
         if !self.target.adjacent(&vertices) {
-            let prefix = wires
-                .iter()
-                .map(|w| self.placement_prefixes.get(w).copied().unwrap_or(0))
-                .max()
-                .unwrap_or(0);
-            self.search.conflict_prefix = Some(prefix.max(realisation_prefix));
+            let prefix = wires.iter().try_fold(realisation_prefix, |prefix, wire| {
+                self.placement_prefixes
+                    .get(wire)
+                    .map(|dependency| prefix.max(*dependency))
+                    .ok_or_else(|| {
+                        Error::new(
+                            crate::Status::InvalidState,
+                            format!("live wire {wire} has no placement dependency"),
+                        )
+                    })
+            })?;
+            self.search.conflict_prefix = Some(prefix);
             return Err(Error::infeasible(
                 "§8.3 / §17 item 15: native leaf operands are not adjacent",
             ));
@@ -590,7 +664,6 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
                 } else {
                     &share
                 };
-                let classes = allocator.classes(&g.all_wires())?;
                 let realisation_prefix = allocator.class_prefix(&g.all_wires());
                 if let Some(n) = target.value["capabilities"]["max_predicate_depth"].as_u64() {
                     if g.controls.len() as u64 > n {
@@ -602,45 +675,11 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
                         "max_parallel is zero for a nonempty gate stream",
                     ));
                 }
-                let native = target.native(g, &classes, gate_share)?;
-                let mut ancilla_identity = None;
-                let realisation;
-                let realized = if let Some(cost) = native {
-                    realisation = "native".to_owned();
-                    vec![(g.clone(), cost)]
-                } else {
-                    let identity = format!("scheme/{source_index}");
-                    let plan = target.scheme(g, &identity)?.ok_or_else(|| {
-                        allocator.search.conflict_prefix = Some(realisation_prefix);
-                        Error::infeasible(format!(
-                            "§8.3: no target entry or scheme covers {} at the requested accuracy",
-                            g.op
-                        ))
-                    })?;
-                    if !plan.ancillae.is_empty() {
-                        allocator.allocate(
-                            identity.clone(),
-                            plan.ancillae.clone(),
-                            &plan.class,
-                            &plan.state,
-                            &now,
-                            Some(event.owner),
-                            Some(plan.name.clone()),
-                        )?;
-                        ancilla_identity = Some(identity);
-                    }
-                    let mut realized = Vec::new();
-                    for leaf in plan.leaves {
-                        let classes = allocator.classes(&leaf.all_wires())?;
-                        let cost=target.native(&leaf,&classes,gate_share)?.ok_or_else(||{
-                            allocator.search.conflict_prefix=Some(realisation_prefix.max(allocator.class_prefix(&leaf.all_wires())));
-                            Error::infeasible("§8.3: scheme leaf does not match a native gates entry; schemes do not nest")
-                        })?;
-                        realized.push((leaf, cost));
-                    }
-                    realisation = plan.name;
-                    realized
-                };
+                let Realisation {
+                    name: realisation,
+                    ancilla_identity,
+                    leaves: realized,
+                } = allocator.realise(g, gate_share, source_index, &now, event.owner)?;
                 if realisation != "native" || !epsilon.is_zero() {
                     entries.push(selector_entry(
                         event,
@@ -1148,4 +1187,150 @@ fn certificate(
         json!({"versions":object.versions,"bindings":{"object_hash":object.object_hash,"interface_hash":object.symbols[&root.name].interface_hash,"closure_hash":root.hash,"reference_program_hash":object.symbols[&root.name].interface_hash,"dialect_mapping_version":"isa-0.9","target_hash":target.hash,"schedule_hash":schedule_hash,"invocation":invocation_binding(root)},"producer":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION"),"materialisation":{"llvm_version":"none","pipeline":"ref-sequential","normaliser_version":"0.9"}},"regions":regions,"composition":{"multiplicities":multiplicities,"epsilon_total":{"diamond":d::exact(&(d::integer(2)*&bounds.declared_total))?},"method":"sum_over_multiplicities"}}),
         bounds.exact_total,
     ))
+}
+
+#[cfg(test)]
+#[path = "../tests/support/pins.rs"]
+mod pins;
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capacity_conflict_ignores_choices_for_released_allocations() {
+        let mut target =
+            crate::canonical::parse(include_bytes!("../data/k83-target.json")).unwrap();
+        let class = target["classes"]
+            .as_object()
+            .unwrap()
+            .values()
+            .next()
+            .unwrap()
+            .clone();
+        target["classes"] = json!({"a":class,"b":class});
+        for gate in target["gates"].as_array_mut().unwrap() {
+            gate["classes"] = json!(["*"]);
+        }
+        target["classes"]["a"]["capacity"] = json!(2);
+        target["classes"]["b"]["capacity"] = json!("unbounded");
+        let target = Target::from_value(target).unwrap();
+        let mut search = Search::default();
+        let limits = BTreeMap::new();
+        let mut allocator = Allocator {
+            target: &target,
+            limits: &limits,
+            live: BTreeMap::new(),
+            placement_prefixes: BTreeMap::new(),
+            class_prefixes: BTreeMap::new(),
+            allocations: Vec::new(),
+            active: BTreeMap::new(),
+            counts: BTreeMap::new(),
+            order: 0,
+            search: &mut search,
+        };
+        allocator
+            .allocate(
+                "interface".into(),
+                vec!["t".into()],
+                "a",
+                "interface",
+                &d::integer(0),
+                None,
+                None,
+            )
+            .unwrap();
+        for i in 0..30 {
+            let name = format!("temporary-{i}");
+            allocator
+                .allocate(
+                    name.clone(),
+                    vec![name.clone()],
+                    "any",
+                    "clean",
+                    &d::integer(0),
+                    None,
+                    None,
+                )
+                .unwrap();
+            allocator.release(&name, &d::integer(0)).unwrap();
+        }
+        let error = allocator
+            .allocate(
+                "too-wide".into(),
+                vec!["x".into(), "y".into()],
+                "a",
+                "clean",
+                &d::integer(0),
+                None,
+                None,
+            )
+            .unwrap_err();
+        assert_eq!(error.status, crate::Status::ScheduleInfeasible);
+        assert!(
+            !search.advance(),
+            "released choices cannot repair the fixed live capacity conflict"
+        );
+    }
+    #[test]
+    fn published_grid_placement_outcomes_match_scheduler_admission() {
+        let dir = pins::spec("conformance/cases/E/E-topology-grid-09");
+        let case = canonical::parse(&std::fs::read(dir.join("case.json")).unwrap()).unwrap();
+        let target = Target::parse(&std::fs::read(dir.join("target.json")).unwrap()).unwrap();
+        assert_eq!(target.hash, case["expected_outcome"]["target_hash"]);
+        for (key, expected) in [
+            ("adjacent", "native_cx_adjacent"),
+            ("non_adjacent", "native_cx_non_adjacent"),
+        ] {
+            let mut search = Search::default();
+            let limits = BTreeMap::new();
+            let vertices = case["scenario"][key].as_array().unwrap();
+            let mut allocator = Allocator {
+                target: &target,
+                limits: &limits,
+                live: BTreeMap::from([
+                    ("c".into(), ("fast".into(), vertices[0].as_u64())),
+                    ("t".into(), ("fast".into(), vertices[1].as_u64())),
+                ]),
+                placement_prefixes: BTreeMap::from([("c".into(), 0), ("t".into(), 0)]),
+                class_prefixes: BTreeMap::new(),
+                allocations: vec![],
+                active: BTreeMap::new(),
+                counts: BTreeMap::new(),
+                order: 0,
+                search: &mut search,
+            };
+            let result = allocator.check_topology(&["c".into(), "t".into()], 0);
+            match case["expected_outcome"][expected].as_str().unwrap() {
+                "realisable" => result.unwrap(),
+                "E_SCHEDULE_INFEASIBLE: §17 item 15" => {
+                    let error = result.unwrap_err();
+                    assert_eq!(error.status, crate::Status::ScheduleInfeasible);
+                    assert!(error.reason.contains("§17 item 15"));
+                }
+                outcome => panic!("unrecognised published topology outcome {outcome}"),
+            }
+            if key == "non_adjacent" {
+                allocator.placement_prefixes.remove("t");
+                let error = allocator
+                    .check_topology(&["c".into(), "t".into()], 0)
+                    .unwrap_err();
+                assert_eq!(
+                    error.status,
+                    crate::Status::InvalidState,
+                    "missing live-wire dependency is not an independent placement conflict"
+                );
+            }
+        }
+        assert_eq!(case["expected_outcome"]["absent_topology"], "all-to-all");
+        let mut value = target.value.clone();
+        value.as_object_mut().unwrap().remove("topology");
+        let all_to_all = Target::from_value(value).unwrap();
+        for a in 0..4 {
+            for b in 0..4 {
+                if a != b {
+                    assert!(all_to_all.adjacent(&[a, b]));
+                }
+            }
+        }
+    }
 }

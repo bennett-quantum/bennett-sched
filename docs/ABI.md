@@ -30,9 +30,11 @@ requires the new binding and rejects a partition mismatch even when parameter
 hashes agree. Pre-K91 portable templates need an explicit, documented rebinding;
 their original bytes are never silently upgraded by the parser.
 
-The ISA draft names `token_aliases/1` but its §10.1 advisor R21 note explicitly
-forbids inventing loader negotiation pending **b-isa-spec-b3ui**. Therefore this
-library does not publish a custom query or claim completed negotiated support.
+The pinned ISA names `token_aliases/1` in §10.1 and requires loader negotiation
+for the additive symbols and metadata semantics, but does not define its symbol,
+signature or version/result encoding. That contract gap remains tracked in
+**bennett-sched-xzv** (upstream **b-isa-spec-b3ui**). This library does not publish
+a custom query or claim completed negotiated support.
 The existing `bennett_sched_version()` compatibility probe is not capability
 negotiation. Consumers must implement the eventual published negotiation before
 relying on negotiated alias-aware launches. This does not remove the published

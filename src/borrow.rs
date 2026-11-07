@@ -161,7 +161,7 @@ pub fn prove(object: &Object, trace: &Trace) -> Result<Vec<Proof>> {
             {
                 return Err(Error::new(
                     Status::GateUnsupported,
-                    "§5.6: borrow-frame proof across nested static sequences is postponed (bennett-sched-ark)",
+                    "§5.6: borrow-frame proof across nested static sequences is postponed",
                 ));
             }
             let invocation = &trace.invocations[event.owner];
@@ -174,7 +174,7 @@ pub fn prove(object: &Object, trace: &Trace) -> Result<Vec<Proof>> {
             let witness = translation(&forward, &borrowed).ok_or_else(|| {
                 Error::new(
                     Status::GateUnsupported,
-                    "§5.6: non-translation borrow-frame T3 proof is postponed (bennett-sched-ark)",
+                    "§5.6: non-translation borrow-frame T3 proof is postponed",
                 )
             })?;
             proofs.push(Proof {

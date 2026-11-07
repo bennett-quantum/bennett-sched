@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{
     expansion::{Binding, Capture, Env, Library, Template, inverse},
     object::Object,
@@ -7,10 +9,10 @@ use serde_json::json;
 use std::{collections::BTreeMap, sync::Arc};
 #[path = "common/basis.rs"]
 mod basis;
-mod common;
+use crate::common;
 
 fn inc8() -> Arc<Object> {
-    let spec = std::fs::read_to_string("../bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md").unwrap();
+    let spec = std::fs::read_to_string(pins::spec("spec/Bennett-ISA-Spec-0.9.md")).unwrap();
     let source = spec
         .split("### 16.3 Example objects")
         .nth(1)

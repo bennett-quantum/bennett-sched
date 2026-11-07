@@ -1,3 +1,5 @@
+#[path = "support/pins.rs"]
+mod pins;
 use bennett_sched::{
     canonical,
     expansion::{Binding, Env, Leaf, Library, Operation},
@@ -59,8 +61,7 @@ fn env(v: &Value) -> Env {
 }
 fn manifest() -> Value {
     serde_json::from_slice(
-        &std::fs::read("../bennett-isa-spec/conformance/fixtures/accepted-k82-09/k82.json")
-            .unwrap(),
+        &std::fs::read(pins::spec("conformance/fixtures/accepted-k82-09/k82.json")).unwrap(),
     )
     .unwrap()
 }

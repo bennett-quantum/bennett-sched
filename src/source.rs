@@ -83,7 +83,7 @@ pub struct Trace {
 fn deferred(feature: &str) -> Error {
     Error::new(
         Status::GateUnsupported,
-        format!("§11: source binding for {feature} is postponed (bennett-sched-ark)"),
+        format!("§11: source binding for {feature} is postponed"),
     )
 }
 fn union(a: &mut Vec<String>, b: &[String]) {
@@ -376,6 +376,14 @@ struct Builder<'a> {
     active: BTreeSet<String>,
     adjoint_depth: usize,
     replacements: BTreeMap<InstructionKey, Vec<Leaf>>,
+}
+#[derive(Clone, Copy)]
+struct InstructionContext<'a> {
+    f: &'a Function,
+    node: &'a Node,
+    chain: &'a [Occurrence],
+    iteration: &'a [u64],
+    owner: usize,
 }
 type InstructionKey = (usize, String, Vec<u64>);
 fn instruction_key(event: &Event) -> InstructionKey {
@@ -1073,6 +1081,558 @@ impl Builder<'_> {
         }
         Ok(regions)
     }
+    fn expand_loop(
+        &mut self,
+        context: InstructionContext<'_>,
+        operands: &[String],
+        env: &mut Env,
+        effective: Vec<String>,
+    ) -> Result<()> {
+        let InstructionContext {
+            f,
+            node,
+            chain,
+            iteration,
+            owner,
+        } = context;
+        if operands.len() != 1 && !(operands.len() == 3 && operands[1] == "while") {
+            return Err(Error::arg(
+                "qloop requires a bound and optional while condition",
+            ));
+        }
+        let n = crate::schedule::uint(&json!(operands[0]))?;
+        if node.bodies.len() != 1 {
+            return Err(Error::arg("qloop requires one body"));
+        }
+        let condition = if operands.len() == 3 {
+            let w = wires(&operands[2], env)?;
+            if w.len() as u64 != n {
+                return Err(Error::arg(
+                    "§4.6: while condition width must equal trip count",
+                ));
+            }
+            Some(w)
+        } else {
+            None
+        };
+        let identity = format!(
+            "source-flags/{}/{}/{:?}",
+            canonical::hash(&canonical::to_vec(&json!(
+                chain.iter().map(Occurrence::json).collect::<Vec<_>>()
+            ))?),
+            node.point,
+            iteration
+        );
+        let flags = (0..n)
+            .map(|i| format!("{identity}[{i}]"))
+            .collect::<Vec<_>>();
+        let mut ordinal = 0;
+        if let Some(condition) = &condition {
+            self.emit(
+                f,
+                node,
+                iteration,
+                chain,
+                owner,
+                vec![Leaf {
+                    ordinal,
+                    calls: vec![],
+                    origin: vec![],
+                    op: Operation::Alloc {
+                        identity: identity.clone(),
+                        wires: flags.clone(),
+                        class: "any".into(),
+                        state: "clean".into(),
+                    },
+                }],
+            )?;
+            ordinal += 1;
+            if n > 0 {
+                self.emit(
+                    f,
+                    node,
+                    iteration,
+                    chain,
+                    owner,
+                    vec![Leaf {
+                        ordinal,
+                        calls: vec![],
+                        origin: vec![],
+                        op: Operation::Gate(Gate {
+                            op: "cx".into(),
+                            wires: vec![condition[0].clone(), flags[0].clone()],
+                            controls: effective.clone(),
+                            theta: None,
+                        }),
+                    }],
+                )?;
+                ordinal += 1;
+            }
+        }
+        for i in 0..n {
+            let mut counts = iteration.to_vec();
+            counts.push(i);
+            let before = live_types(env);
+            let mut controls = effective.clone();
+            if condition.is_some() {
+                union(&mut controls, &[flags[i as usize].clone()]);
+            }
+            let start = self.trace.events.len();
+            self.nodes(f, &node.bodies[0], env, &controls, chain, &counts, owner)?;
+            if before != live_types(env) {
+                return Err(Error::arg(
+                    "§4.6: loop body entry and exit live names/types must agree",
+                ));
+            }
+            if let Some(condition) = &condition {
+                if self.trace.events[start..].iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if g.wires[g.own_controls()..].iter().any(|w|condition.contains(w)))){return Err(Error::arg("§3.3: while condition modified inside loop body"));}
+                if i + 1 < n {
+                    self.emit(
+                        f,
+                        node,
+                        iteration,
+                        chain,
+                        owner,
+                        vec![Leaf {
+                            ordinal,
+                            calls: vec![],
+                            origin: vec![],
+                            op: Operation::Gate(Gate {
+                                op: "ccx".into(),
+                                wires: vec![
+                                    flags[i as usize].clone(),
+                                    condition[i as usize + 1].clone(),
+                                    flags[i as usize + 1].clone(),
+                                ],
+                                controls: effective.clone(),
+                                theta: None,
+                            }),
+                        }],
+                    )?;
+                    ordinal += 1;
+                }
+            }
+        }
+        if let Some(condition) = &condition {
+            for i in (1..n).rev() {
+                self.emit(
+                    f,
+                    node,
+                    iteration,
+                    chain,
+                    owner,
+                    vec![Leaf {
+                        ordinal,
+                        calls: vec![],
+                        origin: vec![],
+                        op: Operation::Gate(Gate {
+                            op: "ccx".into(),
+                            wires: vec![
+                                flags[i as usize - 1].clone(),
+                                condition[i as usize].clone(),
+                                flags[i as usize].clone(),
+                            ],
+                            controls: effective.clone(),
+                            theta: None,
+                        }),
+                    }],
+                )?;
+                ordinal += 1;
+            }
+            if n > 0 {
+                self.emit(
+                    f,
+                    node,
+                    iteration,
+                    chain,
+                    owner,
+                    vec![Leaf {
+                        ordinal,
+                        calls: vec![],
+                        origin: vec![],
+                        op: Operation::Gate(Gate {
+                            op: "cx".into(),
+                            wires: vec![condition[0].clone(), flags[0].clone()],
+                            controls: effective.clone(),
+                            theta: None,
+                        }),
+                    }],
+                )?;
+                ordinal += 1;
+            }
+            self.emit(
+                f,
+                node,
+                iteration,
+                chain,
+                owner,
+                vec![Leaf {
+                    ordinal,
+                    calls: vec![],
+                    origin: vec![],
+                    op: Operation::Release {
+                        identity,
+                        wires: flags,
+                        class: "any".into(),
+                        state: "clean".into(),
+                    },
+                }],
+            )?;
+        }
+        Ok(())
+    }
+    fn expand_if(
+        &mut self,
+        context: InstructionContext<'_>,
+        operands: &[String],
+        env: &mut Env,
+        effective: Vec<String>,
+    ) -> Result<()> {
+        let InstructionContext {
+            f,
+            node,
+            chain,
+            iteration,
+            owner,
+        } = context;
+        if operands.len() != 1 || node.bodies.len() != 2 {
+            return Err(Error::arg("qif requires predicate and two bodies"));
+        }
+        let p = wires(&operands[0], env)?;
+        if p.len() != 1 {
+            return Err(Error::arg("qif requires one wire"));
+        }
+        let mut pred = effective.clone();
+        union(&mut pred, &p);
+        self.nodes(f, &node.bodies[0], env, &pred, chain, iteration, owner)?;
+        let g = Gate {
+            op: "x".into(),
+            wires: p.clone(),
+            controls: effective.clone(),
+            theta: None,
+        };
+        self.emit(
+            f,
+            node,
+            iteration,
+            chain,
+            owner,
+            vec![Leaf {
+                ordinal: 0,
+                calls: vec![],
+                origin: vec![],
+                op: Operation::Gate(g.clone()),
+            }],
+        )?;
+        self.nodes(f, &node.bodies[1], env, &pred, chain, iteration, owner)?;
+        self.emit(
+            f,
+            node,
+            iteration,
+            chain,
+            owner,
+            vec![Leaf {
+                ordinal: 1,
+                calls: vec![],
+                origin: vec![],
+                op: Operation::Gate(g),
+            }],
+        )?;
+        Ok(())
+    }
+    fn expand_action_call(
+        &mut self,
+        context: InstructionContext<'_>,
+        operands: &[String],
+        env: &mut Env,
+        effective: Vec<String>,
+        readonly: &BTreeSet<String>,
+        adjoint: bool,
+    ) -> Result<()> {
+        let InstructionContext {
+            f,
+            node,
+            chain,
+            iteration,
+            owner,
+        } = context;
+        if operands.len() != 5 {
+            return Err(Error::arg("action_call requires symbol and four groups"));
+        }
+        let callee = operands[0]
+            .strip_prefix('@')
+            .and_then(|n| self.object.functions.get(n))
+            .ok_or_else(|| Error::arg("unresolved action callee"))?;
+        if !["action", "perm_action"].contains(&callee.kind.as_str()) {
+            return Err(Error::arg("action_call tier mismatch"));
+        }
+        let mut child = Env::new();
+        let mut child_slots = Vec::new();
+        for (group, role) in [(0, "mut"), (1, "in")] {
+            let actuals = object::list(&operands[group + 1])?;
+            if actuals.len() != callee.groups[group].len() {
+                return Err(Error::arg("call slot count mismatch"));
+            }
+            for (i, (p, a)) in callee.groups[group].iter().zip(actuals).enumerate() {
+                let w = wires(&a, env)?;
+                if w.len() as u64 != object::wire_width(&p.ty)? {
+                    return Err(Error::arg("call width mismatch"));
+                }
+                child.insert(p.name.clone(), Binding::Wires(w.clone()));
+                child_slots.push(Slot {
+                    id: format!("{role}:{i}"),
+                    role: role.into(),
+                    wires: w,
+                });
+            }
+        }
+        let mut used = BTreeSet::new();
+        for slot in &child_slots {
+            for w in &slot.wires {
+                if !used.insert(w.clone())
+                    || (slot.role == "mut" && (readonly.contains(w) || effective.contains(w)))
+                {
+                    return Err(Error::arg(
+                        "§3.3/§5.1: call interfaces overlap or write a read-only/control wire",
+                    ));
+                }
+            }
+        }
+        let regions = object::list(&operands[3])?;
+        if regions.len() != callee.groups[2].len() {
+            return Err(Error::arg("call region count mismatch"));
+        }
+        for (index, (p, actual)) in callee.groups[2].iter().zip(regions).enumerate() {
+            let Some(Binding::Region {
+                address,
+                cell,
+                role,
+                origin,
+                wires,
+            }) = env.get(&actual)
+            else {
+                return Err(Error::arg("unbound region call operand"));
+            };
+            let (a, w) = object::region_shape(&p.ty)?;
+            let requested = p
+                .role
+                .as_deref()
+                .ok_or_else(|| Error::arg("callee region role missing"))?;
+            if (a, w) != (*address, *cell)
+                || (!origin.starts_with("local:") && role != requested)
+                || wires.iter().any(|wire| !used.insert(wire.clone()))
+                || (requested == "mut"
+                    && wires
+                        .iter()
+                        .any(|wire| readonly.contains(wire) || effective.contains(wire)))
+            {
+                return Err(Error::arg(
+                    "§3.3/K26: region call shape, role or disjointness mismatch",
+                ));
+            }
+            child.insert(
+                p.name.clone(),
+                Binding::Region {
+                    address: *address,
+                    cell: *cell,
+                    role: requested.into(),
+                    origin: origin.clone(),
+                    wires: wires.clone(),
+                },
+            );
+            child_slots.push(Slot {
+                id: format!("mem:{index}"),
+                role: format!("mem_{requested}"),
+                wires: wires.clone(),
+            });
+        }
+        let args = object::list(&operands[4])?;
+        if args.len() != callee.groups[3].len() {
+            return Err(Error::arg("call classical argument count mismatch"));
+        }
+        let mut values = Vec::new();
+        for (p, a) in callee.groups[3].iter().zip(args) {
+            let Some(Binding::Value {
+                isa_type,
+                value,
+                token_identity,
+            }) = env.get(&a)
+            else {
+                return Err(Error::arg("unbound call classical argument"));
+            };
+            if isa_type != &json!(p.ty) {
+                return Err(Error::arg("call argument type mismatch"));
+            }
+            values.push(value.clone());
+            child.insert(
+                p.name.clone(),
+                Binding::Value {
+                    isa_type: isa_type.clone(),
+                    value: value.clone(),
+                    token_identity: *token_identity,
+                },
+            );
+        }
+        let mut path = chain.to_vec();
+        path.push(Occurrence {
+            symbol: self.object.symbols[&f.name].interface_hash.clone(),
+            point: node.point.clone(),
+            iteration: iteration.to_vec(),
+            instance: vec![],
+            call_index: Some(0),
+            entered_oracle: None,
+        });
+        self.invoke(
+            callee,
+            child,
+            effective,
+            child_slots,
+            json!(values),
+            self.trace.invocations[owner].budget,
+            &path,
+            adjoint,
+            Some(owner),
+        )?;
+        Ok(())
+    }
+    fn expand_memory(
+        &mut self,
+        context: InstructionContext<'_>,
+        env: &mut Env,
+        effective: Vec<String>,
+        readonly: &BTreeSet<String>,
+    ) -> Result<(Vec<Leaf>, Option<Vec<Leaf>>)> {
+        let InstructionContext {
+            node,
+            chain,
+            iteration,
+            ..
+        } = context;
+        let mut replacement = None;
+        let identity = format!(
+            "{}/{}/{:?}",
+            canonical::hash(&canonical::to_vec(&json!(
+                chain.iter().map(Occurrence::json).collect::<Vec<_>>()
+            ))?),
+            node.point,
+            iteration
+        );
+        let plan = bind_memory(node, env, &readonly, &identity)?;
+        let leaves = self.recipe(&plan.kind, plan.args.clone(), env, &effective)?;
+        if self.adjoint_depth > 0 {
+            let inverse_kind = if let Some(role) = plan.kind.strip_prefix("qload.") {
+                format!("qunload.{role}")
+            } else if let Some(role) = plan.kind.strip_prefix("qunload.") {
+                format!("qload.{role}")
+            } else {
+                plan.kind.clone()
+            };
+            replacement = Some(self.recipe(&inverse_kind, plan.args, env, &effective)?);
+        }
+        if let Some(name) = plan.consumed {
+            env.remove(&name);
+        }
+        Ok((leaves, replacement))
+    }
+    fn expand_gate(
+        &mut self,
+        gate: &str,
+        operands: Vec<String>,
+        env: &Env,
+        effective: Vec<String>,
+        readonly: &BTreeSet<String>,
+        adjoint: bool,
+    ) -> Result<Vec<Leaf>> {
+        let mut leaves = Vec::new();
+        let mut params = operands;
+        let theta = if ["rx", "ry", "rz"].contains(&gate) {
+            if params.is_empty() {
+                return Err(Error::arg("missing angle"));
+            }
+            let s = params.remove(0);
+            let f = s
+                .parse::<f64>()
+                .map_err(|_| Error::arg("invalid gate angle"))?;
+            if !f.is_finite() {
+                return Err(Error::arg("nonfinite gate angle"));
+            }
+            Some(format!("0x{:016x}", f.to_bits()))
+        } else {
+            None
+        };
+        let mut w = Vec::new();
+        for p in params {
+            if p.starts_with('(') {
+                for p in object::list(&p)? {
+                    w.extend(wires(&p, env)?);
+                }
+            } else {
+                w.extend(wires(&p, env)?);
+            }
+        }
+        let mut g = Gate {
+            op: gate.into(),
+            wires: w,
+            controls: effective,
+            theta,
+        };
+        g.validate()?;
+        if !["s", "sdg", "t", "tdg", "rz", "cz"].contains(&gate)
+            && g.wires[g.own_controls()..]
+                .iter()
+                .any(|w| readonly.contains(w))
+        {
+            return Err(Error::arg("§5.1: non-diagonal gate writes an in wire"));
+        }
+        if adjoint {
+            g = g.adjoint();
+        }
+        leaves.push(Leaf {
+            ordinal: 0,
+            calls: vec![],
+            origin: vec![],
+            op: Operation::Gate(g),
+        });
+        Ok(leaves)
+    }
+    fn expand_bundle(
+        &mut self,
+        op: &str,
+        operands: &[String],
+        env: &Env,
+        effective: Vec<String>,
+        readonly: &BTreeSet<String>,
+    ) -> Result<(Vec<Leaf>, Option<Vec<Leaf>>)> {
+        let mut replacement = None;
+        if operands.len() != 2 {
+            return Err(Error::arg("bundle operation arity"));
+        }
+        if wires(&operands[1], env)?
+            .iter()
+            .any(|w| readonly.contains(w))
+            || (op == "qexch"
+                && wires(&operands[0], env)?
+                    .iter()
+                    .any(|w| readonly.contains(w)))
+        {
+            return Err(Error::arg("§5.1: bundle operation writes an in wire"));
+        }
+        let n = wires(&operands[0], env)?.len();
+        let leaves = self.recipe(
+            if op == "qxor" {
+                "bind.qxor"
+            } else {
+                "bind.qexch"
+            },
+            json!([n, operands[0], operands[1]]),
+            env,
+            &effective,
+        )?;
+        if self.adjoint_depth > 0 {
+            replacement = Some(leaves.clone());
+        }
+        Ok((leaves, replacement))
+    }
     fn nodes(
         &mut self,
         f: &Function,
@@ -1125,6 +1685,13 @@ impl Builder<'_> {
                 }
             }
             let op = operation.as_str();
+            let context = InstructionContext {
+                f,
+                node,
+                chain,
+                iteration,
+                owner,
+            };
             let mut leaves = Vec::new();
             let mut replacement = None;
             match op {
@@ -1153,236 +1720,11 @@ impl Builder<'_> {
                     continue;
                 }
                 "qloop" => {
-                    if operands.len() != 1 && !(operands.len() == 3 && operands[1] == "while") {
-                        return Err(Error::arg(
-                            "qloop requires a bound and optional while condition",
-                        ));
-                    }
-                    let n = crate::schedule::uint(&json!(operands[0]))?;
-                    if node.bodies.len() != 1 {
-                        return Err(Error::arg("qloop requires one body"));
-                    }
-                    let condition = if operands.len() == 3 {
-                        let w = wires(&operands[2], env)?;
-                        if w.len() as u64 != n {
-                            return Err(Error::arg(
-                                "§4.6: while condition width must equal trip count",
-                            ));
-                        }
-                        Some(w)
-                    } else {
-                        None
-                    };
-                    let identity = format!(
-                        "source-flags/{}/{}/{:?}",
-                        canonical::hash(&canonical::to_vec(&json!(
-                            chain.iter().map(Occurrence::json).collect::<Vec<_>>()
-                        ))?),
-                        node.point,
-                        iteration
-                    );
-                    let flags = (0..n)
-                        .map(|i| format!("{identity}[{i}]"))
-                        .collect::<Vec<_>>();
-                    let mut ordinal = 0;
-                    if let Some(condition) = &condition {
-                        self.emit(
-                            f,
-                            node,
-                            iteration,
-                            chain,
-                            owner,
-                            vec![Leaf {
-                                ordinal,
-                                calls: vec![],
-                                origin: vec![],
-                                op: Operation::Alloc {
-                                    identity: identity.clone(),
-                                    wires: flags.clone(),
-                                    class: "any".into(),
-                                    state: "clean".into(),
-                                },
-                            }],
-                        )?;
-                        ordinal += 1;
-                        if n > 0 {
-                            self.emit(
-                                f,
-                                node,
-                                iteration,
-                                chain,
-                                owner,
-                                vec![Leaf {
-                                    ordinal,
-                                    calls: vec![],
-                                    origin: vec![],
-                                    op: Operation::Gate(Gate {
-                                        op: "cx".into(),
-                                        wires: vec![condition[0].clone(), flags[0].clone()],
-                                        controls: effective.clone(),
-                                        theta: None,
-                                    }),
-                                }],
-                            )?;
-                            ordinal += 1;
-                        }
-                    }
-                    for i in 0..n {
-                        let mut counts = iteration.to_vec();
-                        counts.push(i);
-                        let before = live_types(env);
-                        let mut controls = effective.clone();
-                        if condition.is_some() {
-                            union(&mut controls, &[flags[i as usize].clone()]);
-                        }
-                        let start = self.trace.events.len();
-                        self.nodes(f, &node.bodies[0], env, &controls, chain, &counts, owner)?;
-                        if before != live_types(env) {
-                            return Err(Error::arg(
-                                "§4.6: loop body entry and exit live names/types must agree",
-                            ));
-                        }
-                        if let Some(condition) = &condition {
-                            if self.trace.events[start..].iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if g.wires[g.own_controls()..].iter().any(|w|condition.contains(w)))){return Err(Error::arg("§3.3: while condition modified inside loop body"));}
-                            if i + 1 < n {
-                                self.emit(
-                                    f,
-                                    node,
-                                    iteration,
-                                    chain,
-                                    owner,
-                                    vec![Leaf {
-                                        ordinal,
-                                        calls: vec![],
-                                        origin: vec![],
-                                        op: Operation::Gate(Gate {
-                                            op: "ccx".into(),
-                                            wires: vec![
-                                                flags[i as usize].clone(),
-                                                condition[i as usize + 1].clone(),
-                                                flags[i as usize + 1].clone(),
-                                            ],
-                                            controls: effective.clone(),
-                                            theta: None,
-                                        }),
-                                    }],
-                                )?;
-                                ordinal += 1;
-                            }
-                        }
-                    }
-                    if let Some(condition) = &condition {
-                        for i in (1..n).rev() {
-                            self.emit(
-                                f,
-                                node,
-                                iteration,
-                                chain,
-                                owner,
-                                vec![Leaf {
-                                    ordinal,
-                                    calls: vec![],
-                                    origin: vec![],
-                                    op: Operation::Gate(Gate {
-                                        op: "ccx".into(),
-                                        wires: vec![
-                                            flags[i as usize - 1].clone(),
-                                            condition[i as usize].clone(),
-                                            flags[i as usize].clone(),
-                                        ],
-                                        controls: effective.clone(),
-                                        theta: None,
-                                    }),
-                                }],
-                            )?;
-                            ordinal += 1;
-                        }
-                        if n > 0 {
-                            self.emit(
-                                f,
-                                node,
-                                iteration,
-                                chain,
-                                owner,
-                                vec![Leaf {
-                                    ordinal,
-                                    calls: vec![],
-                                    origin: vec![],
-                                    op: Operation::Gate(Gate {
-                                        op: "cx".into(),
-                                        wires: vec![condition[0].clone(), flags[0].clone()],
-                                        controls: effective.clone(),
-                                        theta: None,
-                                    }),
-                                }],
-                            )?;
-                            ordinal += 1;
-                        }
-                        self.emit(
-                            f,
-                            node,
-                            iteration,
-                            chain,
-                            owner,
-                            vec![Leaf {
-                                ordinal,
-                                calls: vec![],
-                                origin: vec![],
-                                op: Operation::Release {
-                                    identity,
-                                    wires: flags,
-                                    class: "any".into(),
-                                    state: "clean".into(),
-                                },
-                            }],
-                        )?;
-                    }
+                    self.expand_loop(context, &operands, env, effective)?;
                     continue;
                 }
                 "qif" => {
-                    if operands.len() != 1 || node.bodies.len() != 2 {
-                        return Err(Error::arg("qif requires predicate and two bodies"));
-                    }
-                    let p = wires(&operands[0], env)?;
-                    if p.len() != 1 {
-                        return Err(Error::arg("qif requires one wire"));
-                    }
-                    let mut pred = effective.clone();
-                    union(&mut pred, &p);
-                    self.nodes(f, &node.bodies[0], env, &pred, chain, iteration, owner)?;
-                    let g = Gate {
-                        op: "x".into(),
-                        wires: p.clone(),
-                        controls: effective.clone(),
-                        theta: None,
-                    };
-                    self.emit(
-                        f,
-                        node,
-                        iteration,
-                        chain,
-                        owner,
-                        vec![Leaf {
-                            ordinal: 0,
-                            calls: vec![],
-                            origin: vec![],
-                            op: Operation::Gate(g.clone()),
-                        }],
-                    )?;
-                    self.nodes(f, &node.bodies[1], env, &pred, chain, iteration, owner)?;
-                    self.emit(
-                        f,
-                        node,
-                        iteration,
-                        chain,
-                        owner,
-                        vec![Leaf {
-                            ordinal: 1,
-                            calls: vec![],
-                            origin: vec![],
-                            op: Operation::Gate(g),
-                        }],
-                    )?;
+                    self.expand_if(context, &operands, env, effective)?;
                     continue;
                 }
                 "qalloc" | "qborrow" => {
@@ -1533,172 +1875,12 @@ impl Builder<'_> {
                     env.remove(&operands[1]);
                 }
                 "qxor" | "qexch" => {
-                    if operands.len() != 2 {
-                        return Err(Error::arg("bundle operation arity"));
-                    }
-                    if wires(&operands[1], env)?
-                        .iter()
-                        .any(|w| readonly.contains(w))
-                        || (op == "qexch"
-                            && wires(&operands[0], env)?
-                                .iter()
-                                .any(|w| readonly.contains(w)))
-                    {
-                        return Err(Error::arg("§5.1: bundle operation writes an in wire"));
-                    }
-                    let n = wires(&operands[0], env)?.len();
-                    leaves = self.recipe(
-                        if op == "qxor" {
-                            "bind.qxor"
-                        } else {
-                            "bind.qexch"
-                        },
-                        json!([n, operands[0], operands[1]]),
-                        env,
-                        &effective,
-                    )?;
-                    if self.adjoint_depth > 0 {
-                        replacement = Some(leaves.clone());
-                    }
+                    (leaves, replacement) =
+                        self.expand_bundle(op, &operands, env, effective, &readonly)?;
                 }
                 "action_call" => {
-                    if operands.len() != 5 {
-                        return Err(Error::arg("action_call requires symbol and four groups"));
-                    }
-                    let callee = operands[0]
-                        .strip_prefix('@')
-                        .and_then(|n| self.object.functions.get(n))
-                        .ok_or_else(|| Error::arg("unresolved action callee"))?;
-                    if !["action", "perm_action"].contains(&callee.kind.as_str()) {
-                        return Err(Error::arg("action_call tier mismatch"));
-                    }
-                    let mut child = Env::new();
-                    let mut child_slots = Vec::new();
-                    for (group, role) in [(0, "mut"), (1, "in")] {
-                        let actuals = object::list(&operands[group + 1])?;
-                        if actuals.len() != callee.groups[group].len() {
-                            return Err(Error::arg("call slot count mismatch"));
-                        }
-                        for (i, (p, a)) in callee.groups[group].iter().zip(actuals).enumerate() {
-                            let w = wires(&a, env)?;
-                            if w.len() as u64 != object::wire_width(&p.ty)? {
-                                return Err(Error::arg("call width mismatch"));
-                            }
-                            child.insert(p.name.clone(), Binding::Wires(w.clone()));
-                            child_slots.push(Slot {
-                                id: format!("{role}:{i}"),
-                                role: role.into(),
-                                wires: w,
-                            });
-                        }
-                    }
-                    let mut used = BTreeSet::new();
-                    for slot in &child_slots {
-                        for w in &slot.wires {
-                            if !used.insert(w.clone())
-                                || (slot.role == "mut"
-                                    && (readonly.contains(w) || effective.contains(w)))
-                            {
-                                return Err(Error::arg(
-                                    "§3.3/§5.1: call interfaces overlap or write a read-only/control wire",
-                                ));
-                            }
-                        }
-                    }
-                    let regions = object::list(&operands[3])?;
-                    if regions.len() != callee.groups[2].len() {
-                        return Err(Error::arg("call region count mismatch"));
-                    }
-                    for (index, (p, actual)) in callee.groups[2].iter().zip(regions).enumerate() {
-                        let Some(Binding::Region {
-                            address,
-                            cell,
-                            role,
-                            origin,
-                            wires,
-                        }) = env.get(&actual)
-                        else {
-                            return Err(Error::arg("unbound region call operand"));
-                        };
-                        let (a, w) = object::region_shape(&p.ty)?;
-                        let requested = p
-                            .role
-                            .as_deref()
-                            .ok_or_else(|| Error::arg("callee region role missing"))?;
-                        if (a, w) != (*address, *cell)
-                            || (!origin.starts_with("local:") && role != requested)
-                            || wires.iter().any(|wire| !used.insert(wire.clone()))
-                            || (requested == "mut"
-                                && wires.iter().any(|wire| {
-                                    readonly.contains(wire) || effective.contains(wire)
-                                }))
-                        {
-                            return Err(Error::arg(
-                                "§3.3/K26: region call shape, role or disjointness mismatch",
-                            ));
-                        }
-                        child.insert(
-                            p.name.clone(),
-                            Binding::Region {
-                                address: *address,
-                                cell: *cell,
-                                role: requested.into(),
-                                origin: origin.clone(),
-                                wires: wires.clone(),
-                            },
-                        );
-                        child_slots.push(Slot {
-                            id: format!("mem:{index}"),
-                            role: format!("mem_{requested}"),
-                            wires: wires.clone(),
-                        });
-                    }
-                    let args = object::list(&operands[4])?;
-                    if args.len() != callee.groups[3].len() {
-                        return Err(Error::arg("call classical argument count mismatch"));
-                    }
-                    let mut values = Vec::new();
-                    for (p, a) in callee.groups[3].iter().zip(args) {
-                        let Some(Binding::Value {
-                            isa_type,
-                            value,
-                            token_identity,
-                        }) = env.get(&a)
-                        else {
-                            return Err(Error::arg("unbound call classical argument"));
-                        };
-                        if isa_type != &json!(p.ty) {
-                            return Err(Error::arg("call argument type mismatch"));
-                        }
-                        values.push(value.clone());
-                        child.insert(
-                            p.name.clone(),
-                            Binding::Value {
-                                isa_type: isa_type.clone(),
-                                value: value.clone(),
-                                token_identity: *token_identity,
-                            },
-                        );
-                    }
-                    let mut path = chain.to_vec();
-                    path.push(Occurrence {
-                        symbol: self.object.symbols[&f.name].interface_hash.clone(),
-                        point: node.point.clone(),
-                        iteration: iteration.to_vec(),
-                        instance: vec![],
-                        call_index: Some(0),
-                        entered_oracle: None,
-                    });
-                    self.invoke(
-                        callee,
-                        child,
-                        effective,
-                        child_slots,
-                        json!(values),
-                        self.trace.invocations[owner].budget,
-                        &path,
-                        adjoint,
-                        Some(owner),
+                    self.expand_action_call(
+                        context, &operands, env, effective, &readonly, adjoint,
                     )?;
                     continue;
                 }
@@ -1717,81 +1899,12 @@ impl Builder<'_> {
                 }
                 "qregion" => continue,
                 "qload" | "qunload" | "qstore" | "qexchm" => {
-                    let identity = format!(
-                        "{}/{}/{:?}",
-                        canonical::hash(&canonical::to_vec(&json!(
-                            chain.iter().map(Occurrence::json).collect::<Vec<_>>()
-                        ))?),
-                        node.point,
-                        iteration
-                    );
-                    let plan = bind_memory(node, env, &readonly, &identity)?;
-                    leaves = self.recipe(&plan.kind, plan.args.clone(), env, &effective)?;
-                    if self.adjoint_depth > 0 {
-                        let inverse_kind = if let Some(role) = plan.kind.strip_prefix("qload.") {
-                            format!("qunload.{role}")
-                        } else if let Some(role) = plan.kind.strip_prefix("qunload.") {
-                            format!("qload.{role}")
-                        } else {
-                            plan.kind.clone()
-                        };
-                        replacement =
-                            Some(self.recipe(&inverse_kind, plan.args, env, &effective)?);
-                    }
-                    if let Some(name) = plan.consumed {
-                        env.remove(&name);
-                    }
+                    (leaves, replacement) =
+                        self.expand_memory(context, env, effective, &readonly)?;
                 }
                 gate if GATES.contains(&gate) => {
-                    let mut params = operands;
-                    let theta = if ["rx", "ry", "rz"].contains(&gate) {
-                        if params.is_empty() {
-                            return Err(Error::arg("missing angle"));
-                        }
-                        let s = params.remove(0);
-                        let f = s
-                            .parse::<f64>()
-                            .map_err(|_| Error::arg("invalid gate angle"))?;
-                        if !f.is_finite() {
-                            return Err(Error::arg("nonfinite gate angle"));
-                        }
-                        Some(format!("0x{:016x}", f.to_bits()))
-                    } else {
-                        None
-                    };
-                    let mut w = Vec::new();
-                    for p in params {
-                        if p.starts_with('(') {
-                            for p in object::list(&p)? {
-                                w.extend(wires(&p, env)?);
-                            }
-                        } else {
-                            w.extend(wires(&p, env)?);
-                        }
-                    }
-                    let mut g = Gate {
-                        op: gate.into(),
-                        wires: w,
-                        controls: effective,
-                        theta,
-                    };
-                    g.validate()?;
-                    if !["s", "sdg", "t", "tdg", "rz", "cz"].contains(&gate)
-                        && g.wires[g.own_controls()..]
-                            .iter()
-                            .any(|w| readonly.contains(w))
-                    {
-                        return Err(Error::arg("§5.1: non-diagonal gate writes an in wire"));
-                    }
-                    if adjoint {
-                        g = g.adjoint();
-                    }
-                    leaves.push(Leaf {
-                        ordinal: 0,
-                        calls: vec![],
-                        origin: vec![],
-                        op: Operation::Gate(g),
-                    });
+                    leaves =
+                        self.expand_gate(gate, operands, env, effective, &readonly, adjoint)?;
                 }
                 _ => {
                     return Err(Error::arg(format!(

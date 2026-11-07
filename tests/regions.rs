@@ -1,3 +1,6 @@
+#[path = "support/pins.rs"]
+mod pins;
+use crate::common;
 use bennett_sched::{
     canonical,
     expansion::{Operation, simulate_basis},
@@ -6,7 +9,6 @@ use bennett_sched::{
 };
 use serde_json::json;
 use std::collections::BTreeMap;
-mod common;
 
 fn layout(mut bytes: Vec<u8>) -> Vec<u8> {
     bytes.extend_from_slice(b"\nsection layout\n{\"A_tab\":0,\"H\":0,\"S_cells\":0,\"globals\":{},\"heap_base\":1,\"heap_limit_max\":0,\"interface_regions\":{},\"null_size\":1,\"ptr_width\":32}\n");
@@ -384,8 +386,10 @@ fn interface_region_shape_role_and_cell_identity_are_preserved_across_calls() {
 #[test]
 fn every_k79_source_address_vector_is_admitted_or_rejected_before_ref_helper_expansion() {
     let manifest: serde_json::Value = canonical::parse(
-        &std::fs::read("../bennett-isa-spec/conformance/fixtures/accepted-k78-k80-09/k79.json")
-            .unwrap(),
+        &std::fs::read(pins::spec(
+            "conformance/fixtures/accepted-k78-k80-09/k79.json",
+        ))
+        .unwrap(),
     )
     .unwrap();
     let mut admitted = 0;

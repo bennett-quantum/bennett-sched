@@ -1,6 +1,6 @@
+use crate::common;
 use bennett_sched::{object::Object, source::Trace};
 use serde_json::json;
-mod common;
 
 fn simple(body: &str) -> Object {
     let sig = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[2],"in":[2],"mem":[],"args":[],"bounds":[]});
