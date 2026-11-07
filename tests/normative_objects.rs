@@ -119,12 +119,14 @@ fn every_normative_quantum_region_has_an_audited_typed_scheduler_outcome() {
                 result.reason
             );
             if postponed {
+                let reason = result.reason.to_str().unwrap();
+                assert!(reason.starts_with('§'), "{}: {reason}", f.name);
                 assert!(
-                    result
-                        .reason
-                        .to_str()
-                        .unwrap()
-                        .contains("bennett-sched-ark")
+                    reason.contains(
+                        "classical pseudo-location physical wire initialization requires a published contract"
+                    ),
+                    "{}: {reason}",
+                    f.name
                 );
                 assert!(result.schedule.is_empty() && result.certificate.is_empty());
                 unsupported += 1;
