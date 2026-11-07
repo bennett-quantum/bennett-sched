@@ -25,10 +25,10 @@ name = "quality baseline"
 argv = ["python3", "-B", "scripts/quality.py", "--check"]
 
 [siblings."bennett-isa-spec"]
-sha = "97e7b9f16977905be8308c2ca33b9d470f83756f"
-note = "SPEC_VERSIONS.toml spec_commit (K83 fixtures, token_aliases metadata); re-pinned 2026-11-06 by pin-sched/orchestrator, on origin via wip/session-end-2026-11-03"
+sha = "3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1"
+note = "isa-spec main 3b10907, quality floor merge, K91 token_aliases reader"
 [siblings."bennett-isa-spec".files]
-"spec/Bennett-ISA-Spec-0.9.md" = "bbd887c7841f4eed40f7b3518270a8f2cf781204c14ac4cc3eabca5c5b4b8c3b"
+"spec/Bennett-ISA-Spec-0.9.md" = "54dde0c83ff31d0a76de1814ac00273c3bb63fbd9c91d71aea625ad714959c5f"
 
 [[siblings."bennett-isa-spec".build]]
 name = "reference interpreter (debug)"
