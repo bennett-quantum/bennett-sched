@@ -1,5 +1,7 @@
 # bennett-sched
 
+Workspace handoff: [bennett/HANDOFF.md](../bennett/HANDOFF.md).
+
 Scheduler and cost model targeting Bennett ISA 0.9 section 11, with Rust `rlib`
 and C `cdylib` interfaces. The complete published contract remains the scope;
 this is a partial implementation. See [docs/PLAN.md](docs/PLAN.md), the
