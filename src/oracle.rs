@@ -34,7 +34,7 @@ pub(crate) fn read(name: &str, env: &Env) -> Result<Vec<String>> {
         }
         Some(Binding::Value { .. }) => Err(Error::new(
             Status::GateUnsupported,
-            "§4.7/K25: classical pseudo-location wire initialization needs contract decision bennett-sched-r28; source adapter tracked by bennett-sched-ark",
+            "§4.7/K25: classical pseudo-location physical wire initialization requires a published contract",
         )),
         _ => Err(Error::arg(format!("§4.2: unbound oracle operand {name}"))),
     }

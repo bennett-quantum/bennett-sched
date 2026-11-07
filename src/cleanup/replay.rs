@@ -171,9 +171,7 @@ fn history(trace: &Trace, pair: &Pair, before: usize) -> Result<Vec<Unit>> {
 fn deferred(feature: &str) -> Error {
     Error::new(
         Status::GateUnsupported,
-        format!(
-            "§11 K81: {feature} requires the remaining source-history algorithm (bennett-sched-7va)"
-        ),
+        format!("§11 K81: {feature} requires the remaining source-history algorithm"),
     )
 }
 
@@ -193,7 +191,7 @@ impl Emitter<'_> {
         if count > 1_000_000usize.saturating_sub(self.events.len()) {
             return Err(Error::new(
                 Status::NoMem,
-                "recompute leaf descriptors exhaust host workspace (bennett-sched-2u4)",
+                "recompute leaf descriptors exhaust host workspace",
             ));
         }
         self.events.try_reserve(count).map_err(|_| {

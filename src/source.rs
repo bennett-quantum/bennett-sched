@@ -83,7 +83,7 @@ pub struct Trace {
 fn deferred(feature: &str) -> Error {
     Error::new(
         Status::GateUnsupported,
-        format!("§11: source binding for {feature} is postponed (bennett-sched-ark)"),
+        format!("§11: source binding for {feature} is postponed"),
     )
 }
 fn union(a: &mut Vec<String>, b: &[String]) {

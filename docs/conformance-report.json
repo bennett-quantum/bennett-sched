@@ -6149,7 +6149,9 @@
   "reference_schedule_execution": "not claimed; published reference interpreter documents staged target/schedule execution",
   "reference_09_schedule_admission": {
     "test": "differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission",
-    "meaning": "Published debug CLI admits the emitted controlled-action schedule and certificate metadata; absent source point rejects. This is not certificate-claim replay or scheduled execution."
+    "status": "blocked-at-pin",
+    "upstream": "b-isa-spec-3wl9",
+    "meaning": "The pinned reference rejects token_aliases; the default test remains active. This is not certificate-claim replay or scheduled execution."
   },
-  "recorded_at_utc": "2026-11-06T13:35:53Z"
+  "recorded_at_utc": "2026-11-07T06:10:05Z"
 }

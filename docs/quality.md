@@ -76,3 +76,18 @@ also has a literal frame-slice and invalid-width unit test. After splitting:
 four library tests pass; the default integration suite has 222 passes, the
 same one upstream reference failure, and ten ignored cases (64.42 seconds of
 test execution; 189.78 seconds including the full multi-file rebuild).
+
+Fail-fast and litter pass: a missing live-wire placement dependency now returns
+InvalidState; the corruption regression fails before the fix and passes after.
+Zero defaults retained elsewhere represent unselected search choices, absent
+optional topology, initial source versions or empty register sets; they are not
+used to conceal this metadata failure. Product source contains zero process
+identifiers. Generated Python bytecode was removed and ignore rules cover
+bytecode, logs, locks and backups. One previously tracked backup,
+.beads/hooks/pre-push.backup, is outside this job owned paths and remains an
+orchestrator cleanup under bennett-sched-ogc.
+
+The gate and SPEC_VERSIONS spec commit/file digest were checked against git show
+of the pinned commit. README and the conformance inventory now attribute the
+current reference failure instead of repeating the old successful-admission
+claim. Ten oracle-pair tests pass after diagnostic cleanup.

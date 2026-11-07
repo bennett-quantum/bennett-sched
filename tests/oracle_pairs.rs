@@ -200,7 +200,10 @@ fn pairing_retains_the_classical_pseudo_location_contract_diagnostic() {
         .err()
         .expect("pseudo-location storage is not silently guessed");
     assert_eq!(error.status, Status::GateUnsupported);
-    assert!(error.reason.contains("bennett-sched-r28"), "{error}");
+    assert!(
+        error.reason.contains("physical wire initialization"),
+        "{error}"
+    );
 }
 
 #[test]

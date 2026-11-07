@@ -245,7 +245,7 @@ impl Document {
                         if recompute {
                             return Err(Error::new(
                                 Status::GateUnsupported,
-                                "§11 K80/K81: recompute call occurrence admission requires source cleanup partition (bennett-sched-ark)",
+                                "§11 K80/K81: recompute call occurrence admission requires source cleanup partition",
                             ));
                         }
                         return Err(fail("call_index is not in the bound source expansion"));

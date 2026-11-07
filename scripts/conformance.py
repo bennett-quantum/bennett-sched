@@ -66,7 +66,7 @@ def main():
     args = parser.parse_args()
     for key in ["DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "BROWSER"]:
         os.environ.pop(key, None)
-    os.environ.setdefault("TMPDIR", str(ROOT / ".tmp/sol-sched/tmp"))
+    os.environ.setdefault("TMPDIR", str(ROOT / ".tmp/conformance/tmp"))
     Path(os.environ["TMPDIR"]).mkdir(parents=True, exist_ok=True)
     records = []
     suites = collections.Counter()
@@ -138,7 +138,7 @@ def main():
         "cases": records, "normative_objects": examples, "portable_manifests": portable,
         "inline_witnesses": [{"id":"K77-TWO-TOKEN", "source":"spec/Bennett-ISA-Spec-0.9.md", "section":"11.1 Two-token witness", "coverage":"published-source-expansion-witness", "test":"oracle_calls::published_k77_two_token_inc8_witness_covers_every_input_and_both_controls", "registry_adapter_test":"linked_source::source_registry_replays_the_actual_k77_two_token_witness_through_direct_and_captured_adapters", "capture_forms":["direct","manual-body","manual-template","typed-body","typed-template"], "input_values":256, "control_values":2, "initial_target":0, "initial_fault":0, "certificate_limit":"Combined differing-budget resource reports require bennett-sched-1na; no complete certificate claim."}],
         "reference_schedule_execution": "not claimed; published reference interpreter documents staged target/schedule execution",
-        "reference_09_schedule_admission": {"test":"differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission","meaning":"Published debug CLI admits the emitted controlled-action schedule and certificate metadata; absent source point rejects. This is not certificate-claim replay or scheduled execution."},
+        "reference_09_schedule_admission": {"test":"differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission","status":"blocked-at-pin","upstream":"b-isa-spec-3wl9","meaning":"The pinned reference rejects token_aliases; the default test remains active. This is not certificate-claim replay or scheduled execution."},
     }
     if args.probe_reference:
         binary = Path(resolve(ROOT, "bennett-isa-spec", reference=True)["binary"])

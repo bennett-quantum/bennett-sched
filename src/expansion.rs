@@ -1149,7 +1149,7 @@ impl Compiler<'_> {
             if self.source_calls.len() >= 65_536 {
                 return Err(Error::new(
                     crate::Status::NoMem,
-                    "source call metadata exhausts host workspace (bennett-sched-2u4)",
+                    "source call metadata exhausts host workspace",
                 ));
             }
             self.source_calls.try_reserve(1).map_err(|_| {
