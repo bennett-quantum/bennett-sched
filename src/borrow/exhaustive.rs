@@ -59,11 +59,20 @@ fn domain(object: &Object, trace: &Trace, owner: usize, state: &entry::State) ->
         .collect::<Vec<_>>();
     let mut allocations = state.allocations.values().collect::<Vec<_>>();
     allocations.sort_by_key(|a| a.order);
-    let mut borrowed = Vec::new();
+    // K69/K70 positions span every checked lifetime, including lifetimes
+    // outside this frame. Non-live positions are untouched spectator systems.
+    let borrowed = trace.events[inv.start..inv.end]
+        .iter()
+        .filter_map(|event| match &event.leaf.op {
+            Operation::Alloc { wires, state, .. } if state == "borrowed" => Some(wires.len()),
+            _ => None,
+        })
+        .enumerate()
+        .map(|(i, width)| full(&format!("borrowed:{i}"), width))
+        .collect::<Vec<_>>();
     let mut workspace = Vec::new();
     for a in allocations {
         if a.borrowed {
-            borrowed.push(full(&format!("borrowed:{}", borrowed.len()), a.wires.len()));
             continue;
         }
         if a.event.location.generated != 0 {
@@ -176,9 +185,7 @@ pub(super) fn prove(
     };
     let lifetime = trace.events[trace.invocations[owner].start..allocation]
         .iter()
-        .filter(|e| {
-            e.owner == owner && matches!(&e.leaf.op,Operation::Alloc{state,..}if state=="borrowed")
-        })
+        .filter(|e| matches!(&e.leaf.op,Operation::Alloc{state,..}if state=="borrowed"))
         .count();
     Ok(Evidence::Exhaustive {
         domain,

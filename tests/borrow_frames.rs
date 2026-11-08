@@ -200,3 +200,50 @@ fn selected_frame_certificate_metadata_is_admitted_by_the_pinned_reference() {
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn sequential_lifetimes_keep_global_borrowed_positions_and_their_distinct_widths() {
+    let bytes = source("", "cx c b\nqreturn b\nb = qborrow any 2\ncx c b[0]");
+    let record = schedule(&bytes, 0);
+    let indices = record["verification"]["borrow_frames"].as_array().unwrap();
+    assert_eq!(indices.len(), 2);
+    let mut lifetimes = Vec::new();
+    for index in indices {
+        let claim = &record["claims"][index.as_u64().unwrap() as usize];
+        lifetimes.push(claim["borrow_frame"]["lifetime"].as_u64().unwrap());
+        assert_eq!(
+            claim["domain"]["borrowed"],
+            json!([{"name":"borrowed:0","width":1,"lo":0,"hi":1},{"name":"borrowed:1","width":2,"lo":0,"hi":3}])
+        );
+    }
+    lifetimes.sort();
+    assert_eq!(lifetimes, vec![0, 1]);
+}
+
+#[test]
+fn callee_borrow_lifetimes_precede_parent_lifetimes_in_the_complete_tuple() {
+    let child = common::action(
+        "perm_action",
+        "idle",
+        json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[],"in":[],"mem":[],"args":[],"bounds":[]}),
+        "perm_action @idle () () () () ()",
+        "b = qborrow any 1\nqreturn b",
+    );
+    let bytes = common::caller(
+        &child,
+        "perm_action",
+        "a",
+        json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[1,1],"mem":[],"args":[],"bounds":[]}),
+        "perm_action @a (t:wire mut) (x:wire in, y:wire in) () () ()",
+        "c = qalloc any 1\naction_call @idle () () () ()\nb = qborrow any 2\ncx c b[0]\nqreturn b\nqfree c",
+    );
+    let record = schedule(&bytes, 0);
+    let indices = record["verification"]["borrow_frames"].as_array().unwrap();
+    assert_eq!(indices.len(), 1);
+    let claim = &record["claims"][indices[0].as_u64().unwrap() as usize];
+    assert_eq!(claim["borrow_frame"]["lifetime"], 1);
+    assert_eq!(
+        claim["domain"]["borrowed"],
+        json!([{"name":"borrowed:0","width":1,"lo":0,"hi":1},{"name":"borrowed:1","width":2,"lo":0,"hi":3}])
+    );
+}

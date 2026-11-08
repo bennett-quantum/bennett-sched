@@ -81,16 +81,22 @@ no constants. Every B fiber is replayed, complete surviving non-B outputs are
 compared, and clean internal release obligations are checked. Repeated visits
 use the union of entry products in visit order, including decimal iteration
 indices above nine. Replaced/reversed traces rebuild selected proof bindings.
+The full borrowed tuple retains every K69/K70 lifetime position and width,
+including completed/future lifetimes and callees. Non-live systems are untouched
+spectators; active non-B borrowed systems remain part of the fiber output check.
+Sequential one-/two-bit and preceding-callee regressions both failed before
+correcting domain coverage and the selected lifetime ordinal.
 
-Five semantic tests pass in `borrow_frames`. The initial three tests failed on
+Seven semantic tests pass in `borrow_frames`. The initial three tests failed on
 the old non-translation Unsupported; the 16-visit test additionally failed on
 lexical iteration ordering before the visit-order repair. The independent
 metadata-admission regression intentionally still requires successful admission
 and is currently **RED**: pinned reference 62a0cf0 rejects domain.workspace as
 an unknown field despite accepted K89. The producer retains the specified field;
-this is not independent checker acceptance. An upstream reader repair is queued
+this is not independent checker acceptance. The reader blocker is
+`bennett-sched-vt8.4`; an upstream repair is queued
 in the uncommitted cross-repo bead requests. Remaining producer mechanics are
-`bennett-sched-vt8.2`; awo remains open until those obligations are complete.
+`bennett-sched-vt8.2`; awo is closed as the now-answered schema request.
 
 ## K84 — diagnostic codes
 
