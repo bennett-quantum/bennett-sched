@@ -22,6 +22,7 @@ mod linked_source;
 mod lproc;
 mod mcx_bundles;
 mod named_interface;
+mod native_models;
 mod normative_objects;
 mod object;
 mod oracle;

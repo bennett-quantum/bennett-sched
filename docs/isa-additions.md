@@ -41,3 +41,26 @@ positive witness failed before implementation because the allocator required
 one class with capacity three. Explicit caller-selected class vectors without
 a topology still require the request binding tracked by `bennett-sched-4tj`;
 no host register/view ABI is invented here.
+
+## K86 — native realisation models
+
+§8.3: “Closed-schema target readers MUST be upgraded for realisation_model;
+missing or unsupported models follow the reporting rules above and MUST NOT
+be silently substituted by ideal operations.” “A supplied model that
+contradicts a zero-epsilon contract rejects that target claim.”
+
+Targets retain model bytes in target_hash. The version-1 reader validates
+basis/arity, canonical reduced rational expressions, declared parameters,
+control-rule and permutation syntax, matrix dimensions and exact rational
+unitarity. Matching validates resolved control/operand counts and whether eps
+or theta is actually bound. Rational controlled_U models for the phase-fixed
+X family, swap, CZ and S/Sdg are checked against a zero-epsilon opcode.
+`native_models` has four positive/negative tests; all failed red on the old
+unknown-field rejection and pass after implementation. Legacy missing models
+and future versions retain scheduling compatibility; their independent
+verification obligations are not discharged by that acceptance.
+
+Independent symbolic/Kraus/instrument reconstruction, general allocation-basis
+permutation checking and positive-epsilon operator-norm verification remain
+required under `bennett-sched-vt8.1`. No numerical checker success or
+model-complete target status is claimed by the scheduler.

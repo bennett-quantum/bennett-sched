@@ -7,6 +7,8 @@ use crate::{
 use num_traits::{One, Signed, ToPrimitive, Zero};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
+#[path = "native_model.rs"]
+mod native_model;
 pub type Variables = BTreeMap<String, Rational>;
 
 pub fn eval(expr: &Value, vars: &Variables, tables: &Value) -> Result<Rational> {
@@ -297,7 +299,7 @@ fn validate_native_entries(
         fields(
             g,
             &["op", "classes", "controls", "epsilon", "cost"],
-            &["params"],
+            &["params", "realisation_model"],
         )?;
         if !GATES.contains(&text(&g["op"])?) {
             return Err(Error::target("unknown native gate"));
@@ -336,6 +338,9 @@ fn validate_native_entries(
                 },
                 &v["tables"],
             )?;
+        }
+        if let Some(model) = g.get("realisation_model") {
+            native_model::validate(model)?;
         }
         if let Some(params) = g.get("params") {
             if params != &json!(["theta"]) {
@@ -651,6 +656,9 @@ impl Target {
             }
             if epsilon > *eps {
                 continue;
+            }
+            if let Some(model) = e.get("realisation_model") {
+                native_model::resolve(model, g, &epsilon)?;
             }
             let mut costs = BTreeMap::new();
             for (name, expr) in e["cost"].as_object().expect("validated costs") {
