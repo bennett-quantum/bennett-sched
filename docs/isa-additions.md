@@ -128,3 +128,20 @@ The precise loader query symbol/signature, absent-feature behavior and version
 encoding remain undefined upstream (`b-isa-spec-b3ui`), so `bennett-sched-xzv`
 stays open. No guessed capability symbol or changed legacy argument layout is
 introduced.
+
+## K87 — complete resource contexts
+
+§12.3: “For compatibility, unkeyed resources/gates_used/estimate MUST be the
+first canonical context's projection.” “The root counts its realised event
+list once, including semantic callee leaves.”
+
+The existing producer implementation is preserved and rechecked by
+`context_reports::published_resource_context_witness_preserves_exact_rationals_and_canonical_projection`:
+all reached keys, child-local time, native leaf counts, complete frame/resource
+context coverage, exact 1/3 and 2/3 fractions and 34-digit upward displays.
+The adjacent error-bound tests exercise call-order independence and negative
+accuracy cases with no output documents. `context_reports::` passed all three
+existing tests at this pin before the additional root-isolation witness.
+`bennett-sched-1na` remains closed; no stale context-gap Unsupported is present.
+Owner-designated dirty-borrow replacement remains the separate `qm2` contract
+and accounting work, rather than a reason to omit context reports.
