@@ -94,8 +94,9 @@ in the uncommitted cross-repo bead requests. Remaining producer mechanics are
 
 ## K84 — diagnostic codes
 
-§12.3: “A diagnostic code not mandated elsewhere in this specification is
-implementation-defined and scoped by the checker's name and version.”
+§12.3: “Checker diagnostic codes other than codes explicitly mandated elsewhere
+in this specification are implementation-defined.” “Such codes are
+scoped by checker name and version”.
 
 The scheduler does not manufacture a checker verdict or depend on a checker's
 local diagnostic spelling. `accepted_contracts::published_diagnostic_witnesses_preserve_verdicts_without_requiring_local_code_spelling`
@@ -105,3 +106,25 @@ components reject. It checks source digests, acceptance polarity and a
 nonempty rejection diagnostic, with no guessed E_* spelling. This is reference
 metadata/domain admission evidence, not independent schedule or claim replay.
 The producer ABI/status contract and mandated K55 diagnostics remain unchanged.
+
+## K91 — token identity and ABI
+
+§10.1: “A legacy request with token arguments and no alias binding returns E_ARG”.
+The pinned editor's note says: “Implementations MUST NOT invent a negotiation
+in the meantime.”
+
+The existing copied additive setter, canonical equality partitions, source
+identity propagation and schedule/certificate alias bindings are preserved.
+`accepted_contracts` now checks all nine published portable object admission
+polarities and schedules the actual published source under both same/distinct
+partitions. Source object and parameter identities match the manifest; alias
+bindings and cleanup carriers match the selected partition, and schedule hashes
+differ. Its target is explicitly rebound to the local exact target; this is not
+original published schedule-byte replay. Existing `token_aliases`, `ffi` and
+`c_link` tests cover missing/malformed bindings, all five three-token partitions,
+forwarding/captures, tuple consistency and binary setter ownership.
+
+The precise loader query symbol/signature, absent-feature behavior and version
+encoding remain undefined upstream (`b-isa-spec-b3ui`), so `bennett-sched-xzv`
+stays open. No guessed capability symbol or changed legacy argument layout is
+introduced.
