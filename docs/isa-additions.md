@@ -145,3 +145,20 @@ existing tests at this pin before the additional root-isolation witness.
 `bennett-sched-1na` remains closed; no stale context-gap Unsupported is present.
 Owner-designated dirty-borrow replacement remains the separate `qm2` contract
 and accounting work, rather than a reason to omit context reports.
+
+## K90 — invocation frames
+
+§12.3: “Each scheduled region record contains exactly one of frame and
+frame_contexts.” “Each root has its own [] context; a descriptor from another
+root is validated against the receiving root's bindings and placements.”
+
+The existing complete frame-context implementation remains in place:
+`pipeline::context_varying_frame_classes_emit_complete_canonical_descriptors`
+passes at this pin, including exclusion of a false uniform descriptor and
+exact A/B child records. The added
+`context_reports::selected_roots_keep_shared_callee_frames_and_inventories_bound_to_their_own_target`
+checks two roots sharing a callee, each under its own A/B topology/target.
+Each certificate contains only the selected root and its callee, retains the
+object binding and root key [], and emits that invocation's actual slot class.
+The complete `context_reports::` filter passes four tests. No host/container
+launch ABI is inferred, and `bennett-sched-lzv` remains closed.
