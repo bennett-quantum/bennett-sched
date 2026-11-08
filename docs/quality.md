@@ -1,7 +1,8 @@
 # Scheduler quality evidence
 
-Evidence is against the ISA revision in `gate.toml`
-(`3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1`). This is a remediation record,
+Evidence for the current additions uses the ISA revision in `gate.toml`
+(`62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc`). Older measurements below retain
+their explicitly named prior revisions. This is a remediation record,
 not a claim that all published capabilities or quality targets are complete.
 
 The reference metadata-admission differential passes unchanged at this pin:
@@ -164,7 +165,7 @@ the current pin. Critical scheduler/gate review and the council round remain
 the orchestrator responsibility; this record does not claim CLEAR or a green
 push gate.
 
-Current-pin verification (ISA `3b10907`; scheduler Rust source unchanged):
+Historical pin-only verification (ISA `3b10907`; before the current feature changes):
 
 - `timeout 120 cargo test --offline -j3 --test integration differential::emitted_09_schedule_and_certificate_pass_reference_metadata_admission -- --exact --test-threads=4`:
   one pass. The identical command at scheduler `c6879dd` and ISA `97e7b9f`
@@ -188,21 +189,68 @@ Current-pin verification (ISA `3b10907`; scheduler Rust source unchanged):
   inventory from the new gate pin: 557 cases and eight portable manifests.
   New K91 cases remain explicitly unexercised by direct fixture replay.
 
+
+Current K84–K93 producer checkpoint, recorded 2026-11-08T12:11:08Z:
+
+- Pin verification materialised published ISA 62a0cf0 through the main-checkout
+  gate tool `verify`; it did not run a full gate. Spec digest and immutable
+  catalog identity are checked at the new pin.
+- `python3 -B .tmp/sched-vt8/guard.py moderate cargo test --offline -j8
+  --test integration <filter> -- --test-threads=8` ran the recorded focused
+  filters: borrow, cleanup::, source::, oracle_calls::, token_aliases::, ffi::,
+  c_link::, pipeline::, context_reports::, native_models::, slot_fragments::,
+  mcx_bundles::, canonical_cost::, conformance_inventory::, target:: and
+  differential::. Results: 112 passes and one retained K89 reader failure.
+  The cleanup filter leaves one existing slow simulation ignored; no new
+  ignore/skip was added. These were focused checkpoints, not a full gate.
+- The final K69/K70 lifetime refinement adds two red-first domain regressions:
+  complete sequential widths and preceding callee lifetimes. The final `borrow`
+  filter passes 12 tests, with the same one pinned K89 reader failure.
+- Subsequent `pair_coverage::` passes three tests, including standalone
+  zero-token inventory with primary/argument alias consistency.
+  `qinplace::` passed all ten regressions after separating static inventory
+  from executed workspace. `accepted_contracts::published_` passes three tests
+  covering K84's three objects, K91's nine metadata objects and both source
+  partitions. None establishes independent schedule or certificate replay.
+- `scripts/conformance.py --write` inventories 559 cases and eight manifests.
+  `--require-complete` still exits 2. K84 and K91 portable evidence is labelled
+  metadata admission/source scheduling, not full checker conformance.
+- The new native reader, entry analysis, exhaustive frame replay and static
+  pair inventory add required behavior. The quality baseline is explicitly
+  refreshed for that feature code and its adapter branches; the measurement
+  script and regression rules are unchanged. Maximum function length remains
+  298, over-300 functions remain 0, wrappers remain
+  58, product process identifiers remain 0, and the tracked
+  litter set is unchanged. No unrelated existing-file complexity allowance is
+  increased. Changed per-file masses (before, after):
+  `{"scripts/conformance.py": [91, 106], "src/borrow.rs": [54, 59], "src/borrow/entry.rs": [0, 75], "src/borrow/exhaustive.rs": [0, 58], "src/canonical.rs": [205, 210], "src/cleanup/raw.rs": [49, 51], "src/cleanup/replay.rs": [268, 274], "src/engine.rs": [316, 329], "src/native_model.rs": [0, 158], "src/oracle_calls.rs": [124, 126], "src/qinplace.rs": [35, 44], "src/qinplace/inventory.rs": [0, 82], "src/source.rs": [834, 839], "src/source/oracle_call.rs": [83, 91], "src/source/qinplace.rs": [108, 101], "src/source_ir.rs": [188, 187], "src/source_registry.rs": [97, 103], "src/target.rs": [399, 403]}`.
+
+The current branch is **not green**: the unchanged independent metadata
+admission test for selected K89 claims rejects `workspace` in the pinned
+reference reader. This blocker is bennett-sched-vt8.4; the upstream request is
+queued under COMMON14. Fixed-image production (vt8.3), general native-model
+verification (vt8.1), remaining borrow mechanics (vt8.2), ABI negotiation (xzv),
+large pair proofs (a0v), root class bindings (4tj), owner borrowing (qm2) and
+classical pseudo-locations (r28) remain required. No full gate, complete
+conformance or independent K89 checker success is claimed.
+
 <!-- quality-baseline -->
 ```json
 {
   "complexity_mass": {
-    "scripts/conformance.py": 91,
+    "scripts/conformance.py": 106,
     "scripts/pinned_sibling.py": 15,
     "scripts/quality.py": 78,
     "src/admission.rs": 218,
-    "src/borrow.rs": 54,
-    "src/canonical.rs": 205,
+    "src/borrow.rs": 59,
+    "src/borrow/entry.rs": 75,
+    "src/borrow/exhaustive.rs": 58,
+    "src/canonical.rs": 210,
     "src/cleanup.rs": 184,
-    "src/cleanup/raw.rs": 49,
-    "src/cleanup/replay.rs": 268,
+    "src/cleanup/raw.rs": 51,
+    "src/cleanup/replay.rs": 274,
     "src/decimal.rs": 57,
-    "src/engine.rs": 316,
+    "src/engine.rs": 329,
     "src/engine/error_bounds.rs": 21,
     "src/expansion.rs": 930,
     "src/expansion_env.rs": 0,
@@ -210,32 +258,34 @@ Current-pin verification (ISA `3b10907`; scheduler Rust source unchanged):
     "src/layout.rs": 77,
     "src/lib.rs": 0,
     "src/lproc.rs": 219,
+    "src/native_model.rs": 158,
     "src/object.rs": 576,
     "src/oracle.rs": 270,
     "src/oracle_activation.rs": 15,
-    "src/oracle_calls.rs": 124,
+    "src/oracle_calls.rs": 126,
     "src/oracle_memory.rs": 42,
     "src/oracle_pairs.rs": 120,
     "src/oracle_state.rs": 113,
-    "src/qinplace.rs": 35,
+    "src/qinplace.rs": 44,
+    "src/qinplace/inventory.rs": 82,
     "src/ref_contract.rs": 75,
     "src/request.rs": 16,
     "src/resources.rs": 112,
     "src/schedule.rs": 126,
-    "src/source.rs": 834,
+    "src/source.rs": 839,
     "src/source/call_graph.rs": 102,
-    "src/source/oracle_call.rs": 83,
-    "src/source/qinplace.rs": 108,
-    "src/source_ir.rs": 188,
-    "src/source_registry.rs": 97,
-    "src/target.rs": 399,
+    "src/source/oracle_call.rs": 91,
+    "src/source/qinplace.rs": 101,
+    "src/source_ir.rs": 187,
+    "src/source_registry.rs": 103,
+    "src/target.rs": 403,
     "src/token_aliases.rs": 28
   },
   "function_lengths": {
-    "count": 423,
+    "count": 445,
     "maximum": 298,
-    "over_100": 42,
-    "over_30": 131,
+    "over_100": 43,
+    "over_30": 145,
     "over_300": 0
   },
   "litter": [

@@ -17,8 +17,8 @@ procedure expansion, memory/allocator rows, finite-domain inverse-pair proofs,
 translation-lemma borrow frames, exact rational costs and resource aggregation.
 Schedules and certificates retain invocation contexts and generated ordinals.
 Producer claims still require independent checking. Scalable construction and
-pair proofs, general cleanup, native realisation models and classical
-pseudo-location initialization remain open; see the quality record for their
+pair proofs, general cleanup, symbolic native-model verification, fixed-image
+claim production and classical pseudo-location initialization remain open; see the quality record for their
 evidence and contract boundaries.
 
 The 219-recipe `ref@0.9` catalog is vendored specification data. Tests use only
@@ -36,9 +36,11 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
   cargo test --offline -j3 -- --test-threads=4
 ```
 
-The default suite retains the known pinned reference metadata-admission failure:
-that interpreter rejects `token_aliases`. The reviewed ISA re-pin belongs to the
-orchestrator. Ten slow exhaustive simulations run with `cargo test --offline
+The controlled-action metadata-admission differential passes at the current pin.
+The selected borrow-frame admission regression remains red: that published
+reference does not yet admit K89's required `domain.workspace`. The producer
+retains the field and the conformance assertion; see
+[accepted ISA additions](docs/isa-additions.md). Ten slow exhaustive simulations run with `cargo test --offline
 -j3 -- --ignored --test-threads=4` and are mandatory in the push gate.
 
 `python3 -B scripts/conformance.py --write --require-complete` inventories every

@@ -1,23 +1,23 @@
 {
   "schema": "bennett-sched.conformance-inventory.v1",
   "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
-  "isa_spec_sha": "3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1",
-  "spec_sha256": "54dde0c83ff31d0a76de1814ac00273c3bb63fbd9c91d71aea625ad714959c5f",
-  "case_count": 557,
+  "isa_spec_sha": "62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc",
+  "spec_sha256": "8b377477f135b82da3cc0a4caa96be9db8c5cee4fd53ed87116ba2e1e259b1f5",
+  "case_count": 559,
   "suites": {
     "A": 22,
     "B": 35,
     "C": 346,
     "D": 16,
     "E": 38,
-    "F": 52,
+    "F": 54,
     "G": 30,
     "H": 18
   },
   "coverage_counts": {
     "direct-fixture-test": 18,
     "equivalent-witness-test": 17,
-    "not-exercised-executor-or-checker-vector": 489,
+    "not-exercised-executor-or-checker-vector": 491,
     "not-exercised-scheduler-vector": 5,
     "partial-reference-expansion": 20,
     "rebound-schedule-fixture-test": 8
@@ -5033,6 +5033,28 @@
       ]
     },
     {
+      "id": "F-adjoint-table-published",
+      "suite": "F",
+      "source": "conformance/cases/F/F-adjoint-table-published/case.json",
+      "sha256": "aeaaadb52604fee244d1935f2e47aec7c6f8040b72ceba8cc162a86ba355b1cb",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-adjoint-table-witness-nonempty",
+      "suite": "F",
+      "source": "conformance/cases/F/F-adjoint-table-witness-nonempty/case.json",
+      "sha256": "66948f2ef251e6cf901d9ff89764b55627dc9d2591899bed1d7df36c54c93c54",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
       "id": "F-borrow-neg-control-in-b",
       "suite": "F",
       "source": "conformance/cases/F/F-borrow-neg-control-in-b/case.json",
@@ -6349,19 +6371,27 @@
       "path": "conformance/fixtures/accepted-k84-09/k84.json",
       "sha256": "242f01b12d3f95f720a6c1a6952667a081c738ef19ceda90ed181b037598d350",
       "vectors": 3,
-      "coverage": "not-exercised",
+      "coverage": "reference-metadata-admission",
       "beads": [
         "bennett-sched-ark"
-      ]
+      ],
+      "test": "accepted_contracts::published_diagnostic_witnesses_preserve_verdicts_without_requiring_local_code_spelling",
+      "admitted": 1,
+      "rejected": 2,
+      "remaining": "No independent schedule or claim replay is asserted."
     },
     {
       "path": "conformance/fixtures/accepted-k91-09/k91.json",
       "sha256": "72b68db2dfbb041fc259f95d3669ff29438bfec5cdcb356fc4b1c713b7dd53fa",
       "vectors": 0,
-      "coverage": "not-exercised",
+      "coverage": "reference-metadata-and-source-scheduling",
       "beads": [
         "bennett-sched-ark"
-      ]
+      ],
+      "test": "accepted_contracts",
+      "metadata_cases": 9,
+      "source_partitions": 2,
+      "remaining": "Original schedules are not replayed: source requests bind the local exact target. Loader negotiation remains bennett-sched-xzv / upstream b-isa-spec-b3ui."
     }
   ],
   "inline_witnesses": [
@@ -6383,7 +6413,7 @@
       "control_values": 2,
       "initial_target": 0,
       "initial_fault": 0,
-      "certificate_limit": "Combined differing-budget resource reports require bennett-sched-1na; no complete certificate claim."
+      "certificate_limit": "K87 resource contexts are implemented; independent schedule execution and rigorous claim replay remain unclaimed."
     }
   ],
   "reference_schedule_execution": "not claimed; published reference interpreter documents staged target/schedule execution",
@@ -6392,5 +6422,5 @@
     "status": "active-differential-test",
     "meaning": "The named default-suite test checks emitted schedule/certificate metadata admission and rejects an absent source point against the pinned reference. This mapping is not certificate-claim replay or scheduled execution."
   },
-  "recorded_at_utc": "2026-11-07T11:32:49Z"
+  "recorded_at_utc": "2026-11-08T11:50:04Z"
 }
