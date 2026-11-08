@@ -39,6 +39,7 @@ mod regions;
 mod resources;
 mod review_regressions;
 mod selectors;
+mod slot_fragments;
 mod source;
 mod source_adjoint;
 mod structure;

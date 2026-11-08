@@ -270,6 +270,24 @@ impl Allocator<'_> {
         self.order += 1;
         Ok(class)
     }
+    fn interface(&mut self, slot: &Slot, now: &Rational) -> Result<()> {
+        // Topology placements bind each bit's class independently (§9.4).
+        // Without placements keep the published homogeneous default; explicit
+        // class-vector launch bindings require their own request contract.
+        let parts = if self.target.value.get("topology").is_some() {
+            slot.wires
+                .iter()
+                .enumerate()
+                .map(|(i, w)| (format!("{}[{i}]", slot.id), vec![w.clone()]))
+                .collect::<Vec<_>>()
+        } else {
+            vec![(slot.id.clone(), slot.wires.clone())]
+        };
+        for (identity, wires) in parts {
+            self.allocate(identity, wires, "any", "interface", now, None, None)?;
+        }
+        Ok(())
+    }
     fn release(&mut self, identity: &str, now: &Rational) -> Result<()> {
         let i = self
             .active
@@ -578,15 +596,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
         )?;
     }
     for slot in &trace.slots {
-        allocator.allocate(
-            slot.id.clone(),
-            slot.wires.clone(),
-            "any",
-            "interface",
-            &now,
-            None,
-            None,
-        )?;
+        allocator.interface(slot, &now)?;
     }
     let root_placements = if target.value.get("topology").is_some() {
         Some(
@@ -849,13 +859,27 @@ fn integer_json(n: u64) -> Value {
     }
 }
 fn slot_record(slot: &Slot, allocator: &Allocator<'_>) -> Result<Value> {
-    let class = allocator
-        .allocations
-        .iter()
-        .find(|a| slot.wires.first().is_some_and(|w| a.wires.contains(w)))
-        .map(|a| a.class.as_str())
-        .ok_or_else(|| Error::infeasible("interface slot has no recorded class"))?;
-    Ok(json!({"id":slot.id,"role":slot.role,"class":class,"width":slot.wires.len()}))
+    let mut fragments: Vec<Value> = Vec::new();
+    for (offset, wire) in slot.wires.iter().enumerate() {
+        let class = allocator
+            .allocations
+            .iter()
+            .find(|a| a.wires.contains(wire))
+            .map(|a| a.class.as_str())
+            .ok_or_else(|| Error::infeasible("interface slot bit has no recorded class"))?;
+        if let Some(previous) = fragments.last_mut().filter(|f| f["class"] == class) {
+            previous["width"] = json!(previous["width"].as_u64().expect("fragment width") + 1);
+        } else {
+            fragments.push(json!({"offset":offset,"width":1,"class":class}));
+        }
+    }
+    let mut record = json!({"id":slot.id,"role":slot.role,"width":slot.wires.len()});
+    match fragments.as_slice() {
+        [] => return Err(Error::infeasible("interface slot must have positive width")),
+        [one] => record["class"] = one["class"].clone(),
+        _ => record["fragments"] = json!(fragments),
+    }
+    Ok(record)
 }
 fn oracle_history(identity: &str) -> bool {
     let index = identity.strip_prefix("oracle-state/history-").or_else(|| {
