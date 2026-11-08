@@ -160,5 +160,7 @@ exact A/B child records. The added
 checks two roots sharing a callee, each under its own A/B topology/target.
 Each certificate contains only the selected root and its callee, retains the
 object binding and root key [], and emits that invocation's actual slot class.
-The complete `context_reports::` filter passes four tests. No host/container
+The new fixture initially overrequired an optional singleton resource_contexts
+array; that test expectation was corrected to K87's explicit omission rule.
+The complete `context_reports::` filter passes four tests after correction. No host/container
 launch ABI is inferred, and `bennett-sched-lzv` remains closed.

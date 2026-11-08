@@ -236,9 +236,11 @@ fn selected_roots_keep_shared_callee_frames_and_inventories_bound_to_their_own_t
             c["regions"][callee]["frame"]["slots"],
             json!([{"id":"mut:0","role":"mut","class":class,"width":1}])
         );
-        assert_eq!(
-            c["regions"][object.closure_hash(root).unwrap()]["resource_contexts"][0]["context_key"],
-            json!([])
-        );
+        let root_record = &c["regions"][object.closure_hash(root).unwrap()];
+        assert!(root_record["frame"].is_object());
+        if let Some(contexts) = root_record.get("resource_contexts") {
+            assert_eq!(contexts.as_array().unwrap().len(), 1);
+            assert_eq!(contexts[0]["context_key"], json!([]));
+        }
     }
 }
