@@ -164,3 +164,19 @@ The new fixture initially overrequired an optional singleton resource_contexts
 array; that test expectation was corrected to K87's explicit omission rule.
 The complete `context_reports::` filter passes four tests after correction. No host/container
 launch ABI is inferred, and `bennett-sched-lzv` remains closed.
+
+## K85 — fixed-image claims (remaining)
+
+§12.2: “Each resolved fixed region occurs exactly once and MUST NOT also occur
+in domain.regions. A mut-role region cannot be fixed by this mechanism.”
+“A supplied label is a request, not a producer assertion.”
+
+The scheduler's existing unconditional claims retain complete interface-region
+domains and make no image-relative success assertion. The optional fixed-image
+producer workflow, preparation/restoration bindings, exact unrestricted-D
+coverage and independent exclusive outcome classification remain unimplemented
+under `bennett-sched-vt8.3`. This is an accepted contract with remaining
+mechanics, not a schema gap. No image-conditioned producer/checker conformance
+test is claimed as passing. Mixed-launch association and general host-memory
+bindings remain the separate `bennett-4ht` boundary; they do not justify
+requiring native host functions to acquire ISA certificates.
