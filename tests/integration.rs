@@ -1,4 +1,5 @@
 // One integration binary shares the library link and test harness.
+mod accepted_contracts;
 mod admission;
 mod borrow;
 mod borrow_frames;

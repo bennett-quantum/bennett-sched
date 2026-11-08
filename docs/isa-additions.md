@@ -91,3 +91,17 @@ an unknown field despite accepted K89. The producer retains the specified field;
 this is not independent checker acceptance. An upstream reader repair is queued
 in the uncommitted cross-repo bead requests. Remaining producer mechanics are
 `bennett-sched-vt8.2`; awo remains open until those obligations are complete.
+
+## K84 — diagnostic codes
+
+§12.3: “A diagnostic code not mandated elsewhere in this specification is
+implementation-defined and scoped by the checker's name and version.”
+
+The scheduler does not manufacture a checker verdict or depend on a checker's
+local diagnostic spelling. `accepted_contracts::published_diagnostic_witnesses_preserve_verdicts_without_requiring_local_code_spelling`
+replays all three pinned portable witnesses with the published reference CLI:
+the complete NOT table admits, missing expected and duplicate resolved
+components reject. It checks source digests, acceptance polarity and a
+nonempty rejection diagnostic, with no guessed E_* spelling. This is reference
+metadata/domain admission evidence, not independent schedule or claim replay.
+The producer ABI/status contract and mandated K55 diagnostics remain unchanged.
