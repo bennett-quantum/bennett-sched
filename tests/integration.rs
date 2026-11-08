@@ -20,6 +20,7 @@ mod lifted_cleanup;
 mod lifted_regions;
 mod linked_source;
 mod lproc;
+mod mcx_bundles;
 mod named_interface;
 mod normative_objects;
 mod object;

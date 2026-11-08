@@ -1560,6 +1560,17 @@ impl Builder<'_> {
         } else {
             None
         };
+        if gate == "mcx" {
+            let [controls, target] = params.as_slice() else {
+                return Err(Error::arg(
+                    "§4.4: mcx requires one control list and one target",
+                ));
+            };
+            object::list(controls)?;
+            if wires(target, env)?.len() != 1 {
+                return Err(Error::arg("§4.4: mcx target must denote exactly one wire"));
+            }
+        }
         let mut w = Vec::new();
         for p in params {
             if p.starts_with('(') {
