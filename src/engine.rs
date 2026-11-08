@@ -851,7 +851,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
         certificate: canonical::to_vec(&certificate)?,
     })
 }
-fn integer_json(n: u64) -> Value {
+pub(crate) fn integer_json(n: u64) -> Value {
     if n >= 1 << 53 {
         json!(n.to_string())
     } else {
@@ -923,6 +923,32 @@ fn frame_record(trace: &Trace, owner: usize, allocator: &Allocator<'_>) -> Resul
     Ok(
         json!({"slots":slots,"scratch":scratch,"history":history,"borrow":borrow,"ancillae":ancillae}),
     )
+}
+fn borrow_claim(
+    record: &mut Value,
+    proof: &crate::borrow::Proof,
+    inv: &crate::source::Invocation,
+    variant: &str,
+    schedule_hash: &str,
+) {
+    let claims = record["claims"].as_array_mut().expect("region claims");
+    let mut index = claims.len();
+    match &proof.evidence {
+        crate::borrow::Evidence::Translation { witness, adjoint } => {
+            claims.push(json!({"kind":"structural","rule":"translation_lemma","invocation":invocation_binding(inv),"subclaims":[],"witness":witness}));
+            if *adjoint {
+                claims.push(json!({"kind":"structural","rule":"adjoint_table","invocation":invocation_binding(inv),"subclaims":[index],"witness":{}}));
+                index += 1;
+            }
+        }
+        crate::borrow::Evidence::Exhaustive { domain, frame } => {
+            claims.push(json!({"kind":"exhaustive","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"invocation":invocation_binding(inv),"expected":"borrow_frame","borrow_frame":frame,"domain":domain}));
+        }
+    }
+    record["verification"]["borrow_frames"]
+        .as_array_mut()
+        .expect("borrow claim indices")
+        .push(json!(index));
 }
 #[allow(clippy::too_many_arguments)]
 fn certificate(
@@ -1067,18 +1093,7 @@ fn certificate(
             record["verification"]["fault_rate"] = json!({"domain":{"bundles":controls,"borrowed":[],"regions":[]},"faults_by_code":faults,"undefined_excluded":0,"layout_dependent_excluded":0});
         }
         for proof in trace.borrow_proofs.iter().filter(|p| p.owner == i) {
-            let mut index = record["claims"].as_array().unwrap().len();
-            record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"translation_lemma","invocation":invocation,"subclaims":[],"witness":proof.witness}));
-            if proof.adjoint {
-                // §16.3 example 3: the inverse frame need not have the lemma's
-                // syntax. Its forward proof and the adjoint table establish it.
-                record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"adjoint_table","invocation":invocation,"subclaims":[index],"witness":{}}));
-                index += 1;
-            }
-            record["verification"]["borrow_frames"]
-                .as_array_mut()
-                .unwrap()
-                .push(json!(index));
+            borrow_claim(record, proof, inv, variant, schedule_hash);
         }
         for proof in trace.qinplaces.iter().filter(|p| p.owner == i) {
             let index = record["claims"].as_array().unwrap().len();

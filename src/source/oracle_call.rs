@@ -250,12 +250,11 @@ impl Builder<'_> {
         }
         for mut proof in child.borrow_proofs {
             proof.owner += base;
-            for field in ["X", "B"] {
-                for w in proof.witness[field]
-                    .as_array_mut()
-                    .expect("translation wire set")
-                {
-                    *w = json!(wire(w.as_str().expect("translation wire")));
+            if let crate::borrow::Evidence::Translation { witness, .. } = &mut proof.evidence {
+                for field in ["X", "B"] {
+                    for w in witness[field].as_array_mut().expect("translation wire set") {
+                        *w = json!(wire(w.as_str().expect("translation wire")));
+                    }
                 }
             }
             self.trace.borrow_proofs.push(proof);

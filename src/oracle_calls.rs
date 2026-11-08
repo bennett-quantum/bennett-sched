@@ -285,7 +285,9 @@ impl Projection {
         for old in &trace.borrow_proofs {
             let mut p = old.clone();
             p.owner += base;
-            p.adjoint ^= reverse;
+            if let crate::borrow::Evidence::Translation { adjoint, .. } = &mut p.evidence {
+                *adjoint ^= reverse;
+            }
             self.borrow_proofs.push(p);
         }
         self.groups.insert(key, (base, index));

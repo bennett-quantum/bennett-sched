@@ -2117,7 +2117,7 @@ fn diagonal(g: &Gate) -> bool {
 fn permutation(g: &Gate) -> bool {
     g.op.starts_with("$perm/") || ["x", "cx", "ccx", "mcx", "swap"].contains(&g.op.as_str())
 }
-fn gate_adjoint(g: &Gate) -> Gate {
+pub(crate) fn gate_adjoint(g: &Gate) -> Gate {
     let mut n = g.adjoint();
     if let Some(s) = g.op.strip_prefix("$perm/call+/") {
         n.op = format!("$perm/call-/{s}");
@@ -2134,7 +2134,7 @@ fn gate_adjoint(g: &Gate) -> Gate {
     }
     n
 }
-fn normalized(g: &Gate) -> Gate {
+pub(crate) fn normalized(g: &Gate) -> Gate {
     let mut n = g.clone();
     if ["x", "cx", "ccx", "mcx"].contains(&g.op.as_str()) {
         n.op = "mcx".into();

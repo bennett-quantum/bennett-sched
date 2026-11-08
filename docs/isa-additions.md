@@ -64,3 +64,30 @@ Independent symbolic/Kraus/instrument reconstruction, general allocation-basis
 permutation checking and positive-epsilon operator-norm verification remain
 required under `bennett-sched-vt8.1`. No numerical checker success or
 model-complete target status is claimed by the scheduler.
+
+## K89 — selected borrow frames
+
+§12.2: “For fixed non-B entry values, varying B over all its values must leave
+B unchanged and produce the same complete non-B output, with exact +1 basis
+phase.” “entry_products denotes the union of its product domains: list products
+in normative visit order”.
+
+The finite primitive path emits exhaustive expected:borrow_frame claims with
+maximal source first/last points, lifetime and root-relative invocation context,
+full independent interface/B domains and every live workspace bit. K76/K78
+entry constants come from the specified all-operand causal stacks, including
+readers and normalized X-family identities; polynomial simplification supplies
+no constants. Every B fiber is replayed, complete surviving non-B outputs are
+compared, and clean internal release obligations are checked. Repeated visits
+use the union of entry products in visit order, including decimal iteration
+indices above nine. Replaced/reversed traces rebuild selected proof bindings.
+
+Five semantic tests pass in `borrow_frames`. The initial three tests failed on
+the old non-translation Unsupported; the 16-visit test additionally failed on
+lexical iteration ordering before the visit-order repair. The independent
+metadata-admission regression intentionally still requires successful admission
+and is currently **RED**: pinned reference 62a0cf0 rejects domain.workspace as
+an unknown field despite accepted K89. The producer retains the specified field;
+this is not independent checker acceptance. An upstream reader repair is queued
+in the uncommitted cross-repo bead requests. Remaining producer mechanics are
+`bennett-sched-vt8.2`; awo remains open until those obligations are complete.

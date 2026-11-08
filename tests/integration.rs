@@ -1,6 +1,7 @@
 // One integration binary shares the library link and test harness.
 mod admission;
 mod borrow;
+mod borrow_frames;
 mod c_link;
 mod canonical_cost;
 mod cleanup;

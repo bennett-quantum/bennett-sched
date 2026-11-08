@@ -443,6 +443,9 @@ impl crate::source::Trace {
         }
         replay::remove_replaced_invocations(self, &mut staged)?;
         replay::refresh_spans(&mut staged);
+        // Rebuild selected occurrence/domain bindings after call replacement,
+        // raw inversion or fresh workspace has changed the realised trace.
+        staged.borrow_proofs = crate::borrow::prove(&staged.object, &staged)?;
         *self = staged;
         Ok(())
     }

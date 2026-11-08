@@ -347,7 +347,9 @@ impl Emitter<'_> {
             }
         }
         for proof in &mut child.borrow_proofs {
-            map_witness(&mut proof.witness, &names);
+            if let crate::borrow::Evidence::Translation { witness, .. } = &mut proof.evidence {
+                map_witness(witness, &names);
+            }
         }
         for proof in &mut child.qinplaces {
             proof.target_id = mapped(&proof.target_id, &names);

@@ -266,7 +266,9 @@ impl Definition {
             }
         }
         for proof in &mut trace.borrow_proofs {
-            map_strings(&mut proof.witness, &names);
+            if let crate::borrow::Evidence::Translation { witness, .. } = &mut proof.evidence {
+                map_strings(witness, &names);
+            }
         }
         Ok(Arc::new(trace))
     }
