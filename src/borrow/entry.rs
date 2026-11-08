@@ -178,10 +178,10 @@ pub(super) fn at(object: &Object, trace: &Trace, owner: usize, end: usize) -> Re
     }) || trace
         .qinplaces
         .iter()
-        .filter(|p| p.owner == owner)
+        .filter(|p| p.owner == owner && p.execution.is_some())
         .any(|p| {
             trace.events[invocation.start..end].iter().any(
-                |e| matches!(&e.leaf.op,Operation::Alloc{identity,..}if identity==&p.target_id),
+                |e| matches!(&e.leaf.op,Operation::Alloc{identity,..}if identity==&p.execution.as_ref().expect("executed pair").target_id),
             )
         })
     {

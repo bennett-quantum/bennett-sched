@@ -34,6 +34,7 @@ mod oracle_lproc;
 mod oracle_memory;
 mod oracle_pairs;
 mod oracle_state;
+mod pair_coverage;
 mod pipeline;
 mod published_vectors;
 mod qinplace;

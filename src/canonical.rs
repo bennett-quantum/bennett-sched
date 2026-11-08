@@ -1,7 +1,18 @@
 //! RFC 8785 serialization with duplicate-key rejection and UTF-16 key ordering.
 use crate::{Error, Result};
+use num_bigint::BigUint;
+use num_traits::ToPrimitive;
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
+
+/// §9.1 metadata integers use JSON numbers through 2^53-1, strings above it.
+pub fn unsigned_integer(value: &BigUint) -> Value {
+    const MAX_EXACT_JSON_INTEGER: u64 = (1 << 53) - 1;
+    match value.to_u64() {
+        Some(n) if n <= MAX_EXACT_JSON_INTEGER => Value::from(n),
+        _ => Value::String(value.to_string()),
+    }
+}
 
 pub fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))

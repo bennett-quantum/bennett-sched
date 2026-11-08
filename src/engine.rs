@@ -369,7 +369,10 @@ fn selector_entry(event: &Event, kind: &str, decision: Value) -> Value {
             coordinate = entered;
         }
     }
-    let step = coordinate.step.map(integer_json).unwrap_or(json!("*"));
+    let step = coordinate
+        .step
+        .map(|n| canonical::unsigned_integer(&n.into()))
+        .unwrap_or(json!("*"));
     let phase = match coordinate.phase {
         Some(schedule::Phase::Fwd) => "fwd",
         Some(schedule::Phase::Rev) => "rev",
@@ -795,7 +798,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
             merged.push(entry);
         }
     }
-    let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|integer_json(*n)).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":merged});
+    let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|canonical::unsigned_integer(&(*n).into())).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":merged});
     schedule["bindings"]["token_aliases"] = json!(crate::token_aliases::partition(
         &trace.invocations[0].token_ids
     ));
@@ -850,13 +853,6 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
         schedule: schedule_bytes,
         certificate: canonical::to_vec(&certificate)?,
     })
-}
-pub(crate) fn integer_json(n: u64) -> Value {
-    if n >= 1 << 53 {
-        json!(n.to_string())
-    } else {
-        json!(n)
-    }
 }
 fn slot_record(slot: &Slot, allocator: &Allocator<'_>) -> Result<Value> {
     let mut fragments: Vec<Value> = Vec::new();
@@ -1032,7 +1028,7 @@ fn certificate(
                         Error::new(crate::Status::NoMem, "domain width exceeds host size")
                     })?)
                     - num_bigint::BigUint::from(1u8);
-                bundles.push(json!({"name":p.name,"width":width,"lo":0,"hi":high.to_string()}));
+                bundles.push(json!({"name":p.name,"width":width,"lo":0,"hi":canonical::unsigned_integer(&high)}));
             }
             let interface_regions = f.groups[3]
                 .iter()

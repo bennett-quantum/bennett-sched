@@ -2,7 +2,6 @@
 use super::*;
 use crate::schedule::Phase;
 use num_bigint::BigUint;
-use num_traits::ToPrimitive;
 
 // Host work allowance, not a limit on the legal frame/domain. Exhaustion is
 // explicit NOMEM and produces no successful proof or narrowed evidence.
@@ -38,10 +37,7 @@ pub(super) fn occurrence(event: &Event) -> Value {
 }
 fn full(name: &str, width: usize) -> Value {
     let high = (BigUint::from(1u8) << width) - BigUint::from(1u8);
-    let encoded = high
-        .to_u64()
-        .map(crate::engine::integer_json)
-        .unwrap_or_else(|| json!(high.to_string()));
+    let encoded = crate::canonical::unsigned_integer(&high);
     json!({"name":name,"width":width,"lo":0,"hi":encoded})
 }
 fn domain(object: &Object, trace: &Trace, owner: usize, state: &entry::State) -> Result<Value> {

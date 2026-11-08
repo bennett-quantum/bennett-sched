@@ -180,3 +180,26 @@ mechanics, not a schema gap. No image-conditioned producer/checker conformance
 test is claimed as passing. Mixed-launch association and general host-memory
 bindings remain the separate `bennett-4ht` boundary; they do not justify
 requiring native host functions to acquire ISA certificates.
+
+## K92 — complete inverse-pair ownership
+
+§12.3: “A qloop 0 body requires static pair inventory but has no applicability
+visits”. “A disabled coherent predicate does not remove an entered instruction's
+obligation.”
+
+`pair_coverage` checks nested owner-local entries in forward/adjoint calls,
+independently forwarded token budgets and rejection of an insufficient inner
+budget despite a larger root budget. A zero-trip source body now retains a
+verified static owner entry without adding oracle visits, gates or scratch
+allocations. Inventory-only proofs are distinct from executed-call workspace;
+all adapters and cleanup paths preserve that distinction.
+
+The zero-trip test failed before implementation on an empty inverse_pairs array.
+A separate red assertion caught small domain bounds encoded as strings. One
+§9.1 integer encoder now serves schedules and pair/oracle/borrow domains;
+bounds through 2^53-1 are JSON numbers, larger bounds remain decimal strings.
+Existing expectations for a 32-bit pointer domain and the width-two full range
+were corrected to this canonical rule. Both pair-coverage tests and all ten
+`qinplace::` regressions pass. Structural/library proof scaling remains `a0v`;
+proof selection at a different budget for unentered sites remains required.
+No sampled or truncated-domain entry is substituted for a covering proof.

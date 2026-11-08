@@ -350,6 +350,7 @@ impl Trace {
             None,
         )?;
         if f.kind=="perm_action"&&trace.events.iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !["x","cx","ccx","mcx","swap"].contains(&g.op.as_str()))){return Err(Error::arg("§5.3: permutation actions require permutation gates transitively"));}
+        crate::qinplace::complete(object, &mut trace)?;
         trace.borrow_proofs = crate::borrow::prove(object, &trace)?;
         for owner in 0..trace.invocations.len() {
             if object.functions[&trace.invocations[owner].name].kind == "oracle" {

@@ -1,12 +1,12 @@
 //! K4 finite inverse-pair verification. No input slice is omitted to fit a host.
 use crate::{
     Error, Result, Status,
-    expansion::simulate_basis,
-    object::{self, Object},
+    expansion::{Binding, Env, simulate_basis},
+    object::{self, Function, Object},
     source::Trace,
 };
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, str::FromStr};
 #[derive(Clone, Debug)]
 pub struct Proof {
     pub owner: usize,
@@ -17,12 +17,62 @@ pub struct Proof {
     pub domain: Value,
     pub arg_tokens: Value,
     pub token_ids: Vec<u64>,
+    pub execution: Option<Execution>,
+}
+#[derive(Clone, Debug)]
+pub struct Execution {
     pub target_id: String,
     pub fault_id: String,
     pub target: Vec<String>,
     pub inputs: Vec<String>,
     pub controls: Vec<String>,
 }
+pub(crate) fn bind(
+    object: &Object,
+    g: &Function,
+    args: &[String],
+    actuals: &[String],
+    env: &Env,
+) -> Result<([u64; 4], Value, Vec<u64>)> {
+    let Some(Binding::Value {
+        isa_type, value, ..
+    }) = env.get(&args[2])
+    else {
+        return Err(Error::arg("qinplace requires a token"));
+    };
+    if isa_type != &json!("token") {
+        return Err(Error::arg("qinplace requires a token"));
+    }
+    let budget: [u64; 4] = crate::schedule::array(value)?
+        .iter()
+        .map(crate::schedule::uint)
+        .collect::<Result<Vec<_>>>()?
+        .try_into()
+        .map_err(|_| Error::arg("invalid qinplace token"))?;
+    object.validate_budget(budget)?;
+    let mut token_ids = vec![crate::token_aliases::binding_identity(&env[&args[2]])?];
+    let mut params = Vec::new();
+    for (p, a) in g.groups[4].iter().zip(actuals) {
+        let Some(Binding::Value {
+            isa_type, value, ..
+        }) = env.get(a)
+        else {
+            return Err(Error::arg("qinplace classical argument is not a value"));
+        };
+        if isa_type != &json!(p.ty) {
+            return Err(Error::arg("qinplace classical type mismatch"));
+        }
+        params.push(value.clone());
+        if p.ty == "token" {
+            token_ids.push(crate::token_aliases::binding_identity(&env[a])?);
+        }
+    }
+    let params = json!(params);
+    Ok((budget, params, token_ids))
+}
+
+mod inventory;
+pub(crate) use inventory::complete;
 fn memory(reason: &str) -> Error {
     Error::new(
         Status::NoMem,
@@ -116,7 +166,7 @@ pub(crate) fn verify_with_ids(
                 "complete domain exceeds the 16 MiB two-table budget",
             ));
         }
-        bundles.push(json!({"name":p.name,"width":width,"lo":0,"hi":((num_bigint::BigUint::from(1u8)<<width as usize)-num_bigint::BigUint::from(1u8)).to_string()}));
+        bundles.push(json!({"name":p.name,"width":width,"lo":0,"hi":crate::canonical::unsigned_integer(&((num_bigint::BigUint::from(1u8)<<width as usize)-num_bigint::BigUint::from(1u8)))}));
     }
     for p in &f.groups[3] {
         let (a, w) = object::region_shape(&p.ty)?;
@@ -158,7 +208,11 @@ pub(crate) fn verify_with_ids(
                 value.clone(),
             ),
         };
-        args.push(json!({"name":p.name,"width":width,"lo":bits,"hi":bits}));
+        let bits =
+            num_bigint::BigUint::from_str(bits.as_str().expect("validated argument bit encoding"))
+                .map_err(|_| Error::arg("invalid inverse-pair argument bits"))?;
+        let encoded = crate::canonical::unsigned_integer(&bits);
+        args.push(json!({"name":p.name,"width":width,"lo":encoded,"hi":encoded}));
     }
     let cases = 1usize
         .checked_shl(count as u32)

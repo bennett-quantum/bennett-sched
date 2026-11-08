@@ -261,11 +261,17 @@ impl Builder<'_> {
         }
         for mut proof in child.qinplaces {
             proof.owner += base;
-            proof.target_id = wire(&proof.target_id);
-            proof.fault_id = wire(&proof.fault_id);
-            for wires in [&mut proof.target, &mut proof.inputs, &mut proof.controls] {
-                for w in wires {
-                    *w = wire(w);
+            if let Some(execution) = &mut proof.execution {
+                execution.target_id = wire(&execution.target_id);
+                execution.fault_id = wire(&execution.fault_id);
+                for wires in [
+                    &mut execution.target,
+                    &mut execution.inputs,
+                    &mut execution.controls,
+                ] {
+                    for w in wires {
+                        *w = wire(w);
+                    }
                 }
             }
             self.trace.qinplaces.push(proof);

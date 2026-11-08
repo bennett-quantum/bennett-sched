@@ -292,7 +292,7 @@ fn qinplace_typed_arguments_use_singleton_bit_domains_and_exact_nested_token_tup
     let domain = &region["claims"][entry["claim"].as_u64().unwrap() as usize]["domain"]["args"];
     assert_eq!(
         domain,
-        &json!([{"name":"big","width":128,"lo":"18446744073709551617","hi":"18446744073709551617"},{"name":"angle","width":64,"lo":"9223372036854775808","hi":"9223372036854775808"},{"name":"addr","width":32,"lo":"4294967295","hi":"4294967295"}])
+        &json!([{"name":"big","width":128,"lo":"18446744073709551617","hi":"18446744073709551617"},{"name":"angle","width":64,"lo":"9223372036854775808","hi":"9223372036854775808"},{"name":"addr","width":32,"lo":4294967295u64,"hi":4294967295u64}])
     );
     // The primary and argument tuple can be equal while their identities differ.
     // Both partitions are legal, and a shared proof must retain that constraint.
@@ -500,7 +500,7 @@ fn qinplace_emits_a_bound_exhaustive_inverse_pair_entry_and_private_frames() {
     assert!(claim.get("invocation").is_none());
     assert_eq!(
         claim["domain"],
-        json!({"bundles":[{"name":"x","width":2,"lo":0,"hi":"3"}],"borrowed":[],"regions":[],"args":[]})
+        json!({"bundles":[{"name":"x","width":2,"lo":0,"hi":3}],"borrowed":[],"regions":[],"args":[]})
     );
     assert_eq!(
         region["frame"]["scratch"]

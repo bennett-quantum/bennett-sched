@@ -352,11 +352,17 @@ impl Emitter<'_> {
             }
         }
         for proof in &mut child.qinplaces {
-            proof.target_id = mapped(&proof.target_id, &names);
-            proof.fault_id = mapped(&proof.fault_id, &names);
-            for wires in [&mut proof.target, &mut proof.inputs, &mut proof.controls] {
-                for w in wires {
-                    *w = mapped(w, &names);
+            if let Some(execution) = &mut proof.execution {
+                execution.target_id = mapped(&execution.target_id, &names);
+                execution.fault_id = mapped(&execution.fault_id, &names);
+                for wires in [
+                    &mut execution.target,
+                    &mut execution.inputs,
+                    &mut execution.controls,
+                ] {
+                    for w in wires {
+                        *w = mapped(w, &names);
+                    }
                 }
             }
         }

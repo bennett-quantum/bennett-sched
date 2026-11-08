@@ -100,3 +100,19 @@ fn host_nesting_exhaustion_is_distinct_from_a_malformed_request() {
         .unwrap_err();
     assert_eq!(error.status, bennett_sched::Status::NoMem);
 }
+
+#[test]
+fn certificate_domain_integers_use_numbers_through_the_exact_json_boundary() {
+    use num_bigint::BigUint;
+    let cases = [
+        ("0", json!(0)),
+        ("1", json!(1)),
+        ("9007199254740991", json!(9007199254740991u64)),
+        ("9007199254740992", json!("9007199254740992")),
+        ("18446744073709551617", json!("18446744073709551617")),
+    ];
+    for (decimal, expected) in cases {
+        let value = BigUint::parse_bytes(decimal.as_bytes(), 10).unwrap();
+        assert_eq!(canonical::unsigned_integer(&value), expected);
+    }
+}
