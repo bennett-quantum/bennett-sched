@@ -199,7 +199,10 @@ A separate red assertion caught small domain bounds encoded as strings. One
 §9.1 integer encoder now serves schedules and pair/oracle/borrow domains;
 bounds through 2^53-1 are JSON numbers, larger bounds remain decimal strings.
 Existing expectations for a 32-bit pointer domain and the width-two full range
-were corrected to this canonical rule. Both pair-coverage tests and all ten
-`qinplace::` regressions pass. Structural/library proof scaling remains `a0v`;
-proof selection at a different budget for unentered sites remains required.
+were corrected to this canonical rule. All three pair-coverage tests and all ten
+`qinplace::` regressions pass. Static proof search may establish a standalone theorem at a larger primary
+budget, without changing the root invocation or inventing applicability visits.
+Its primary token equality class remains tuple-consistent. Zero-trip fixtures
+cover both zero and one tokens and a primary/argument alias. Structural/library
+proof scaling remains `a0v`; host exhaustion yields no reduced-domain claim.
 No sampled or truncated-domain entry is substituted for a covering proof.

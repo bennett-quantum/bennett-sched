@@ -50,6 +50,47 @@ fn environment(function: &Function, inv: &crate::source::Invocation) -> Result<E
     }
     Ok(env)
 }
+fn establish(
+    object: &Object,
+    g: &str,
+    h: &str,
+    mut budget: [u64; 4],
+    params: &Value,
+    ids: &[u64],
+) -> Result<([u64; 4], Value, Value, Value)> {
+    let mut params = params.clone();
+    loop {
+        match verify_with_ids(object, g, h, budget, &params, ids) {
+            Ok((domain, tokens)) => return Ok((budget, params, domain, tokens)),
+            Err(e) if e.status == Status::ScheduleInfeasible => {
+                budget[0] = match budget[0] {
+                    0 => 1,
+                    n => n.checked_mul(2).ok_or_else(|| {
+                        Error::new(
+                            Status::NoMem,
+                            "static inverse-pair proof search exceeds host budget counter",
+                        )
+                    })?,
+                };
+                // This is a standalone static theorem, not an entered call.
+                // Keep its primary equality class tuple-consistent while the
+                // verified proof budget grows; invocation bindings never change.
+                let mut token_ids = ids.iter().skip(1);
+                for (parameter, value) in object.functions[g].groups[4]
+                    .iter()
+                    .zip(params.as_array_mut().expect("static proof args"))
+                {
+                    if parameter.ty == "token"
+                        && token_ids.next().expect("bound token identity") == &ids[0]
+                    {
+                        *value = json!(budget.map(|n| n.to_string()));
+                    }
+                }
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
 pub(crate) fn complete(object: &Object, trace: &mut Trace) -> Result<()> {
     for owner in 0..trace.invocations.len() {
         let inv = &trace.invocations[owner];
@@ -105,19 +146,8 @@ pub(crate) fn complete(object: &Object, trace: &mut Trace) -> Result<()> {
             }) {
                 continue;
             }
-            let (domain, arg_tokens) = verify_with_ids(
-                object, &g.name, &h.name, budget, &params, &token_ids,
-            )
-            .map_err(|e| {
-                if e.status == Status::ScheduleInfeasible {
-                    Error::new(
-                        Status::GateUnsupported,
-                        "§12.3: static unentered inverse-pair proof at another budget is postponed",
-                    )
-                } else {
-                    e
-                }
-            })?;
+            let (budget, params, domain, arg_tokens) =
+                establish(object, &g.name, &h.name, budget, &params, &token_ids)?;
             trace.qinplaces.push(Proof {
                 owner,
                 g: gh,
