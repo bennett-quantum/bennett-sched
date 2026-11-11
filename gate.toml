@@ -30,10 +30,10 @@ name = "quality baseline"
 argv = ["python3", "-B", "scripts/quality.py", "--check"]
 
 [siblings."bennett-isa-spec"]
-sha = "dbc884525331fe5c5748c50662ae401ac5e7c79b"
-note = "published ISA 0.9, accepted K84-K94 plus closed native models, fixed-image bindings and K91 per-role feature negotiation"
+sha = "aaa8f1887ef68541ba9ddb07dfbb223b93fe7b1e"
+note = "published ISA 0.9 aaa8f18: K86-K92 reference checks and the 0.9 C headers"
 [siblings."bennett-isa-spec".files]
-"spec/Bennett-ISA-Spec-0.9.md" = "a86aec98d41f5c042425253b10ff632099c02fa427b220203913a861722b3d83"
+"spec/Bennett-ISA-Spec-0.9.md" = "58171461f231b916bad3365319fe063ff6f623323512db1f17dac7375204f3ce"
 
 [[siblings."bennett-isa-spec".build]]
 name = "reference interpreter (debug)"
