@@ -1,8 +1,8 @@
 # Accepted ISA 0.9 additions
 
 Contract: gate.toml selects published ISA commit
-`62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc`, spec SHA-256
-`8b377477f135b82da3cc0a4caa96be9db8c5cee4fd53ed87116ba2e1e259b1f5`.
+`dbc884525331fe5c5748c50662ae401ac5e7c79b`, spec SHA-256
+`a86aec98d41f5c042425253b10ff632099c02fa427b220203913a861722b3d83`.
 Quotes below come from that committed specification. Producer tests establish
 scheduler behavior; they do not establish an independent checker verdict.
 The mixed fat-object inventory remains the selected device root and its
@@ -115,25 +115,29 @@ The producer ABI/status contract and mandated K55 diagnostics remain unchanged.
 
 ## K91 — token identity and ABI
 
-§10.1: “A legacy request with token arguments and no alias binding returns E_ARG”.
-The pinned editor's note says: “Implementations MUST NOT invent a negotiation
-in the meantime.”
+§10.1 defines `bennett_sched_features(const uint8_t** jcs_out, size_t* len_out)`
+and the exact sched/0.9 manifest advertising `token_aliases/1`. The earlier
+negotiation contract gap is resolved in this pin.
 
-The existing copied additive setter, canonical equality partitions, source
-identity propagation and schedule/certificate alias bindings are preserved.
-`accepted_contracts` now checks all nine published portable object admission
-polarities and schedules the actual published source under both same/distinct
-partitions. Source object and parameter identities match the manifest; alias
-bindings and cleanup carriers match the selected partition, and schedule hashes
-differ. Its target is explicitly rebound to the local exact target; this is not
-original published schedule-byte replay. Existing `token_aliases`, `ffi` and
-`c_link` tests cover missing/malformed bindings, all five three-token partitions,
-forwarding/captures, tuple consistency and binary setter ownership.
+The copied additive setter, canonical equality partitions, source identity
+propagation and schedule/certificate alias bindings are preserved.
+`accepted_contracts` checks nine published portable object admission polarities
+and schedules the published source under both same/distinct partitions. Source
+object and parameter identities match the manifest; alias bindings and cleanup
+carriers match the selected partition, and schedule hashes differ. Its target
+is explicitly rebound to the local exact target; this is not original published
+schedule-byte replay. `token_aliases`, `ffi` and `c_link` cover malformed/missing
+partitions, all five three-token partitions, forwarding/captures, tuple
+consistency and binary setter ownership.
 
-The precise loader query symbol/signature, absent-feature behavior and version
-encoding remain undefined upstream (`b-isa-spec-b3ui`), so `bennett-sched-xzv`
-stays open. No guessed capability symbol or changed legacy argument layout is
-introduced.
+The provider now exports the published query with immutable static JCS bytes,
+length excluding a terminator, no request dependency, concurrent/repeated byte
+identity and E_ARG for either NULL output without writing either output. A new
+Rust regression failed to compile before the missing export was implemented.
+The C alias consumer negotiates before setting aliases and verifies the manifest
+survives scheduling and request destruction. Each launch provider and independent
+reader still has its own obligations; sched negotiation asserts no launch role.
+No manifest field is added to schedules, certificates or parameter hashes.
 
 ## K87 — complete resource contexts
 

@@ -9,8 +9,8 @@ this is a partial implementation. See [docs/PLAN.md](docs/PLAN.md), the
 
 Requests copy their inputs. Responses own their reason, schedule and certificate
 buffers until freed. The local header is [data/bennett_sched.h](data/bennett_sched.h).
-Token identity bindings and the additive alias setter are implemented; the
-loader negotiation ABI still needs a precise published protocol.
+Token identity bindings, the additive alias setter and the published
+`bennett_sched_features` negotiation query are implemented; see the ABI contract.
 
 Implemented paths include source actions and adjoints, lifted oracle and local
 procedure expansion, memory/allocator rows, finite-domain inverse-pair proofs,

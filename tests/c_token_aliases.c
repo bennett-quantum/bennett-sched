@@ -24,6 +24,18 @@ static char *copy_document(const uint8_t *data, size_t size) {
 }
 int main(int argc, char **argv) {
     assert(argc == 4);
+    const uint8_t *manifest = NULL;
+    size_t manifest_len = 0;
+    const char *expected = "{\"abi\":\"sched/0.9\",\"features\":[\"token_aliases/1\"],\"schema\":\"bennett.abi-features/1\"}";
+    assert(bennett_sched_features(&manifest, &manifest_len) == BENNETT_OK);
+    assert(manifest_len == strlen(expected));
+    assert(memcmp(manifest, expected, manifest_len) == 0);
+    const uint8_t *saved_manifest = manifest;
+    size_t saved_len = manifest_len;
+    assert(bennett_sched_features(NULL, &manifest_len) == BENNETT_E_ARG);
+    assert(manifest_len == saved_len);
+    assert(bennett_sched_features(&manifest, NULL) == BENNETT_E_ARG);
+    assert(manifest == saved_manifest);
     bennett_sched_request_t *request = NULL;
     assert(bennett_sched_request_new(&request) == BENNETT_OK);
     set_file(request, argv[1], 1); set_file(request, argv[2], 0);
@@ -57,6 +69,9 @@ int main(int argc, char **argv) {
     assert(strcmp(documents[0], documents[1]) != 0);
     free(documents[0]); free(documents[1]);
     bennett_sched_request_free(request);
+    assert(bennett_sched_features(&manifest, &manifest_len) == BENNETT_OK);
+    assert(manifest == saved_manifest && manifest_len == saved_len);
+    assert(memcmp(manifest, expected, manifest_len) == 0);
     puts("C alias ABI: legacy E_ARG, copied partitions, both identities verified");
     return 0;
 }
