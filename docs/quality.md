@@ -226,9 +226,9 @@ Current K84–K93 producer checkpoint, recorded 2026-11-08T12:11:08Z:
   increased. Changed per-file masses (before, after):
   `{"scripts/conformance.py": [91, 106], "src/borrow.rs": [54, 59], "src/borrow/entry.rs": [0, 75], "src/borrow/exhaustive.rs": [0, 58], "src/canonical.rs": [205, 210], "src/cleanup/raw.rs": [49, 51], "src/cleanup/replay.rs": [268, 274], "src/engine.rs": [316, 329], "src/native_model.rs": [0, 158], "src/oracle_calls.rs": [124, 126], "src/qinplace.rs": [35, 44], "src/qinplace/inventory.rs": [0, 82], "src/source.rs": [834, 839], "src/source/oracle_call.rs": [83, 91], "src/source/qinplace.rs": [108, 101], "src/source_ir.rs": [188, 187], "src/source_registry.rs": [97, 103], "src/target.rs": [399, 403]}`.
 
-The current branch is **not green**: the unchanged independent metadata
-admission test for selected K89 claims rejects `workspace` in the pinned
-reference reader. This blocker is bennett-sched-vt8.4; the upstream request is
+At the former 33e9ee9 checkpoint the branch was **not green**: the unchanged
+independent metadata-admission test for selected K89 claims rejected
+`workspace` in that pinned reference reader. This blocker is bennett-sched-vt8.4; the upstream request is
 queued under COMMON14. Fixed-image production (vt8.3), general native-model
 verification (vt8.1), remaining borrow mechanics (vt8.2),
 large pair proofs (a0v), root class bindings (4tj), owner borrowing (qm2) and
@@ -264,7 +264,7 @@ adequate capacity for either homogeneous allocation. That added fixture first
 used an incorrect zero-control range for CX; it was corrected to one control
 before interpreting its result. No existing test was changed or weakened.
 
-The unchanged K89 regression also fails at the new published pin on the same
+The unchanged K89 regression also failed at the then-current dbc8845 pin on the same
 unknown-field diagnostic. This is a reader interoperability blocker under
 vt8.4, not permission to omit the accepted field or claim independent replay.
 vt8.1–vt8.3 and the other recorded producer/scaling obligations remain required.
@@ -290,8 +290,10 @@ nested-call fixture initially omitted the required space in its comma-separated
 operand list; it was corrected before interpreting its result. Ten focused
 borrow-frame semantic tests pass, including generated allocations, source call
 contexts and raw inverse lifetimes. The original reference-admission assertion
-is retained unchanged. Its current-pin result and the fast tier are recorded
-separately after the pinned reader rebuild.
+is retained unchanged. The unchanged current-pin reference-admission regression passes (1 test).
+The rebuilt published reference accepts the emitted closed occurrence records.
+The refreshed inventory contains 884 cases and 40 portable JSON records; it
+remains incomplete. This is metadata admission, not independent proof replay.
 
 This new encoding and acquisition counting increases exhaustive.rs complexity
 mass from 58 to 73 and the number of functions over 30 lines from 145 to 147.

@@ -104,11 +104,11 @@ peaks and child scheme ancilla accounting. The general algorithms above remain
 required. Structural and numerical certificate entries are producer claims;
 independent checker replay is not claimed.
 
-`bennett-sched-qnl` tracks the remaining conformance. The inventory has 878 A–H
+`bennett-sched-qnl` tracks the remaining conformance. The inventory has 884 A–H
 cases: 18 direct fixture mappings, 17 equivalent witness mappings, 20 partial ref
-families, 8 explicitly rebound K83 schedule fixtures, 5 other scheduler vectors,
-and 810 executor/checker vectors not replayed
-by this scheduler. Eleven portable manifests are recorded (K84 metadata admission and K91 metadata/source scheduling are exercised): K79's 12 source address
+families, 8 explicitly rebound K83 schedule fixtures, 7 other scheduler vectors,
+and 814 executor/checker vectors not replayed
+by this scheduler. Forty portable JSON records are recorded (K84 metadata admission and K91 metadata/source scheduling are exercised): K79's 12 source address
 cases (4 accepted, 8 rejected) and all 128 forward/inverse tuples, K82's 16 binding
 cases/54 interfaces/86 digests pass; K80 source trace fields and all 80 published basis tuples pass after version rebinding; K78/K81 direct manifest replay remains open. Original 0.8 source
 bodies in K79 are re-enveloped and rehashed for 0.9 without changing instructions.

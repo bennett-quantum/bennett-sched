@@ -1,24 +1,24 @@
 {
   "schema": "bennett-sched.conformance-inventory.v1",
   "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
-  "isa_spec_sha": "dbc884525331fe5c5748c50662ae401ac5e7c79b",
-  "spec_sha256": "a86aec98d41f5c042425253b10ff632099c02fa427b220203913a861722b3d83",
-  "case_count": 878,
+  "isa_spec_sha": "52836976829e05770090dd49c50909541c1207ba",
+  "spec_sha256": "1c859d6b3a0c5c117634dd7a12fb132cbfc742957a59a0843b8d134fd395b6fb",
+  "case_count": 884,
   "suites": {
     "A": 22,
     "B": 35,
     "C": 628,
     "D": 44,
-    "E": 38,
-    "F": 63,
-    "G": 30,
+    "E": 40,
+    "F": 65,
+    "G": 32,
     "H": 18
   },
   "coverage_counts": {
     "direct-fixture-test": 18,
     "equivalent-witness-test": 17,
-    "not-exercised-executor-or-checker-vector": 810,
-    "not-exercised-scheduler-vector": 5,
+    "not-exercised-executor-or-checker-vector": 814,
+    "not-exercised-scheduler-vector": 7,
     "partial-reference-expansion": 20,
     "rebound-schedule-fixture-test": 8
   },
@@ -8093,6 +8093,16 @@
       "test": "published_vectors::published_cost_ast_vectors_match_their_exact_outcomes"
     },
     {
+      "id": "E-classical-pseudo-locations-09",
+      "suite": "E",
+      "source": "conformance/cases/E/E-classical-pseudo-locations-09/case.json",
+      "sha256": "d3f0651239a0d25169ea7c797008bc40c64d3c3ea330f02f6d31ff0fe64ed095",
+      "coverage": "not-exercised-scheduler-vector",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
       "id": "E-epsilon-zero-entry",
       "suite": "E",
       "source": "conformance/cases/E/E-epsilon-zero-entry/case.json",
@@ -8139,6 +8149,16 @@
       "sha256": "4270ccaf216dd5ae27c7bb05daa105f70571371c8e5117c30ddc97d2efff8973",
       "coverage": "direct-fixture-test",
       "test": "published_vectors::published_target_hash_and_topology_vectors_are_checked_directly"
+    },
+    {
+      "id": "E-qjumpr-independent-widths-09",
+      "suite": "E",
+      "source": "conformance/cases/E/E-qjumpr-independent-widths-09/case.json",
+      "sha256": "43e933ad1f7e270ca21d50b6cb6424d09808ece9ce8bfd0f3bdd899a4f0a37e8",
+      "coverage": "not-exercised-scheduler-vector",
+      "beads": [
+        "bennett-sched-ark"
+      ]
     },
     {
       "id": "E-ref-09-activation",
@@ -8685,6 +8705,17 @@
       "test": "k83_vectors::every_published_k83_source_trace_and_external_basis_value_matches_including_raw_inverse"
     },
     {
+      "id": "F-k89-closed-occurrences-09",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k89-closed-occurrences-09/case.json",
+      "sha256": "b3b029ab54b8cb81217de4d5e3c9ff44821fd2f11ede3f6afd689a14bc1435bc",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
       "id": "F-k91-duplicate-carrier-distinct",
       "suite": "F",
       "source": "conformance/cases/F/F-k91-duplicate-carrier-distinct/case.json",
@@ -9004,6 +9035,17 @@
       ]
     },
     {
+      "id": "F-return-delivery-width-09",
+      "suite": "F",
+      "source": "conformance/cases/F/F-return-delivery-width-09/case.json",
+      "sha256": "edafce505a1fa36415ad3b972e6de0f13a13474151dc3c2b2bdab03a96595713",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
       "id": "F-retval-in-lproc",
       "suite": "F",
       "source": "conformance/cases/F/F-retval-in-lproc/case.json",
@@ -9136,11 +9178,33 @@
       ]
     },
     {
+      "id": "G-estimate-parameter-hash-09",
+      "suite": "G",
+      "source": "conformance/cases/G/G-estimate-parameter-hash-09/case.json",
+      "sha256": "6fc6e96a20206d7a5d9dc4b34f91774e00a3278d999b3a688b6d163ddd03abb0",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
       "id": "G-estimate-resolved-class-decimal",
       "suite": "G",
       "source": "conformance/cases/G/G-estimate-resolved-class-decimal/case.json",
       "sha256": "48f793b51cb3c105a543dd20fbbc8236df8d9be2699730f37d94cde1b16b6fa6",
       "coverage": "not-exercised-scheduler-vector",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "G-estimate-root-accuracy-09",
+      "suite": "G",
+      "source": "conformance/cases/G/G-estimate-root-accuracy-09/case.json",
+      "sha256": "c5c126268fdd0e4345bee5188362dc8321437dc77fc9452982364a1bb9352de4",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
       "beads": [
         "bennett-sched-ark"
       ]
@@ -9908,6 +9972,258 @@
       ]
     },
     {
+      "path": "conformance/fixtures/accepted-k86-09/binary64-angle.target.json",
+      "sha256": "7e6b3c3af5003aba74587ff22ccf3a5bd5c07c6dfd6d0431a827802341d90ae5",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/context-positive.target.json",
+      "sha256": "b0e429f7b625b465f2a3df32e19c728a8b5b1ed63da2730869680169ee35bd38",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/context-zero.target.json",
+      "sha256": "b0e429f7b625b465f2a3df32e19c728a8b5b1ed63da2730869680169ee35bd38",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/controlled-cx.target.json",
+      "sha256": "c9b0b49c68e025eefd92a3bd8016aed586c3ef9a78a570c2b07bd2e72aeb7aa3",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/controlled-x.schedule.json",
+      "sha256": "909340b9b5216b67f1b73482c712a5f41ac4ac61044c1daadec58b27108f1a96",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/controlled-x.target.json",
+      "sha256": "d3869521286729768176cf8c6d5ddc1ae535a90c7e1207a1c2a634d234cc183d",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/duplicate-operand.target.json",
+      "sha256": "8d4f85c60f45ef6c4d402a020080bd24ea60633729b0b9f0e58588853dcc0408",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/legacy.schedule.json",
+      "sha256": "1201461d88bf8cbc2b9428c0058d805e69d77beb9ad476c9bf5576a8026ea29b",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/legacy.target.json",
+      "sha256": "8ddf2b23f640d94b12d6ff674a24309f82ce5b1d2bf4e14cdc270ef412ad5ed5",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/missing-positive.target.json",
+      "sha256": "980a20092a8317a98a95bec3fa4c22976f6a0ace3e0a704fbdaf3dba02f373cb",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/negative-x-bound-one.target.json",
+      "sha256": "a3f1d69ed68432ce119b6e24137493afee01dc2974a872a78517dd6ff4255dfe",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/negative-x-bound-three.target.json",
+      "sha256": "cc336754b6db8f0ec015f09c3a6f3d30160456d803c0e7eb84ff0111397d55a0",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/negative-x-bound-two.target.json",
+      "sha256": "9013f0e581373068489df93a1583f34bb27e3d4b86eca075bffc58581dcae459",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/negative-x-exact.target.json",
+      "sha256": "749bd04a4cd139e09d85be712e7a4a625456480cbd957db93d4970952f28f911",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/not-normalized.target.json",
+      "sha256": "693d82d0492022287523490777669af1b74ea8747cad7d003ff64a04892e4267",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/omitted-expression-zero.target.json",
+      "sha256": "1c61e51e035e352c9c8ba8d440ffdd4cc909cda1c62a47623682bd2f03816077",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/unreduced-leaf.target.json",
+      "sha256": "0755acde4db6297a11f9051f54bc4bc5d6c1d2108d918a95cb9f77f89d200665",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/unsupported-version.target.json",
+      "sha256": "4ac39d9f037e6de82ba961ec86e0d440576c959bac052259d255b7816e35be18",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/vectors.json",
+      "sha256": "5af5a4b6303c597f968ab0b6159bfdd974c1e3b2d62609722aadd278bcb5554c",
+      "vectors": 17,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/wrong-control-order.target.json",
+      "sha256": "390703f751783614e677712062bb954604069bc3b0162b2f51f682d860507f40",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k86-09/zero-illegal-cost.target.json",
+      "sha256": "cb58fc3dbfce3ae3c2cd3124ecb7d07529da6cc72e901469357e98694d64e856",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k87-09/schedule.json",
+      "sha256": "109ab3d70a40f6bfae621ab512819d7122c50d41b74c82ffe18d9fe3fda3abae",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k87-09/target.json",
+      "sha256": "2454c043581ad54944aa1d868ae52950ff1b11bf5bd0d956c334d35f40dfdcb3",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k87-09/vectors.json",
+      "sha256": "edbf895c831b5ed2602059319672f7b1b1ea87d62d6e678e5469fbbb5db1dd0a",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k88-09/target.json",
+      "sha256": "9369ef89d621380e5a4d0561fa8294a6269c98df0ab94f4698a14126a37dd9ce",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k88-09/vectors.json",
+      "sha256": "b002b9d765cc45959d56ca72f077964e04aa8693c673001ffa765d5cef2380e5",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k89-09/vectors.json",
+      "sha256": "c8da31d90c31964951a90fca2ff78eb0caed036727bb821a67d7aa839c02bee8",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k90-09/vectors.json",
+      "sha256": "701324b2c077e26d85cabfe4ec854696d57cb45ef1d61725d460a080ba44beca",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
       "path": "conformance/fixtures/accepted-k91-09/k91.json",
       "sha256": "72b68db2dfbb041fc259f95d3669ff29438bfec5cdcb356fc4b1c713b7dd53fa",
       "vectors": 0,
@@ -9919,6 +10235,15 @@
       "metadata_cases": 9,
       "source_partitions": 2,
       "remaining": "Original schedules are not replayed: source requests bind the local exact target. Published sched/0.9 feature negotiation is covered separately by ffi::feature_query_is_immutable_concurrent_and_rejects_nulls_without_writes and c_link::c11_alias_consumer_uses_the_additive_setter_and_keeps_partitions."
+    },
+    {
+      "path": "conformance/fixtures/accepted-k92-09/vectors.json",
+      "sha256": "ff09ce12d7575b8ae84bcfccee23fe448289cb88ea59ad6b8bb702b2cec405b9",
+      "vectors": 8,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
     },
     {
       "path": "conformance/fixtures/accepted-k93-09/k93.json",
@@ -9958,5 +10283,5 @@
     "status": "active-differential-test",
     "meaning": "The named default-suite test checks emitted schedule/certificate metadata admission and rejects an absent source point against the pinned reference. This mapping is not certificate-claim replay or scheduled execution."
   },
-  "recorded_at_utc": "2026-11-11T12:35:14Z"
+  "recorded_at_utc": "2026-11-11T16:10:56Z"
 }
