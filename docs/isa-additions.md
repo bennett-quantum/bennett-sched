@@ -31,7 +31,8 @@ and its complete signature width. Exactly one of class and fragments is
 present.” “Adjacent equal-class fragments must be merged; use the class form
 when there is only one fragment.”
 
-Topology-bound interfaces now select each wire independently, preserving one
+Topology-bound interfaces prefer homogeneous slots, then search per-wire
+assignments when no homogeneous schedule succeeds, preserving one
 source slot and one interface_vertices array. Frames derive every bit's actual
 allocation class, merge adjacent equal classes, and inherit the entire vector
 through calls. `slot_fragments` checks a width-three A/B/B root and child,
@@ -90,12 +91,11 @@ correcting domain coverage and the selected lifetime ordinal.
 Seven semantic tests pass in `borrow_frames`. The initial three tests failed on
 the old non-translation Unsupported; the 16-visit test additionally failed on
 lexical iteration ordering before the visit-order repair. The independent
-metadata-admission regression intentionally still requires successful admission
-and is currently **RED**: pinned reference 62a0cf0 rejects domain.workspace as
+metadata-admission regression still requires successful admission
+and is currently **RED**: pinned reference dbc8845 rejects domain.workspace as
 an unknown field despite accepted K89. The producer retains the specified field;
 this is not independent checker acceptance. The reader blocker is
-`bennett-sched-vt8.4`; an upstream repair is queued
-in the uncommitted cross-repo bead requests. Remaining producer mechanics are
+`bennett-sched-vt8.4`; the exact upstream repair request is recorded in that bead. Remaining producer mechanics are
 `bennett-sched-vt8.2`; awo is closed as the now-answered schema request.
 
 ## K84 — diagnostic codes

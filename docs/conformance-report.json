@@ -1,23 +1,23 @@
 {
   "schema": "bennett-sched.conformance-inventory.v1",
   "meaning": "Coverage inventory, not a full-conformance pass report. Equivalent witnesses are separate from direct fixture replay.",
-  "isa_spec_sha": "62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc",
-  "spec_sha256": "8b377477f135b82da3cc0a4caa96be9db8c5cee4fd53ed87116ba2e1e259b1f5",
-  "case_count": 559,
+  "isa_spec_sha": "dbc884525331fe5c5748c50662ae401ac5e7c79b",
+  "spec_sha256": "a86aec98d41f5c042425253b10ff632099c02fa427b220203913a861722b3d83",
+  "case_count": 878,
   "suites": {
     "A": 22,
     "B": 35,
-    "C": 346,
-    "D": 16,
+    "C": 628,
+    "D": 44,
     "E": 38,
-    "F": 54,
+    "F": 63,
     "G": 30,
     "H": 18
   },
   "coverage_counts": {
     "direct-fixture-test": 18,
     "equivalent-witness-test": 17,
-    "not-exercised-executor-or-checker-vector": 491,
+    "not-exercised-executor-or-checker-vector": 810,
     "not-exercised-scheduler-vector": 5,
     "partial-reference-expansion": 20,
     "rebound-schedule-fixture-test": 8
@@ -4258,6 +4258,3108 @@
       ]
     },
     {
+      "id": "C-k93-coherent-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-coherent-adj/case.json",
+      "sha256": "b43e182feb71db207f922e059857f265d4683e48e10effa577d093331f804fa8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-coherent-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-coherent-fwd/case.json",
+      "sha256": "d82aaa458d2eb4c23ee663737f07fd95daa32ea53ea15558bf04dd763d6be1f8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-0-adj/case.json",
+      "sha256": "e393cd2232eeca48d8a46d2e370108edcc5a3a415989bc844667b178e5151012",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-0-fwd/case.json",
+      "sha256": "981931e70e6b5725b6fdcb50b82a28b7ad3f2e851292c6a1b693a3759141c05b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-1-adj/case.json",
+      "sha256": "c914b8c718d48314519df1eb0411c334f7f1452822f731e0e5bbfb425c7cffda",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-1-fwd/case.json",
+      "sha256": "fe1548b2b47c6baf884b7790741017ddcb13a8c5786aacaea6f37490d60391e9",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-2-adj/case.json",
+      "sha256": "d7fda7ad8101d30054083499078c062605c6187fea860d76255acc7c2fdd38d5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-2-fwd/case.json",
+      "sha256": "b47396e3803f62824fcaf47d16bd522f608655ba3c31e89ee0907f24edbf848e",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-3-adj/case.json",
+      "sha256": "a02f731e1e6af0a68f4998ba4541990b5983f44628950618e87d5d53390e365e",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-3-fwd/case.json",
+      "sha256": "0edb1be4c9f13fd6713d367609fc1e908faa1b6ebfd95c65e5e7973e9b533382",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-predicate-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-predicate-0-adj/case.json",
+      "sha256": "3efedccffcc1a133a905fc72dfad841b60c12796a55c6cc7662fbfa3e6a8c10f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-predicate-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-predicate-0-fwd/case.json",
+      "sha256": "03dcc42d85179ff2f8d3c36e6be57153879eba67714ce4b31598f0424047f4a6",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-predicate-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-predicate-1-adj/case.json",
+      "sha256": "ade2c306d2bf0b7ca0168824af72378c1e572fbbb04738c296d73feed835a977",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-predicate-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-predicate-1-fwd/case.json",
+      "sha256": "f8c5fd366bae4450f4e59fde8ce81f1f5f25c36d1d36b33354d4dc9953fef1a6",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-predicate-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-predicate-2-adj/case.json",
+      "sha256": "f37107e20b86babe548550918824b67cb7aa3b78fc1e36ef1ea59fbcc5c03c5f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-predicate-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-predicate-2-fwd/case.json",
+      "sha256": "d2d17808321416c4710549f6f982b7a5677fee644455fd28fce15184c79064f8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-predicate-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-predicate-3-adj/case.json",
+      "sha256": "ddb5e5727a4cada3159c7cfe8057a8376202d0d8885a87e3fc152f9416c815a4",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-empty-predicate-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-empty-predicate-3-fwd/case.json",
+      "sha256": "741ede56533dd761db297997dc28b80c2e54aab7ae14720afae52a4d5f3461c1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-0-adj/case.json",
+      "sha256": "76172720331265e61b490a5edbbe99fce3756c924033f40c48c970823153a3dd",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-0-fwd/case.json",
+      "sha256": "a161502288fbce3ad67c3cfed0a95849d3633b27d6ff991ca28814159a869b72",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-1-adj/case.json",
+      "sha256": "adf4539885f9e0ff6928abe4dc61a121d1ccad4d2248819a4afa26c98dc2a426",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-1-fwd/case.json",
+      "sha256": "d3a197e66a29d1f000ed5c30270bff1ceee68d7bc9a2aa0cff5d8f42e6687aa1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-10-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-10-adj/case.json",
+      "sha256": "978e8336530dd2721dd0fec73142e3cc7142c890800dab4296f0407b4f06f296",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-10-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-10-fwd/case.json",
+      "sha256": "20cb520032012799f7f663f307a17761b221a2e9b5d56474bbd0d80fa7de6b72",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-11-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-11-adj/case.json",
+      "sha256": "851e0d03844f5de57a5b6bbcb1086cb27dfb54bd9b61af80b10e21d453a37947",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-11-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-11-fwd/case.json",
+      "sha256": "bb4624dd72507997993f9330d3ef1c64f5a704fe7bc71c22a65b888e2bea343f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-12-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-12-adj/case.json",
+      "sha256": "89569c781196562a53f8f0ec18ca17b104af86da3cc7db3cb19fdb3c5ad487ab",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-12-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-12-fwd/case.json",
+      "sha256": "29be50db90e7b59da9b9e5de4645d58bc79e8fab33595d83e7ecf034079cf117",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-13-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-13-adj/case.json",
+      "sha256": "43fc61a40e24e92c1fa96d7399353488059e488d86990ed09c3ac1f04f1cc527",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-13-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-13-fwd/case.json",
+      "sha256": "4b020ea975db5d046cedbcd9e05c0548dc4be919313e0c9fb8b3000974e70a56",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-14-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-14-adj/case.json",
+      "sha256": "ff05ef555853a796ed3b8e449e82ac8b5ea8f810fe37f898e6b631e76de32450",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-14-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-14-fwd/case.json",
+      "sha256": "c4863bf26b10ec21ad66b974388b424a501e31a89fd4dfe36193bab4b5d0bff8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-15-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-15-adj/case.json",
+      "sha256": "09e73846d738020b4df4e46fc53ef7fe2e00524882524594723f3ab101807afa",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-15-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-15-fwd/case.json",
+      "sha256": "964778ad4a4dd7bcfea725f36691a4095acfed58ead3c6dcfd9d3a1ed6bcd438",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-2-adj/case.json",
+      "sha256": "dda9edc3baf010773f1a9e9fcb11ed72a32f3ee3a13600ab6b33e142dc571f19",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-2-fwd/case.json",
+      "sha256": "cc836b65755526e57d2ccc639daaf8e1eeaecf1eded2b29ca39d47efd556e718",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-3-adj/case.json",
+      "sha256": "05647314504a4d0061a5222038e8b63b9c459b49a252d4bd7ea47cc6abdafcaa",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-3-fwd/case.json",
+      "sha256": "7e56a5115f0066aaba2b31e9f220a98951bd9c1273e3ec7848f6159c17a9639d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-4-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-4-adj/case.json",
+      "sha256": "2245c6bed2484eb187073fe465a04bc4c88e1384d9552877bf601ef101705d01",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-4-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-4-fwd/case.json",
+      "sha256": "aefa8c0f262299a9ed0f7a9046ec728e1f87b325362155a7dbe8b784f9e8c113",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-5-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-5-adj/case.json",
+      "sha256": "77ac081b38f6f71bf0d11845c8f1b3015cc11cdf826c1d9c225e40f90a51a4d8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-5-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-5-fwd/case.json",
+      "sha256": "532a335310641553299f3ddc6ad13e19a7cce5998353fa87755fa88f868f2898",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-6-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-6-adj/case.json",
+      "sha256": "098ad46ef761fbdfc5374002c67032486e12b0ff8af47d087e6202df4506e0a7",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-6-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-6-fwd/case.json",
+      "sha256": "cb7f0bf04bc165504d21fe73236c292fe4f683e25d609b18ffc7fb6333820b6b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-7-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-7-adj/case.json",
+      "sha256": "d472a3ac14cc2768c46ea7fecf60cf1d533a325798984d6a7c7f7e97f90fab76",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-7-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-7-fwd/case.json",
+      "sha256": "94f9f2ee0774a111da2e3f1e110a0743bfb7e020b81c5ef4a56fe4cfda793a9c",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-8-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-8-adj/case.json",
+      "sha256": "4446f6fd3bf16205132d0f28f62a5f027d60959c4076c8db546f5a22ff2da070",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-8-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-8-fwd/case.json",
+      "sha256": "b9f2849a5e31fb388a6c8b40282615fbffd6696287d12e931db405f889975efd",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-9-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-9-adj/case.json",
+      "sha256": "72446974ef4bcb342a1d59bfd3bf39dc78f3a6df447ac381d90b48af7d9f5336",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-indexed-target-9-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-indexed-target-9-fwd/case.json",
+      "sha256": "8c6b7d148371f0053b8439a20599976773d80033bf6d3cda95553d60746db730",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-0-adj/case.json",
+      "sha256": "13850b0353fc45fdba94490b37f90b491d8d773bcff2750ece8711127ddabcb9",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-0-fwd/case.json",
+      "sha256": "69b0da8418374a18eb1d855d3c7e7158a5c403916fc911a7f486b8079395d8ca",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-1-adj/case.json",
+      "sha256": "737469bcab32215cf600197e3249978e1328477345bda3209eaef3a7f261d289",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-1-fwd/case.json",
+      "sha256": "9c5b6acc29576bcbf92a36de4cfc5fd87dc0888d8bbf9463a6a6704f3746df79",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-10-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-10-adj/case.json",
+      "sha256": "977d8a60b922b2a77840cce5ebe2631fa153e67ada8d7d6c7a01d2c9cd6dc5ac",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-10-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-10-fwd/case.json",
+      "sha256": "02ecad4c3df020c6920ed8784a0921b7aafe89be8a6739bfa3e75361bb5b3aa9",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-11-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-11-adj/case.json",
+      "sha256": "f5b559b7d2f41407e44c97c7bf185cf9b02aeaa6eead3f851a3cdf97195f82db",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-11-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-11-fwd/case.json",
+      "sha256": "7fd69d5a2e0f5b45bb079d69627ee0a98bfc165d00000e9664e90a839e7fd87b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-12-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-12-adj/case.json",
+      "sha256": "0d697bccdae78e7782c70e06f06dec81befdd9ca251777590d3497854b0f9a39",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-12-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-12-fwd/case.json",
+      "sha256": "54c0d001993d87dd6f7d28467c99b9b2ea1448a09f45ec825bfa1c2241415632",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-13-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-13-adj/case.json",
+      "sha256": "b0b84225e19211b446f676818fcce3080765ebd2acc18f77e7f886801495392b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-13-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-13-fwd/case.json",
+      "sha256": "a0c27f8e8b98a0b5f3aa9e1240cbbbd05a9a30db2267b684d5ac9f8d8e4ed1e1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-14-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-14-adj/case.json",
+      "sha256": "13b4dbc1fc1a7fbf658460bd4acbac582c20abcde8171a9e187c3d03879f873b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-14-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-14-fwd/case.json",
+      "sha256": "6b8cb4c7f373601031e298573a6afa477a8ea0669ae89c893d0caefa7acb87c9",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-15-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-15-adj/case.json",
+      "sha256": "84baa4389ad676f3bde0bc78592957ac075c6d2a040604f6a0dd755913382001",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-15-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-15-fwd/case.json",
+      "sha256": "104fff7020da9d691736c251bab723240bed5d9ef58b812b1e82034fd6443e88",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-2-adj/case.json",
+      "sha256": "7c52dcf1af1b64d8087454168a81f64119ba634df116148469a3c2ec808300ce",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-2-fwd/case.json",
+      "sha256": "a406d91fa0c6b2c4679056d12990e5ded9e6ea2209256788b2d43c3acd29a0da",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-3-adj/case.json",
+      "sha256": "23aaabba8affa5177f9a8decd25adaacb32fb2638fafb87b9e4989121ec1082e",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-3-fwd/case.json",
+      "sha256": "4082900f6223d8e57c68b2e0685d9d4482e746c07e0efd08afa1635704b2b261",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-4-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-4-adj/case.json",
+      "sha256": "b972ec41a0f326b0cf1cdbb5714bcae11a09e996cd295c715b72263c3d5726b0",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-4-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-4-fwd/case.json",
+      "sha256": "e66e2930451b975c57b7983c51bc5936b2903e84fed03bb67c28e24b5b497e01",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-5-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-5-adj/case.json",
+      "sha256": "a7b9da573ff37a8a055f95346e4a672cfb26940c0f9cdafc5226886ec60ba390",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-5-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-5-fwd/case.json",
+      "sha256": "9048abdf86d2955e4a727a14eac7c9247a6cf7ec9a52939eb01d7916e6115191",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-6-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-6-adj/case.json",
+      "sha256": "9b6faad2230fe30476fbb74b159e3ca66fade205d4f8d5b525cf5991a7fe38c9",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-6-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-6-fwd/case.json",
+      "sha256": "1d1a502f79a3753c5634e0122250a1787f90cd15e9bb67360dfe678737ecec7a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-7-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-7-adj/case.json",
+      "sha256": "2c73f035026d1a04b44d024f496c7c610b9d61f4dd6ffdac486fd8fee2af37e2",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-7-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-7-fwd/case.json",
+      "sha256": "6b81cb716affc1bddbce3e27aa14318b02ebb3feebe0129860ae91ed90d76691",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-8-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-8-adj/case.json",
+      "sha256": "8d8ef29825e3b0f087127c72d70e339eb70aaffaeac55e44c1a1e8c459b91d89",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-8-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-8-fwd/case.json",
+      "sha256": "67ad3c934feacbb413f1301d6ec26829b1fe47e7c042b73c83bea8b3b6ca98cc",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-9-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-9-adj/case.json",
+      "sha256": "af2346fd6b08fc20ae7599e677685a690bd643b14aaa990c6607b495294dd920",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-bs-9-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-bs-9-fwd/case.json",
+      "sha256": "5752eb5d59e88439d676fb3ffc1cdf7b36cc440774b91550c368f82336066549",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-0-adj/case.json",
+      "sha256": "8a737e584be590dc330b6f58cb97c62f32723337e9d9ecd8c42ca3c6d2d98c74",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-0-fwd/case.json",
+      "sha256": "75df665e4e464509ede83c1be8049a56825cb858099dbc2e02f2044f37de35b8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-1-adj/case.json",
+      "sha256": "5f513ca72d8ae58b018216d776295b3edb7bab931573770c63003da658057594",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-1-fwd/case.json",
+      "sha256": "aeed7a963ea0c91d62737f0169631457df11e4da2b0ba670fd5213a38a407df6",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-10-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-10-adj/case.json",
+      "sha256": "a0d3d4f0d4f258a51a464928db2303cba61000aed11a2b604f03cfd945c70eb2",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-10-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-10-fwd/case.json",
+      "sha256": "e1d793a449c3714730d92b1dbf205f146d0cfe3a271311863416c24064a50d78",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-11-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-11-adj/case.json",
+      "sha256": "d262cf6d709906d13ae9cc9ea572e58feb354771b87773d96e41e8194a62fc75",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-11-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-11-fwd/case.json",
+      "sha256": "433a6adc353b4edfb0deea8d276b539fe073945adc0ebda73f0395c7786ad04c",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-12-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-12-adj/case.json",
+      "sha256": "ae20bb64f5c88369a86c9a7fdb8603b1f00b6bd1fb7cd850516d2ba427264b63",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-12-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-12-fwd/case.json",
+      "sha256": "dc54976a938c4bf197fd857e947e470c856e05d85449642570ac1321e78e7518",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-13-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-13-adj/case.json",
+      "sha256": "ac84489d7dacf493f4670327a147cbfa594ef0e4d579e98d93ce24b848e8c8a4",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-13-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-13-fwd/case.json",
+      "sha256": "26a811814d96e08b12ffde57c887b31a7d579a31a70c0757d930481d8ac661f2",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-14-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-14-adj/case.json",
+      "sha256": "4c2780255a9df51dedd6ca7c2528ea8ff22e425fafe0ea351fd37e41acdc140e",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-14-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-14-fwd/case.json",
+      "sha256": "23ecda2b55222eadedb0e127b2226bb9ac7cb2717f6a9ec0976a4aa45ac3d74e",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-15-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-15-adj/case.json",
+      "sha256": "035a1c1f4926f4ca6f908d17a5ecc84bbaeccc58e6acd2ac1c0e1dc3c4f4706f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-15-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-15-fwd/case.json",
+      "sha256": "fef23f6030d984b0f0576a66f0f163b52be582072bde42f14517e19c52d14762",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-2-adj/case.json",
+      "sha256": "a22eb8d2fac6270929af6009ea38d6898d3c12b408f9d11fe8377549e35e4179",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-2-fwd/case.json",
+      "sha256": "a0b38bd6eeebf55d910219550d531c50750acd92d680b19b416f9140608b5764",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-3-adj/case.json",
+      "sha256": "9f114e173c14c45aa30694e6a46e57eb55b0d84e96f9e6bf3a3f155f7be1fab3",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-3-fwd/case.json",
+      "sha256": "fa3c713d5b161ab64a9c61b41434f30fa7f38ed11b5b26f9e1e5fdd20f022240",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-4-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-4-adj/case.json",
+      "sha256": "f37a792fa7050c2f36fcb955f5c95c92ddf4eb364c0ccd579933efc1bf4cb45d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-4-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-4-fwd/case.json",
+      "sha256": "2ab507f17a122a9bf547b17ef196dc387a4ee5cb2087a46b7d04ecc5247a94c5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-5-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-5-adj/case.json",
+      "sha256": "4f535d48084a7037ca3a73728403f4c45b37f5186a0816d6f68605fe6f21e742",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-5-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-5-fwd/case.json",
+      "sha256": "16f30c772f41219972e6410af0fad5e1cc2ff1ba3cbb8278b017ee9b12ab4494",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-6-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-6-adj/case.json",
+      "sha256": "6ad3d70c16e811727a4bf1056f4562c4cdc027c7175098433bfaeafb042d2d02",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-6-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-6-fwd/case.json",
+      "sha256": "9ce6ab145fbbd2a7580ce361871b6dec384e212030f8beceedcd36bb6ee247d7",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-7-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-7-adj/case.json",
+      "sha256": "ac143f7199621c00f9017d1ee8e3f5994ccb4bbe70805a4f03a968135fa4f762",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-7-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-7-fwd/case.json",
+      "sha256": "591cac9d02ecad146dad7a093ea68e7e7e81eefd5804e9ba7559130b267539f2",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-8-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-8-adj/case.json",
+      "sha256": "e7167a4107ea3ed03aefdc770ee1713433bb0ac126ecc2b3260cb9b2ab8102eb",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-8-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-8-fwd/case.json",
+      "sha256": "d3ce042ea9d3ccd605e04a76eca136ea3ac89cd445f51619d250f3403bb113ac",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-9-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-9-adj/case.json",
+      "sha256": "93c5b2cd6b0b587d34f0bfcb51f2ab0f0b2c0399a1fb0f77ff6e610cabe55f31",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-mixed-sb-9-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-mixed-sb-9-fwd/case.json",
+      "sha256": "682ad0f62a3fa3b32da2c17b2c9bc1ea65c37947f8781e5e2d8ce3369f0132fd",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-0-adj/case.json",
+      "sha256": "04ad81489ece904c75168357ebde6d2f286967fa5c9942d616ef23ea7f630021",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-0-fwd/case.json",
+      "sha256": "b7ad38452d8f30dd59fb5305cdd6fd1a264049d2b7d53efa1d655b8b1aebae89",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-1-adj/case.json",
+      "sha256": "0c1458e796f826c106e7a240fed8da5d3ee3c0546567fe6d82269fdd4db6e5da",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-1-fwd/case.json",
+      "sha256": "fa5c4c739b5477c806b90f1bbbf9cba05290cc00553bba726e41ba73e120bb29",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-10-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-10-adj/case.json",
+      "sha256": "e00164d49f5225bb38a50002fdae342f6206a8e51d1b02b24cf11e0b2ed11e87",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-10-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-10-fwd/case.json",
+      "sha256": "3dffe1eac74f8d1aede487f8e1311856b878ce98dd47f27be1bb06490c87d7a6",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-11-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-11-adj/case.json",
+      "sha256": "4d6dbac0692a11049b65876a25e61691480547c31a16b08e5a4581430d41a180",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-11-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-11-fwd/case.json",
+      "sha256": "fbc2b7b73363d654560e7e07ab758e7fe98f20da637ecf5303ae10a7da74494c",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-12-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-12-adj/case.json",
+      "sha256": "901406cbc170ace7d78d9b17e6dbbd670588f25d6944d132403010c9446b3a83",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-12-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-12-fwd/case.json",
+      "sha256": "0b645d57d33edec086fe086b9e0d956cd2b11381470dfb0f7f51d89b42cab93a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-13-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-13-adj/case.json",
+      "sha256": "e924fb36b4a231463e08111c4864d0d6fa6db42da1fc20037b137a9ddf81069d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-13-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-13-fwd/case.json",
+      "sha256": "6c0305cce8362fe8221f681666f274d7c7ddf18811ef08dad2a13a62cf5ac971",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-14-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-14-adj/case.json",
+      "sha256": "94037eb72e7e743fa6ad35e5d4f6c47a072742d991a434f430d2e060fd541535",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-14-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-14-fwd/case.json",
+      "sha256": "c5aa5a42ee93afa4b088f1edd839093961f5441609d49f7a77bfe3f7732c04ab",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-15-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-15-adj/case.json",
+      "sha256": "81b1bd661bf401b27c789aae8c64860a2c2a6c95e9da8e346b46587d33047199",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-15-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-15-fwd/case.json",
+      "sha256": "2467141bea5b57a9e5a7d63aa895f609ef5248220644b755edcaa92652049122",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-16-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-16-adj/case.json",
+      "sha256": "cdef1fd33990fa4808e85f904ec5b64fb1f51a60c1d8af68ac2b68f14116bdd1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-16-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-16-fwd/case.json",
+      "sha256": "81f59ffd67bdd734028a3505626aa13102d10d42ac9d59c2f9fda8e968f427df",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-17-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-17-adj/case.json",
+      "sha256": "c979793b32723e8a43b56f6e39539ac2818a182cb6654eacf0b1d1a50eb14d34",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-17-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-17-fwd/case.json",
+      "sha256": "c525d2fe421be62e1eee3cba0d6a18faeca861b51c032cee10aa162adb3fd6be",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-18-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-18-adj/case.json",
+      "sha256": "748457f4ab422f88e579a3c1a054988d25a45d62eb6d4777a8dad874a408c0e3",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-18-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-18-fwd/case.json",
+      "sha256": "f3f5dd2870155a871940f94aa2e7910b3f18c10dece809757ad7195248efb596",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-19-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-19-adj/case.json",
+      "sha256": "25650fca06ed09ef30a2b154b03e77fd5d27411f51da66f4181a75b399d0d3de",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-19-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-19-fwd/case.json",
+      "sha256": "8b8c76fa37ad9356146654b1f8302c1fedf503eef3ad61344a884f80ec2617fb",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-2-adj/case.json",
+      "sha256": "11c6fd5e50e45e48bb70877a8843ba1e9ef0721ebe86f870726643c40f067571",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-2-fwd/case.json",
+      "sha256": "1f92b5d236f97efd8b433da9a13a9d9643666cb93c02e57e2e5573a4089898df",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-20-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-20-adj/case.json",
+      "sha256": "3c0a4b4d6a8a4ce6feb35ea836d48f020f32e829cfeece945e34bf90b331124d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-20-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-20-fwd/case.json",
+      "sha256": "08540eb9297b7e7982add379798a8524d83cbd06f20370f3440b20021bf64810",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-21-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-21-adj/case.json",
+      "sha256": "17c0d5bc2792cab3f8824e060f53be1015155b90117df31d6524365076c9d4f2",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-21-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-21-fwd/case.json",
+      "sha256": "76660d62ee7715032db31cc6d42008b3bb4d87b8d0b659bfe95c6f91fdbf2793",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-22-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-22-adj/case.json",
+      "sha256": "d2970d3c94fca045b5c2375c9775e926272865bf29336bf290aa2a53f8237852",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-22-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-22-fwd/case.json",
+      "sha256": "df4c5bfac3a2ba003b225fb822e2e96209f6259b687be27bf1ce5fbd69fe7b2b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-23-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-23-adj/case.json",
+      "sha256": "dd1411b26e9a905f4142aec18a89c3965c3cf830755b20f10b5d19d7bedea208",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-23-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-23-fwd/case.json",
+      "sha256": "8ee8b8f3d3faf18eaff1f7ac27ecabf88bff81123bbc32100c4c372da8822082",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-24-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-24-adj/case.json",
+      "sha256": "ebb7057fca38d629a44d70fb75d7e8adc45627f18d6c1f19bf77d6256d00e89c",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-24-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-24-fwd/case.json",
+      "sha256": "fe3dbd85a57319b60f1735f474216cafa42c07d865a4ae12f8bda8409416206d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-25-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-25-adj/case.json",
+      "sha256": "3e43a1549c47b8d260b1887a3ff1c665f5b4017014f9ccf77e3230e2ff1e01a0",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-25-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-25-fwd/case.json",
+      "sha256": "e2d49c218a10d5006af28594e88c660402d27297984d4bfe43a1fcda2e789242",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-26-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-26-adj/case.json",
+      "sha256": "dea3cc953dbc14fd4db115f0de638e4c24938b259d330f610356bc652cef6e9a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-26-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-26-fwd/case.json",
+      "sha256": "ca0ef7ef70b506a991880c5cc99a69551dbdc8244f6e5500ee0708de830a2423",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-27-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-27-adj/case.json",
+      "sha256": "d3a4d2edb8416d30121519b2a72a0fbb28f8f7b700a16522afbc7f5fe4c16428",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-27-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-27-fwd/case.json",
+      "sha256": "5f4998058ffae3dabefa0baad28e40b3a25b8f59242a3dcf4744600413d39e8b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-28-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-28-adj/case.json",
+      "sha256": "39ac011781323e04ec3979795b8040e004ee8bada9dbd2617bb97f2b62308b24",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-28-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-28-fwd/case.json",
+      "sha256": "7d3771bf827621565b187f60c475d61d5d31534cbec2b6be861006cc3355859e",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-29-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-29-adj/case.json",
+      "sha256": "0df8f5fccb56a5032ed1204bafd2bb925e5ef897c389df43ce88955f28b8a969",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-29-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-29-fwd/case.json",
+      "sha256": "bfb3db61f49fb56f7d627724f73a0deb6feee901d287a1d6926b9aeb94a5cc7d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-3-adj/case.json",
+      "sha256": "67714828eb4b1c36b36040d0a6db3a8fe696b9dbdb1e9725d3f400b997454b61",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-3-fwd/case.json",
+      "sha256": "fc9371d1fc706ec586f608ee3ae39c0b04c9709b173962ae89727d68b7a1d494",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-30-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-30-adj/case.json",
+      "sha256": "33423757d3a68ebaeef2f900e7e3c211dfd7a04e99fee6ca121afc145dfc2913",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-30-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-30-fwd/case.json",
+      "sha256": "e3d14b69a796cec5c2c022f25b468dbad3f485c80a2922eacc7dfee51ca23ea5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-31-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-31-adj/case.json",
+      "sha256": "ab592ffe70c4dd210bc9e4836fe8b227447004e086791de33582f7af836207b1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-31-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-31-fwd/case.json",
+      "sha256": "95ad600bbd8817c7a9596b83d8ab758d74c6e94d9bb70f2368b970c3088d27de",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-4-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-4-adj/case.json",
+      "sha256": "0c66f0be12f3bfe9e0417ed0867445c25e177b3397620f866424b47654e5cecb",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-4-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-4-fwd/case.json",
+      "sha256": "58cf61b219ac4a416ba976dd6479ff50df29aa1545ed06c436015a42aa479280",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-5-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-5-adj/case.json",
+      "sha256": "9e88f688ebedc495e226e28894d4547ca75bab827b073d4a87b089126846ebb1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-5-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-5-fwd/case.json",
+      "sha256": "f1a861b8f607d2a67b0494093fdf4ad3c5d5d2c3105e50ebe839afeb29588a38",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-6-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-6-adj/case.json",
+      "sha256": "183ec6884386e7746d49d5f3eccd1cdff7a83d2ef98842916c1a3522ba1d1b02",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-6-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-6-fwd/case.json",
+      "sha256": "f77344df530bc63d463b993317da0503c775712d98d4563c2ad7566a0fbde80e",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-7-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-7-adj/case.json",
+      "sha256": "c75a5c71c9c66fb55121df816544edffcdb82421ae33eb8cc165f48c00ca6dfd",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-7-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-7-fwd/case.json",
+      "sha256": "a23774e0c5cfabf39e0f73e399bb22fa7788544f9f739ba62340d995ac21d1a7",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-8-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-8-adj/case.json",
+      "sha256": "b3424dc0bc499bd7ee2f854c729e79a66bab46acf0c808dfa059187544eaaac2",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-8-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-8-fwd/case.json",
+      "sha256": "1de43479e43f48049370a3047e20e0adba58cfb6c81577176079268727c73456",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-9-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-9-adj/case.json",
+      "sha256": "2b07488dc28322420f24a010a7f462954c3cef3ae2009e678b0d9851551e5df8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-predicate-9-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-predicate-9-fwd/case.json",
+      "sha256": "25067ad5f0e29e37be371e4af52cec83ea898461d7434ff0552c78f0258a1793",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-1-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-1-0-adj/case.json",
+      "sha256": "f9c4682b9d088cf81d8b596b7d9e988fbbcef0693bb57e42b1d1f9aa22eba9ea",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-1-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-1-0-fwd/case.json",
+      "sha256": "ccee47f475f42d9ceaad444c9e36d01c4d277e499f174b4c732bf014b846b223",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-1-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-1-1-adj/case.json",
+      "sha256": "16a64a5a48a5028ebd101cf75a104d0755a1a9ee6260b509c686c33249ac591c",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-1-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-1-1-fwd/case.json",
+      "sha256": "7b8152363760d24141a9b38de1a2a86ff62dbda461e4b0d33657fca49f8f960b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-1-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-1-2-adj/case.json",
+      "sha256": "336a99b33bab69c2b400b35b76ec33fcb23aad77a1f848d4057ee371272f3fc3",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-1-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-1-2-fwd/case.json",
+      "sha256": "e54f07c90afb442986133d05938f79cfd1f1cf9602e56267ef3638bcb2848e47",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-1-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-1-3-adj/case.json",
+      "sha256": "3a964649bfc0dba73d17a432cb2062147931000c84306d911918f79c1b99beac",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-1-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-1-3-fwd/case.json",
+      "sha256": "c957b05d1ed6a7c574e5a0c8495136a964ac4eb0dd85117cfb9a58d6523d4060",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-0-adj/case.json",
+      "sha256": "4f0e675164a90661a89f3bb4f3d04df41dde33975c19cc13426f3b9fc1c3b722",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-0-fwd/case.json",
+      "sha256": "3d4fa55c3c6f463d9161bc6eb6bcb2e52ad9b3cb1846e63ae67b5da6dfc7f930",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-1-adj/case.json",
+      "sha256": "9de56af263843c56495e3ed82722462acf760647af84f7b44e07e8b34e534d43",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-1-fwd/case.json",
+      "sha256": "900d77901f07a009e9d59ffef2d93377644b1d6162253c7a12351f56ece4d71a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-2-adj/case.json",
+      "sha256": "776a1f56733ba5b0eebad40d60bff95f20898739f67e558e4874333250ca29d0",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-2-fwd/case.json",
+      "sha256": "e62fc58155a9a919b8a1b8282cbd425cef35a3fb641eb79423afbf9f3a7f9e62",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-3-adj/case.json",
+      "sha256": "1b5ba4426648c8208690e592a717639ec9f251be0d8fb81fba446a67422e6bb9",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-3-fwd/case.json",
+      "sha256": "9e8b580f692ebdee1e9167c5377a9cbb4fa328e0825c9a16b3f975b8f72b91b5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-4-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-4-adj/case.json",
+      "sha256": "cb6f484c6fac3ebcce67c05407644fde744fbdf84a493f15ef54e21911156a5b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-4-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-4-fwd/case.json",
+      "sha256": "776150ee4983e19710bdd551f1e32ecc51bb5ade3c8f19a6da837c5309b477ac",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-5-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-5-adj/case.json",
+      "sha256": "36f66259e59782d2f5200707737d59cae4a7fb79f1d09888d9ed37ad70a7b8b4",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-5-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-5-fwd/case.json",
+      "sha256": "6c6944dc37cc7b95e9c56abd1d55c61acd908bf85253eab8af4d3d54fb2d3f23",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-6-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-6-adj/case.json",
+      "sha256": "df3e1828eaf44404b48c57e112541d3579d50f47781282632d8bb0734bf7bb75",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-6-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-6-fwd/case.json",
+      "sha256": "4f4f525ef51ac36f2d7024c9c7214cadd34889e1e54c0bb3817152181565a75b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-7-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-7-adj/case.json",
+      "sha256": "20e5a29b9d1657cbca54be1dba691dc2991dbc7a52151e7071e8f696f1db03b3",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-2-7-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-2-7-fwd/case.json",
+      "sha256": "c341c61c143c576a4f034c1070c281eba2bc690a553c68f0e9ac7b4eddad6363",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-0-adj/case.json",
+      "sha256": "4424828d004c04e364a95eddd4a1b49be0b87c5c4532aa348736e67c48c43af4",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-0-fwd/case.json",
+      "sha256": "534f63df77b1f2f415a415264d4a312086836758ecc4af7d213fa3836fefe044",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-1-adj/case.json",
+      "sha256": "5ce52c2fd531ae6013b95ae90c3e0f1b905aba4e02a443f4a0a9043d92b77b3b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-1-fwd/case.json",
+      "sha256": "125e043d1d75b97f9db0bafecf65b66e75ea75c691a8162bd95eea5b1996c08f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-10-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-10-adj/case.json",
+      "sha256": "aa3431cc9cc9790dde191462c973f67ce14717d966ec30d259b63aa5b01c5c61",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-10-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-10-fwd/case.json",
+      "sha256": "f02b9e51af2a8f55f594fbc74db55830a4cbd77c732fdcdc4beeff22a0b96aa1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-11-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-11-adj/case.json",
+      "sha256": "694ede1a206de02ea07fbad8ada116bee5eee0e11ab762ff760296d6923530c1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-11-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-11-fwd/case.json",
+      "sha256": "c397cee22b3185c1bf92963a6e184157324bc272a26f0c8716a29ef1c2a02e7d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-12-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-12-adj/case.json",
+      "sha256": "9eb6567ec9d346be1cfbb9c0753dae968a733bffc71b8b4c95132bf3b6791da6",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-12-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-12-fwd/case.json",
+      "sha256": "81483660f32f6b63a0e2837eaf9d85d8cb0750b89ad5e912c7e352fcf81ea4fd",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-13-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-13-adj/case.json",
+      "sha256": "c96aee8f4f14c7068ef15e80bed6a001d54d3a5ec5c15e1cff7f73bbd1dd3cde",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-13-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-13-fwd/case.json",
+      "sha256": "8fa9fe9e103d49d0a76076aa007ad1bfdc31fdfd065a5cf99a6a44e5c17dece5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-14-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-14-adj/case.json",
+      "sha256": "d88eb4ea78dbd80e1266b2c9d05e1dc1fa8700e9b3b9e1bd97702ccb42edf847",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-14-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-14-fwd/case.json",
+      "sha256": "19396299b0e3f617d8bc4a00eabe8f33933193e99afea097815867a389647be7",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-15-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-15-adj/case.json",
+      "sha256": "2bb0e9b852ea035015959c3aa7844710540fa47067599d403dd58ba446c0ea9c",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-15-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-15-fwd/case.json",
+      "sha256": "3229998715bb8919b52c211158a61f3226f6c9cc1660b56724c20755a29edbfa",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-2-adj/case.json",
+      "sha256": "5baf3dfca27f18909497e61c3da00f1fb84764dc5e81340893ca6aee5331af51",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-2-fwd/case.json",
+      "sha256": "26bb76d4d0c530be80f10664a92540487cbdb3a12277d5e1c92d6eb6237c3035",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-3-adj/case.json",
+      "sha256": "ec40f44bcfed0d7165a0f4d029d6a59837696ec4e5813beafd5e9ccf26c6b8ac",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-3-fwd/case.json",
+      "sha256": "93bc876f64ed0325a7e111d410c1bec9b7ba849456215268c7758e87a3218e3a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-4-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-4-adj/case.json",
+      "sha256": "f0325a09454655d34c04459eb12ca80d91f60e4ae679cf2e475bba88cca55b01",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-4-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-4-fwd/case.json",
+      "sha256": "c4181ff4b9a65b2291079e0c799df5db218d4d6d80fc6842591175bb88d65a4c",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-5-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-5-adj/case.json",
+      "sha256": "ec0a9a11669ee799469b66f76150613d824f171e1cafe5b64b576ffb0f89acf1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-5-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-5-fwd/case.json",
+      "sha256": "2f9330997913e65c2f2d82e0d5d5fe1494d727d6950f34bcb1df35fc2f50619d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-6-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-6-adj/case.json",
+      "sha256": "a2a91f8a295c9661c29bf964e4d17e3d5098045cd0aaf1972375a87ac2e76ef8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-6-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-6-fwd/case.json",
+      "sha256": "032f94cd0d4e2baf76f6a4f31438bc80f0986ca175e35fabff75bd0c84d74852",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-7-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-7-adj/case.json",
+      "sha256": "ce1e17cfeda6ee61331b2acccd269894aa19ed736738b826dbcad20bf4ac34aa",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-7-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-7-fwd/case.json",
+      "sha256": "b764019e5ea4562c5ffdbb4d9b6399b9a99d90b2e746d207f8d6cab7cb7d6f84",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-8-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-8-adj/case.json",
+      "sha256": "8159ca0726d264f6b2da1beb921da01a6eea7022398547fb51af6fa503385d0f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-8-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-8-fwd/case.json",
+      "sha256": "0a31218880470145c413050a8c99b277788809c08bbe1f9d9cf6fc60f1beb74d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-9-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-9-adj/case.json",
+      "sha256": "3c9fa5da57a4c89ad302f5c7475a694503455b6745bc5284023c366166ee4f68",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-width-3-9-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-width-3-9-fwd/case.json",
+      "sha256": "30398c5b5d277552fa99e8654949b5584d0331a941ad383430b0b0363ddd85f6",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-0-adj/case.json",
+      "sha256": "a8f00ad5ff2d5a0f63102fe5c8e10b3a6c80dbf55605d7297aa8d41686923552",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-0-fwd/case.json",
+      "sha256": "148278becd82bd24f29c1407a3300b2d8fa3085cab8631f24c902298e39b239a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-1-adj/case.json",
+      "sha256": "78ab8b79bbeb0982e5db091ba3538bc49197f8f09ed2184decb16694c3f2a5bd",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-1-fwd/case.json",
+      "sha256": "b1c3e0e57ad4e847276ffedff0337225e05f5973a91d5d089e67108231d08939",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-2-adj/case.json",
+      "sha256": "f1245bb39c2f50630bcba85569ba02ad10dc55d796a97d57028bcf09e6af4a66",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-2-fwd/case.json",
+      "sha256": "12d6558f0fb12e67d104ecdf27df97d04d61d7866bc7df546e2eb53199e7076a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-3-adj/case.json",
+      "sha256": "27410ffaf5210aad61ceb65e8daf59d82f2ba15a13e41dcf73b578cc8b2c2096",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-3-fwd/case.json",
+      "sha256": "830aa0b0622f124a1128356c9aecfa3192e0e990e299b75e9ca747249fd519e0",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-4-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-4-adj/case.json",
+      "sha256": "3d81a6b245cf5bd01b6016bf03221052410f4e6ffff24f01609a6072c16006e8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-4-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-4-fwd/case.json",
+      "sha256": "20d965bc2fa511f9a8e21ec96be0776ef058ba1d5642ba09a91d7d1eb2cf4e88",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-5-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-5-adj/case.json",
+      "sha256": "58e0c50a435e15ee6768e5ca47442c5e31c30c9a8c4933d623fb5b235be599b2",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-5-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-5-fwd/case.json",
+      "sha256": "ea7953cb94db9ffb9c3194ee232b9e02904326a8740f09577728cc1367a764e5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-6-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-6-adj/case.json",
+      "sha256": "7ce76001e17838d3055ebe38fafd971722abf386cfebb7b3fe4d799c085e2b9f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-6-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-6-fwd/case.json",
+      "sha256": "5772edcf63e9f3351aa1fb362ba94a24b419d5ed001578d45502ca60ea5e5f5a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-7-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-7-adj/case.json",
+      "sha256": "df462e765658bfcdd043f705a9d4078438878c6cc1a2b3b2ce4eea342057a012",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-wire1-target-7-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-wire1-target-7-fwd/case.json",
+      "sha256": "7532cb984c360b851148de366036586f29ea8a91c606b0752563257e073e42ff",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-0-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-0-adj/case.json",
+      "sha256": "561f5d360773c1da0e02bbefe3f6cf78696a4857faa4a3c584f704a0531c6a24",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-0-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-0-fwd/case.json",
+      "sha256": "c0e2d91f1ddc0f6388d1b4885e9e889ca58cc939c87d3c90e1675c8de73f8086",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-1-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-1-adj/case.json",
+      "sha256": "a70442a64ad25c8476dc78e51419ca2ba2c52962e9a24864375b1736e4720621",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-1-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-1-fwd/case.json",
+      "sha256": "b416bb3f500583efb397fd2e8eebaf7a073ed5ca928cf6bdeedad585f1b11d96",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-10-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-10-adj/case.json",
+      "sha256": "33a6ad007fd9303537e2ff16b58bf87245b9efc9c40491bbbdfa5a36cfc9d8c9",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-10-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-10-fwd/case.json",
+      "sha256": "0ffe88439487e59797052aec6a732fd69f5368aab8852eb345ca970ef3ee0bfa",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-11-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-11-adj/case.json",
+      "sha256": "f2e716a1dc23889c60e39f7f5e72f57e7305dbfec05f06a9be74022b056a3f5b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-11-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-11-fwd/case.json",
+      "sha256": "27d66a0456971b738f31095ac629669f1c7d224ed4fe8e6eac99ba43f49f9c95",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-12-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-12-adj/case.json",
+      "sha256": "a02969f1b7e25ec9ca2b159d45e231aecd243bdbe43396b67d7715ece8fa0865",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-12-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-12-fwd/case.json",
+      "sha256": "ea25753f7cf2fbcd870b3fa32aac7fd25589fd75ba1a9b9b5bbe9c3a18c16aed",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-13-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-13-adj/case.json",
+      "sha256": "83e6b36d9d254de3894a15f6f3164f6894d032382bd77a5b3fb27aa91f995e07",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-13-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-13-fwd/case.json",
+      "sha256": "ed37b986b51cec8746aa769ea7ac63cabe6b8baf910b4d30f4df33104a733fa5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-14-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-14-adj/case.json",
+      "sha256": "d215a6812f5b94f4f7f51a8e04ceb2de665aa10d482e354c49f1cd491fba8d23",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-14-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-14-fwd/case.json",
+      "sha256": "07c8134082ef7adb9c045c3830e3a49b1e49038c327272b48bc2b3a19e2005c2",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-15-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-15-adj/case.json",
+      "sha256": "fad7499b2d0e0f7e71c019e79de603ab15027023b455d998008dbfc737e945b9",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-15-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-15-fwd/case.json",
+      "sha256": "54a6b40477ebce90cc88eedf68f7bdc550ae822a10b2050e1cdd84e9369f320e",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-2-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-2-adj/case.json",
+      "sha256": "87ce4d38d20e65039d0daea2a2c97223a36ad10a9dd5f7ce017f64a1fb4bf03c",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-2-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-2-fwd/case.json",
+      "sha256": "1da7d0688111c50f1ffde9df06c3f627bca6390eaf40ed8cf0d0f8fd1771307d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-3-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-3-adj/case.json",
+      "sha256": "b059701b8bf30fbdab4bf1fee5de7df7f1e05b5d70ac738d98ea2d4ac04287fa",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-3-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-3-fwd/case.json",
+      "sha256": "2b793f7a46a5ea5219df028f9178183a61e14c7bedf856fa9bb8d19fe1978746",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-4-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-4-adj/case.json",
+      "sha256": "aa383857488083ca0fc8b77062320e69883af0a1e0178c8f4c3aa88e80393ec0",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-4-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-4-fwd/case.json",
+      "sha256": "01d5a774a88feddab78e4c02104e385c5c9bc0decb251142a7203bdb585bd316",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-5-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-5-adj/case.json",
+      "sha256": "92f916c0db793e674aca5209323a407aae365ddff617f8f57f91d6f8d33f4807",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-5-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-5-fwd/case.json",
+      "sha256": "447180812322a492bd6c997b16a5315eea450842bdb39c11ef6ac0bab339d4c6",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-6-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-6-adj/case.json",
+      "sha256": "9ebd6e4dba45476dc72341b193c810ed87d0f74237063a7d34e09978bb3a6936",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-6-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-6-fwd/case.json",
+      "sha256": "f0418c0c04dfba2c95488666d79d08f33c5bdc059ac75bd399da359d8563ae98",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-7-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-7-adj/case.json",
+      "sha256": "6c21c82697165331ab66a0d56ea7d3cc605a8060d706d491a67c2339edf28009",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-7-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-7-fwd/case.json",
+      "sha256": "c1bc6b692dff122d23f66be05d25742c784bdaa623e5963c4fa768f569c8b710",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-8-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-8-adj/case.json",
+      "sha256": "ceea5227c78397e510380b9eda246943aa2371d1f4d839b772f4e742e96ad6c8",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-8-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-8-fwd/case.json",
+      "sha256": "8c04850154a258d4e24703224c262849bb9c19c2bd116735025c1d124342c7e3",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-9-adj",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-9-adj/case.json",
+      "sha256": "10f96d5d7732c3efb815ff896080e48235b3a40b5b19597f44b21148b28adde0",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "C-k93-witness-9-fwd",
+      "suite": "C",
+      "source": "conformance/cases/C/C-k93-witness-9-fwd/case.json",
+      "sha256": "7de9f892af99fe75c8b43d0a8cad376bad8544213a19b06535a260084cccdaef",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
       "id": "C-lifted-perm-call",
       "suite": "C",
       "source": "conformance/cases/C/C-lifted-perm-call/case.json",
@@ -4581,6 +7683,314 @@
       "suite": "D",
       "source": "conformance/cases/D/D-k84-missing-expected/case.json",
       "sha256": "5633fb7e49c317b44213ff7f93a66b31d0d9c52fc504107e10351483cb754d33",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-also-ranged",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-also-ranged/case.json",
+      "sha256": "54cd1536fdfe1ab1920e2a2fc41059f34a939ce338894c8e88c7a773017cb7b1",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-controlled-dirty",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-controlled-dirty/case.json",
+      "sha256": "e3c6f6923e3ff5abdff2e36d652432cff6ce1097100533d2b9dcd1690790fd7b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-duplicate-bundle",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-duplicate-bundle/case.json",
+      "sha256": "5d8f7a985ef5e2df5ab5fd2e6843397d037b5c416d724e602a668429d9619cea",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-duplicate-cell",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-duplicate-cell/case.json",
+      "sha256": "07825e0ebdc7bf702f8bb186b059e414a22cc6a96d46fb1904b7f0b9a6918345",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-duplicate-image",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-duplicate-image/case.json",
+      "sha256": "565d6a03dbdd09423299b5aa8525efcd8b12034b89604d71bf6f9a478dff31d3",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-duplicate-region",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-duplicate-region/case.json",
+      "sha256": "32d44e9032b7864a40f1b985ec53083f195fd2a49e6760528a4fc7178ed0bdd5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-external-reference",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-external-reference/case.json",
+      "sha256": "1a31bc3ba4eeab7354308131e95069d0676283c05333c4a641ec4da338a4fe48",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-full-d-x",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-full-d-x/case.json",
+      "sha256": "12d8500ff26975c934990b2ae65fcfe7280b7d868ca45b5b98287038afd38d86",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-hex-text-hash",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-hex-text-hash/case.json",
+      "sha256": "8f4170c469bbe428ca8abe67940d3fd30051ca9bfd3322bcd4fd077ce6601553",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-image-0102",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-image-0102/case.json",
+      "sha256": "f4331c69acf0fe95dea5bf33e7f8899fea7363087cdf39dcd08b125ba9a11191",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-image-0201",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-image-0201/case.json",
+      "sha256": "9e267db1406b3c8f4982a6dad9cd0a7086db486b9ea4a75948f7f6afb2e0419f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-long-image",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-long-image/case.json",
+      "sha256": "d451bfcd3c0112d5e5971248771404327b451f9479818bda27566fd38d53762f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-mut-region",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-mut-region/case.json",
+      "sha256": "9366ab4dec4d73e4200939728d5c02ff1410f09048e9c918a9dc4047acf7bc6d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-nonzero-padding",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-nonzero-padding/case.json",
+      "sha256": "e47967cbd8a3e1e434c8e5527e41c935aee0087f14e44a6e962e9423cbc84bbc",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-omit-a",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-omit-a/case.json",
+      "sha256": "e1befb040252d4d174189f2bcebafb14ec1f7afc208baca7720119f60b0dc425",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-omit-f",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-omit-f/case.json",
+      "sha256": "2e054875dcaa3e87e0c5c72a4125559c69922c8f5d2b3cc7f379f187e7a3afe6",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-omit-t",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-omit-t/case.json",
+      "sha256": "5a5e019f6402aa3277d19b159ac83bbf563a76079040fb16b9bdef796afa11d5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-packing",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-packing/case.json",
+      "sha256": "995f02b91c99cc8f303e7f0bf23b506625326a6a19155e3ab723b4d1dbab7c8d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-report-order",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-report-order/case.json",
+      "sha256": "0ecddb1855a7187b1d422cdd94da742336fe24ea97aca59399796b4b0729e84f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-request-evidence",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-request-evidence/case.json",
+      "sha256": "5b8bfb938e8773a87e05e017cdd4e8cd3965fe1e6de7049be80cc47017f1571d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-request-proof_relative_to_image",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-request-proof_relative_to_image/case.json",
+      "sha256": "f2b1c3155bf9d91cdaaaec33ddd5e1c7591ae83d55000597e3abc328a156e12d",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-sampled-full-d",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-sampled-full-d/case.json",
+      "sha256": "3a2a7a34098cd04f2cba63910c1b736f4fba098ccd597d7eb2c8fcae73cd6806",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-short-image",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-short-image/case.json",
+      "sha256": "de49e6cf562555d50607a8345a2703a2d0c60471f02db9600fc1d33eabe74d99",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-stale-hash",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-stale-hash/case.json",
+      "sha256": "6c246dde0a3e660d549fe4a56e602aa34d73e7b4ca840efdf919d696e67af1a5",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-swapped-hash",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-swapped-hash/case.json",
+      "sha256": "64e72d4ac6c155865f9bf3121f622bc079a6d542a7a47c1172ec9cb2aff1c35b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-uppercase",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-uppercase/case.json",
+      "sha256": "ba97399df9ca2c76d9bc545ca448973adfae291fb48ba6dbfd30886646dea942",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-wrong-a",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-wrong-a/case.json",
+      "sha256": "d3704f82ac35baf1c3387c8a15dec8d898aec5eeac5ac6ace0b839af3f164327",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "D-k85-wrong-w",
+      "suite": "D",
+      "source": "conformance/cases/D/D-k85-wrong-w/case.json",
+      "sha256": "8bfb4c3ff89150f2fe8980526a8a9613ead70e710a3468c455f2d80c9f8a603f",
       "coverage": "not-exercised-executor-or-checker-vector",
       "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
       "beads": [
@@ -5367,6 +8777,105 @@
       "suite": "F",
       "source": "conformance/cases/F/F-k91-wrong-partition-certificate/case.json",
       "sha256": "bcec665cc7ec269b3ba072bb73c4b67e3a016387d429a06d41156cd24933e78a",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-k93-causal-different-controls",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k93-causal-different-controls/case.json",
+      "sha256": "0951b61dfa39e20caea2faa61176b6e9073a740e79d5d49317561400b6d65285",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-k93-causal-same-controls",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k93-causal-same-controls/case.json",
+      "sha256": "6141e37edc44465f77f0afb6f357e5e0d4e716d4d05816f232623e04163bee96",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-k93-dead-target",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k93-dead-target/case.json",
+      "sha256": "d68a297687c1c0b3fc2eaaa354b4110e457d72c80942e7cf73860328fec02ca6",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-k93-multiwire-target",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k93-multiwire-target/case.json",
+      "sha256": "586738743c76e9350c5dc86a3625a3af08ba76f6f03d313826139edc4780f6c7",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-k93-repeated-bundle",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k93-repeated-bundle/case.json",
+      "sha256": "03dc8a1c16bf4d8eeb1b554888f0cda52ea20422bc822c8691d9e1a3c436e93b",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-k93-repeated-scalar",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k93-repeated-scalar/case.json",
+      "sha256": "fdf6dc5e599911836b4b3a8e7102c5b3a9a761418a5d45cdbfd8def3fce3a30f",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-k93-scalar-target-overlap",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k93-scalar-target-overlap/case.json",
+      "sha256": "45a87532007612eddcfc8e32d19e384358e62b556ae58742289890cabb09a763",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-k93-target-out-of-range",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k93-target-out-of-range/case.json",
+      "sha256": "8a212674f2456f7f46afb0543b5d34632a684b81c5ba82ae4953197c657ee69c",
+      "coverage": "not-exercised-executor-or-checker-vector",
+      "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "id": "F-k93-target-overlap",
+      "suite": "F",
+      "source": "conformance/cases/F/F-k93-target-overlap/case.json",
+      "sha256": "1b7131b2d3f34add678bc3ba939eb8e7268e72f2110cbc0e6ea016439e52e4e6",
       "coverage": "not-exercised-executor-or-checker-vector",
       "reason": "No executor/checker CLI is claimed by this scheduler. Full source expansion conformance remains open.",
       "beads": [
@@ -6381,6 +9890,24 @@
       "remaining": "No independent schedule or claim replay is asserted."
     },
     {
+      "path": "conformance/fixtures/accepted-k85-09/k85.json",
+      "sha256": "d77e24500fecafc27e6046192e3fdb25bdbc0cb80f714528cbe2e6fd4b668cf0",
+      "vectors": 30,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
+      "path": "conformance/fixtures/accepted-k85-09/restricted-map.json",
+      "sha256": "d0fe8579f0b1c7fc8c90e4f183ce01c1c34a2170fb1e64be532a41c3b8d53ddf",
+      "vectors": 0,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
+    },
+    {
       "path": "conformance/fixtures/accepted-k91-09/k91.json",
       "sha256": "72b68db2dfbb041fc259f95d3669ff29438bfec5cdcb356fc4b1c713b7dd53fa",
       "vectors": 0,
@@ -6391,7 +9918,16 @@
       "test": "accepted_contracts",
       "metadata_cases": 9,
       "source_partitions": 2,
-      "remaining": "Original schedules are not replayed: source requests bind the local exact target. Loader negotiation remains bennett-sched-xzv / upstream b-isa-spec-b3ui."
+      "remaining": "Original schedules are not replayed: source requests bind the local exact target. Published sched/0.9 feature negotiation is covered separately by ffi::feature_query_is_immutable_concurrent_and_rejects_nulls_without_writes and c_link::c11_alias_consumer_uses_the_additive_setter_and_keeps_partitions."
+    },
+    {
+      "path": "conformance/fixtures/accepted-k93-09/k93.json",
+      "sha256": "ba3c4cabe8f3590a0644a5eadaa8ddc707f6c530bee226ed983e798ae6bfbf34",
+      "vectors": 11,
+      "coverage": "not-exercised",
+      "beads": [
+        "bennett-sched-ark"
+      ]
     }
   ],
   "inline_witnesses": [
@@ -6422,5 +9958,5 @@
     "status": "active-differential-test",
     "meaning": "The named default-suite test checks emitted schedule/certificate metadata admission and rejects an absent source point against the pinned reference. This mapping is not certificate-claim replay or scheduled execution."
   },
-  "recorded_at_utc": "2026-11-08T11:50:04Z"
+  "recorded_at_utc": "2026-11-11T12:35:14Z"
 }

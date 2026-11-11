@@ -36,6 +36,7 @@ struct Search {
     epsilon_divisor: u64,
     required_divisor: u64,
     conflict_prefix: Option<usize>,
+    heterogeneous_interfaces: bool,
 }
 impl Search {
     fn choose(&mut self, count: usize) -> Result<usize> {
@@ -274,7 +275,9 @@ impl Allocator<'_> {
         // Topology placements bind each bit's class independently (§9.4).
         // Without placements keep the published homogeneous default; explicit
         // class-vector launch bindings require their own request contract.
-        let parts = if self.target.value.get("topology").is_some() {
+        let parts = if self.target.value.get("topology").is_some()
+            && self.search.heterogeneous_interfaces
+        {
             slot.wires
                 .iter()
                 .enumerate()
@@ -407,6 +410,23 @@ pub fn run(request: &Request) -> Result<Response> {
                     unsupported = Some(error.clone());
                 }
                 if !search.advance() {
+                    // Preserve the established homogeneous preference, then
+                    // search all per-bit class assignments permitted by K88.
+                    if !search.heterogeneous_interfaces
+                        && request
+                            .target
+                            .as_ref()
+                            .expect("prepared target")
+                            .value
+                            .get("topology")
+                            .is_some()
+                    {
+                        search = Search {
+                            heterogeneous_interfaces: true,
+                            ..Search::default()
+                        };
+                        continue;
+                    }
                     return Err(unsupported.unwrap_or(error));
                 }
                 search.epsilon_divisor = 1;

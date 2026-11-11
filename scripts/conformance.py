@@ -128,7 +128,7 @@ def main():
         elif path.name=="k84.json":
             record.update(coverage="reference-metadata-admission",test="accepted_contracts::published_diagnostic_witnesses_preserve_verdicts_without_requiring_local_code_spelling",admitted=1,rejected=2,remaining="No independent schedule or claim replay is asserted.")
         elif path.name=="k91.json":
-            record.update(coverage="reference-metadata-and-source-scheduling",test="accepted_contracts",metadata_cases=9,source_partitions=2,remaining="Original schedules are not replayed: source requests bind the local exact target. Loader negotiation remains bennett-sched-xzv / upstream b-isa-spec-b3ui.")
+            record.update(coverage="reference-metadata-and-source-scheduling",test="accepted_contracts",metadata_cases=9,source_partitions=2,remaining="Original schedules are not replayed: source requests bind the local exact target. Published sched/0.9 feature negotiation is covered separately by ffi::feature_query_is_immutable_concurrent_and_rejects_nulls_without_writes and c_link::c11_alias_consumer_uses_the_additive_setter_and_keeps_partitions.")
         elif path.name=="k81.json":
             record.update(coverage="partial-equivalent-witness",test="cleanup::intrinsic_boundaries_and_joint_call_inverses_have_exactly_one_owner",remaining="General mutable-interface/borrowed pre-call history replay and direct complete manifest replay; allocated copy history and fresh call spaces have focused coverage.")
         portable.append(record)

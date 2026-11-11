@@ -89,3 +89,37 @@ fn homogeneous_slots_use_class_and_insufficient_total_capacity_emits_no_document
         }
     }
 }
+
+#[test]
+fn heterogeneous_gate_binding_is_tried_after_feasible_homogeneous_allocations_fail() {
+    let bytes = common::action(
+        "perm_action",
+        "cross_class",
+        json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[2],"in":[],"mem":[],"args":[],"bounds":[]}),
+        "perm_action @cross_class (t:wire[2] mut) () () () ()",
+        "cx t[0] t[1]",
+    );
+    let object = Object::parse(&bytes).unwrap();
+    let mut target: Value =
+        serde_json::from_slice(&std::fs::read("data/k83-target.json").unwrap()).unwrap();
+    target["classes"] = json!({"A":{"capacity":2,"qubit_second":1,"dirty_rate":1},"B":{"capacity":2,"qubit_second":1,"dirty_rate":1}});
+    target["topology"] = json!({"vertices":[{"class":"A"},{"class":"A"},{"class":"B"},{"class":"B"}],"edges":[[0,2]]});
+    target["gates"] = json!([{"op":"cx","classes":["A","B"],"controls":{"min":1,"max":1},"epsilon":0,"cost":{"time":1}}]);
+    let mut r = Request::default();
+    r.set_object(&bytes).unwrap();
+    r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+    let root = object.closure_hash("cross_class").unwrap();
+    r.set_region(root, "forward", 0).unwrap();
+    r.set_params(b"[]").unwrap();
+    r.budget = Some([0; 4]);
+    r.set_accuracy("0").unwrap();
+    let response = r.schedule().unwrap();
+    assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+    let schedule = canonical::require_jcs(&response.schedule).unwrap();
+    assert_eq!(schedule["interface_vertices"], json!([[0, 2]]));
+    let certificate = canonical::require_jcs(&response.certificate).unwrap();
+    assert_eq!(
+        certificate["regions"][root]["frame"]["slots"][0]["fragments"],
+        json!([{"offset":0,"width":1,"class":"A"},{"offset":1,"width":1,"class":"B"}])
+    );
+}

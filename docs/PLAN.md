@@ -104,11 +104,11 @@ peaks and child scheme ancilla accounting. The general algorithms above remain
 required. Structural and numerical certificate entries are producer claims;
 independent checker replay is not claimed.
 
-`bennett-sched-qnl` tracks the remaining conformance. The inventory has 559 A–H
+`bennett-sched-qnl` tracks the remaining conformance. The inventory has 878 A–H
 cases: 18 direct fixture mappings, 17 equivalent witness mappings, 20 partial ref
 families, 8 explicitly rebound K83 schedule fixtures, 5 other scheduler vectors,
-and 491 executor/checker vectors not replayed
-by this scheduler. Eight portable manifests are recorded (K84 metadata admission and K91 metadata/source scheduling are exercised): K79's 12 source address
+and 810 executor/checker vectors not replayed
+by this scheduler. Eleven portable manifests are recorded (K84 metadata admission and K91 metadata/source scheduling are exercised): K79's 12 source address
 cases (4 accepted, 8 rejected) and all 128 forward/inverse tuples, K82's 16 binding
 cases/54 interfaces/86 digests pass; K80 source trace fields and all 80 published basis tuples pass after version rebinding; K78/K81 direct manifest replay remains open. Original 0.8 source
 bodies in K79 are re-enveloped and rehashed for 0.9 without changing instructions.
@@ -527,7 +527,7 @@ mechanics and contract/reader blockers; this is not complete conformance.
 | K88 | Per-wire class vectors and canonical frame slot fragments without splitting source slots | Topology-bound per-wire allocation and canonical merged slot fragments inherited by callees pass slot_fragments; explicit no-topology class bindings remain 4tj |
 | K89 | Selected maximal borrow_frame relations and workspace entry components/products | Finite selected-frame claims, K76/K78 entry constants, full B fibers and visit-ordered entry_products pass seven semantic tests; pinned reader regression is red; remaining mechanics vt8.2 |
 | K90 | Exclusive all-context-valid frame or canonical complete frame_contexts | Implemented complete canonical frame contexts with per-invocation workspace and slots; A/B and B2/B3 histories pass (lzv closed) |
-| K91 | token_aliases equality partitions, captured source identities and negotiated /1 estimation ABI | Setter, canonical partitions, global identities and all producer bindings implemented; nine published fixture admission polarities and both source partitions pass. Negotiation remains xzv / upstream b-isa-spec-b3ui |
+| K91 | token_aliases equality partitions, captured source identities and negotiated /1 estimation ABI | Setter, canonical partitions, global identities and all producer bindings implemented; nine published fixture admission polarities and both source partitions pass. Published sched/0.9 token_aliases/1 negotiation is implemented and tested through Rust and C |
 | K92 | Complete owner-local qinplace pair coverage over all reached contexts | Owner-local transitive entries, forwarded budgets, adjoints and zero-trip static inventory implemented; static theorems preserve root bindings and alias consistency. Pair coverage 3 and qinplace 10 pass; scaling/library proof remains a0v |
 | K93 | Flatten ordered bundle MCX controls, check distinct wires and scalar target | Written bundle order, full control flattening, scalar-target preflight, distinctness and literal k+c cost are tested across all 64 basis tuples (mcx_bundles) |
 
@@ -591,8 +591,11 @@ schema requires it. K83 fixture tests separately record missing token_aliases
 and expansion bindings, then explicitly rebind their portable templates.
 Inverse-pair entries preserve their primary/argument partition and exact nested
 token tuples; increasing only the primary budget cannot retain a shared alias.
-The draft's advisor R21 note leaves feature-query negotiation pending
-b-isa-spec-b3ui and forbids invented protocols, so xzv is not closed.
+The accepted K91 per-role query is now published. The scheduler exports
+`bennett_sched_features`, with immutable JCS storage, concurrent byte identity
+and atomic NULL-output errors. Rust FFI and linked C11 alias consumers verify
+negotiation before alias-aware scheduling. This resolves the xzv query gap;
+launch and mixed-container providers retain their separate obligations.
 
 The 2026-11-03 batch review adds fdu (P0 source-adjoint ordinal formation), jez
 (P1 class search scaling) and b08 (P1 overstated E-vector evidence). These are

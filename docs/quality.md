@@ -1,7 +1,7 @@
 # Scheduler quality evidence
 
 Evidence for the current additions uses the ISA revision in `gate.toml`
-(`62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc`). Older measurements below retain
+(`dbc884525331fe5c5748c50662ae401ac5e7c79b`). Older measurements below retain
 their explicitly named prior revisions. This is a remediation record,
 not a claim that all published capabilities or quality targets are complete.
 
@@ -26,7 +26,8 @@ Inherited review work:
 - **bennett-sched-nsy**: inventory regenerated from the gate pin; its complete
   case and manifest hash test covers 557 cases and eight manifests.
 - **bennett-sched-xzv**: setter/identity tests and actual C linkage pass.
-  Section 10.1 still needs the precise negotiation ABI (symbol/signature/result).
+  The accepted per-role K91 query is now implemented; Rust FFI and linked C11
+  consumers verify the exact manifest, lifetime and atomic NULL-output behavior.
 - **bennett-sched-r28**: section 3.7 permits classical pseudo-location reads,
   but K25 omits their physical allocation, initialization and ordinal ordering.
 - **bennett-sched-kbc**: straight paths no longer retain one proof state per
@@ -229,10 +230,49 @@ The current branch is **not green**: the unchanged independent metadata
 admission test for selected K89 claims rejects `workspace` in the pinned
 reference reader. This blocker is bennett-sched-vt8.4; the upstream request is
 queued under COMMON14. Fixed-image production (vt8.3), general native-model
-verification (vt8.1), remaining borrow mechanics (vt8.2), ABI negotiation (xzv),
+verification (vt8.1), remaining borrow mechanics (vt8.2),
 large pair proofs (a0v), root class bindings (4tj), owner borrowing (qm2) and
-classical pseudo-locations (r28) remain required. No full gate, complete
-conformance or independent K89 checker success is claimed.
+classical pseudo-locations (r28) remain required. No complete conformance or independent K89 checker success is claimed.
+The resumed fast-gate evidence is recorded below.
+
+## Resumed published-contract adoption
+
+The branch merged current origin/main and repinned gate.toml and
+SPEC_VERSIONS.toml to published ISA dbc8845. Pin verification built its
+reference binary and verified the committed spec digest. The vendored catalog
+and the published catalog both have raw-byte SHA-256
+`52dbc3f8f0c91d587fd933a43080385fd5284abcfec0ce84788229fcb15c53d8`.
+The inventory now records 878 cases and eleven portable manifests; it remains
+incomplete, including the newly published K85/K86/K93 manifests.
+
+K91's previously missing query contract is now published and implemented.
+The added Rust query regression failed with the missing export before the
+implementation; it passes for exact JCS bytes, stable immutable storage,
+concurrent queries, no request dependency and atomic NULL-output errors.
+The linked C alias consumer queries before scheduling both partitions and
+checks manifest lifetime after request destruction. Focused ffi (4), c_link
+(2) and token_aliases (11) tests pass at the new pin.
+
+The merged-base fast tier ran: 246 integration tests passed, two failed and
+ten pre-existing slow tests remained ignored in the default tier. K89 failed
+on the published reader's unknown `workspace` field. K88's unchanged class
+search regression exposed an unintended change from homogeneous to mixed
+placement. The scheduler now searches homogeneous assignments first and
+falls back to complete per-bit assignments; all eight review regressions and
+three slot-fragment tests pass, including a mixed-class native gate with
+adequate capacity for either homogeneous allocation. That added fixture first
+used an incorrect zero-control range for CX; it was corrected to one control
+before interpreting its result. No existing test was changed or weakened.
+
+The unchanged K89 regression also fails at the new published pin on the same
+unknown-field diagnostic. This is a reader interoperability blocker under
+vt8.4, not permission to omit the accepted field or claim independent replay.
+vt8.1–vt8.3 and the other recorded producer/scaling obligations remain required.
+
+The quality baseline is explicitly remeasured for the new query and complete
+placement fallback: engine complexity mass 329 to 336; ffi mass 35 to 37.
+Measurement and regression rules are unchanged. No test or quality check is
+removed; all other per-file complexity allowances remain unchanged.
 
 <!-- quality-baseline -->
 ```json
@@ -250,11 +290,11 @@ conformance or independent K89 checker success is claimed.
     "src/cleanup/raw.rs": 51,
     "src/cleanup/replay.rs": 274,
     "src/decimal.rs": 57,
-    "src/engine.rs": 329,
+    "src/engine.rs": 336,
     "src/engine/error_bounds.rs": 21,
     "src/expansion.rs": 930,
     "src/expansion_env.rs": 0,
-    "src/ffi.rs": 35,
+    "src/ffi.rs": 37,
     "src/layout.rs": 77,
     "src/lib.rs": 0,
     "src/lproc.rs": 219,
@@ -282,7 +322,7 @@ conformance or independent K89 checker success is claimed.
     "src/token_aliases.rs": 28
   },
   "function_lengths": {
-    "count": 445,
+    "count": 446,
     "maximum": 298,
     "over_100": 43,
     "over_30": 145,
