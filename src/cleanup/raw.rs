@@ -122,7 +122,9 @@ fn invert_scope(trace: &mut Trace, floor: usize) {
         }
     }
     for proof in &mut trace.borrow_proofs {
-        proof.adjoint = !proof.adjoint;
+        if let crate::borrow::Evidence::Translation { adjoint, .. } = &mut proof.evidence {
+            *adjoint = !*adjoint;
+        }
     }
 }
 pub(super) fn replace(

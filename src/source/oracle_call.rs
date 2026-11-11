@@ -250,23 +250,28 @@ impl Builder<'_> {
         }
         for mut proof in child.borrow_proofs {
             proof.owner += base;
-            for field in ["X", "B"] {
-                for w in proof.witness[field]
-                    .as_array_mut()
-                    .expect("translation wire set")
-                {
-                    *w = json!(wire(w.as_str().expect("translation wire")));
+            if let crate::borrow::Evidence::Translation { witness, .. } = &mut proof.evidence {
+                for field in ["X", "B"] {
+                    for w in witness[field].as_array_mut().expect("translation wire set") {
+                        *w = json!(wire(w.as_str().expect("translation wire")));
+                    }
                 }
             }
             self.trace.borrow_proofs.push(proof);
         }
         for mut proof in child.qinplaces {
             proof.owner += base;
-            proof.target_id = wire(&proof.target_id);
-            proof.fault_id = wire(&proof.fault_id);
-            for wires in [&mut proof.target, &mut proof.inputs, &mut proof.controls] {
-                for w in wires {
-                    *w = wire(w);
+            if let Some(execution) = &mut proof.execution {
+                execution.target_id = wire(&execution.target_id);
+                execution.fault_id = wire(&execution.fault_id);
+                for wires in [
+                    &mut execution.target,
+                    &mut execution.inputs,
+                    &mut execution.controls,
+                ] {
+                    for w in wires {
+                        *w = wire(w);
+                    }
                 }
             }
             self.trace.qinplaces.push(proof);

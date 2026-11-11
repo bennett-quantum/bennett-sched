@@ -15,6 +15,9 @@ typedef enum {
 typedef struct bennett_sched_request_t bennett_sched_request_t;
 typedef struct bennett_sched_response_t bennett_sched_response_t;
 typedef enum { BENNETT_SCHED_OK, BENNETT_SCHED_INFEASIBLE, BENNETT_SCHED_UNSUPPORTED } bennett_sched_outcome;
+/* K91: immutable provider-owned JCS bytes, valid until provider unload.
+ * Either NULL output returns E_ARG without writing either output. */
+bennett_status bennett_sched_features(const uint8_t **jcs_out, size_t *len_out);
 bennett_status bennett_sched_request_new(bennett_sched_request_t **out);
 bennett_status bennett_sched_request_set_object(bennett_sched_request_t *, const uint8_t *, size_t);
 bennett_status bennett_sched_request_set_target(bennett_sched_request_t *, const uint8_t *, size_t);

@@ -1,49 +1,6 @@
 //! §4.5's literal sequence, with the K4 obligation discharged before emission.
 use super::*;
 impl Builder<'_> {
-    fn bind_qinplace_invocation(
-        &self,
-        g: &Function,
-        args: &[String],
-        actuals: &[String],
-        env: &Env,
-    ) -> Result<([u64; 4], Value, Vec<u64>)> {
-        let Some(Binding::Value {
-            isa_type, value, ..
-        }) = env.get(&args[2])
-        else {
-            return Err(Error::arg("qinplace requires a token"));
-        };
-        if isa_type != &json!("token") {
-            return Err(Error::arg("qinplace requires a token"));
-        }
-        let budget: [u64; 4] = crate::schedule::array(value)?
-            .iter()
-            .map(crate::schedule::uint)
-            .collect::<Result<Vec<_>>>()?
-            .try_into()
-            .map_err(|_| Error::arg("invalid qinplace token"))?;
-        self.object.validate_budget(budget)?;
-        let mut token_ids = vec![crate::token_aliases::binding_identity(&env[&args[2]])?];
-        let mut params = Vec::new();
-        for (p, a) in g.groups[4].iter().zip(actuals) {
-            let Some(Binding::Value {
-                isa_type, value, ..
-            }) = env.get(a)
-            else {
-                return Err(Error::arg("qinplace classical argument is not a value"));
-            };
-            if isa_type != &json!(p.ty) {
-                return Err(Error::arg("qinplace classical type mismatch"));
-            }
-            params.push(value.clone());
-            if p.ty == "token" {
-                token_ids.push(crate::token_aliases::binding_identity(&env[a])?);
-            }
-        }
-        let params = json!(params);
-        Ok((budget, params, token_ids))
-    }
     #[allow(clippy::too_many_arguments)]
     pub(super) fn qinplace(
         &mut self,
@@ -149,7 +106,8 @@ impl Builder<'_> {
             }
             inputs.extend(wires.clone());
         }
-        let (budget, params, token_ids) = self.bind_qinplace_invocation(g, &args, &actuals, env)?;
+        let (budget, params, token_ids) =
+            crate::qinplace::bind(self.object, g, &args, &actuals, env)?;
         let gh = self.object.closure_hash(&g.name)?.to_owned();
         let hh = self.object.closure_hash(&h.name)?.to_owned();
         let (domain, arg_tokens) = if let Some(p) = self.trace.qinplaces.iter().find(|p| {
@@ -330,11 +288,13 @@ impl Builder<'_> {
             domain,
             arg_tokens,
             token_ids,
-            target_id,
-            fault_id,
-            target: x,
-            inputs,
-            controls: controls.to_vec(),
+            execution: Some(crate::qinplace::Execution {
+                target_id,
+                fault_id,
+                target: x,
+                inputs,
+                controls: controls.to_vec(),
+            }),
         });
         Ok(())
     }
@@ -352,6 +312,9 @@ pub(super) fn form_adjoint(
         .filter(|p| is_descendant(p.owner, owner, invocations) && !frozen.contains_key(&p.owner))
         .collect::<Vec<_>>();
     for proof in active {
+        let Some(execution) = &proof.execution else {
+            continue;
+        };
         let find = |id: &str, alloc: bool| {
             events
                 .iter()
@@ -362,10 +325,10 @@ pub(super) fn form_adjoint(
                 })
                 .ok_or_else(|| Error::arg("missing qinplace private lifetime boundary"))
         };
-        let at = find(&proof.target_id, true)?;
-        let af = find(&proof.fault_id, true)?;
-        let rt = find(&proof.target_id, false)?;
-        let rf = find(&proof.fault_id, false)?;
+        let at = find(&execution.target_id, true)?;
+        let af = find(&execution.fault_id, true)?;
+        let rt = find(&execution.target_id, false)?;
+        let rf = find(&execution.fault_id, false)?;
         if at > af {
             events.swap(at, af);
         }
@@ -378,7 +341,7 @@ pub(super) fn form_adjoint(
         };
         let mut swap_indices = Vec::new();
         let mut swaps = Vec::new();
-        for (a, b) in proof.target.iter().zip(wires) {
+        for (a, b) in execution.target.iter().zip(wires) {
             let index=events.iter().position(|e|e.owner==proof.owner&&matches!(&e.leaf.op,Operation::Gate(g)if g.op=="swap"&&g.wires==vec![a.clone(),b.clone()])).ok_or_else(||Error::arg("missing qinplace exchange bit"))?;
             swap_indices.push(index);
             swaps.push(events[index].clone());

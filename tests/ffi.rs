@@ -7,6 +7,54 @@ use std::{
 };
 
 #[test]
+fn feature_query_is_immutable_concurrent_and_rejects_nulls_without_writes() {
+    const MANIFEST: &[u8] =
+        br#"{"abi":"sched/0.9","features":["token_aliases/1"],"schema":"bennett.abi-features/1"}"#;
+    let query = || unsafe {
+        let mut bytes = ptr::null();
+        let mut len = 0;
+        assert_eq!(bennett_sched_features(&mut bytes, &mut len), Status::Ok);
+        assert!(!bytes.is_null());
+        assert_eq!(std::slice::from_raw_parts(bytes, len), MANIFEST);
+        bennett_sched::canonical::require_jcs(std::slice::from_raw_parts(bytes, len)).unwrap();
+        (bytes as usize, len)
+    };
+    let original = query();
+    unsafe {
+        let mut bytes = original.0 as *const u8;
+        let mut len = usize::MAX;
+        assert_eq!(
+            bennett_sched_features(ptr::null_mut(), &mut len),
+            Status::Arg
+        );
+        assert_eq!(len, usize::MAX);
+        assert_eq!(
+            bennett_sched_features(&mut bytes, ptr::null_mut()),
+            Status::Arg
+        );
+        assert_eq!(bytes as usize, original.0);
+        assert_eq!(
+            bennett_sched_features(ptr::null_mut(), ptr::null_mut()),
+            Status::Arg
+        );
+        let mut request = ptr::null_mut();
+        assert_eq!(bennett_sched_request_new(&mut request), Status::Ok);
+        assert_eq!(
+            bennett_sched_request_set_token_aliases(request, b"[0,1]".as_ptr(), 5),
+            Status::Ok
+        );
+        assert_eq!(query(), original);
+        assert_eq!((*request).token_aliases, Some(vec![0, 1]));
+        bennett_sched_request_free(request);
+    }
+    let queries: Vec<_> = (0..8).map(|_| std::thread::spawn(query)).collect();
+    for result in queries {
+        assert_eq!(result.join().unwrap(), original);
+    }
+    assert_eq!(query(), original);
+}
+
+#[test]
 fn binary_api_rejects_nulls_and_preserves_owned_buffers() {
     unsafe {
         assert_eq!(bennett_sched_request_new(ptr::null_mut()), Status::Arg);

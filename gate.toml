@@ -30,10 +30,10 @@ name = "quality baseline"
 argv = ["python3", "-B", "scripts/quality.py", "--check"]
 
 [siblings."bennett-isa-spec"]
-sha = "3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1"
-note = "isa-spec main 3b10907, quality floor merge, K91 token_aliases reader"
+sha = "52836976829e05770090dd49c50909541c1207ba"
+note = "published ISA 0.9 5283697: closed K89 occurrence reader, repaired r1 catalog default and original-hash compatibility"
 [siblings."bennett-isa-spec".files]
-"spec/Bennett-ISA-Spec-0.9.md" = "54dde0c83ff31d0a76de1814ac00273c3bb63fbd9c91d71aea625ad714959c5f"
+"spec/Bennett-ISA-Spec-0.9.md" = "1c859d6b3a0c5c117634dd7a12fb132cbfc742957a59a0843b8d134fd395b6fb"
 
 [[siblings."bennett-isa-spec".build]]
 name = "reference interpreter (debug)"

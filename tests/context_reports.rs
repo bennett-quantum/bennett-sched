@@ -175,3 +175,72 @@ fn requested_accuracy_is_compared_exactly_and_error_displays_keep_sufficient_pre
         bennett_sched::decimal::value(&c["composition"]["epsilon_total"]["diamond"]).unwrap();
     assert_eq!(total, bennett_sched::decimal::integer(2) * bound);
 }
+
+#[test]
+fn selected_roots_keep_shared_callee_frames_and_inventories_bound_to_their_own_target() {
+    let sig = json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[],"mem":[],"args":[],"bounds":[]});
+    let leaf = common::action(
+        "perm_action",
+        "flip",
+        sig.clone(),
+        "perm_action @flip (t:wire mut) () () () ()",
+        "x t",
+    );
+    let a = common::caller(
+        &leaf,
+        "perm_action",
+        "root_a",
+        sig.clone(),
+        "perm_action @root_a (t:wire mut) () () () ()",
+        "action_call @flip (t) () () ()",
+    );
+    let bytes = common::caller(
+        &a,
+        "perm_action",
+        "root_b",
+        sig,
+        "perm_action @root_b (t:wire mut) () () () ()",
+        "action_call @flip (t) () () ()",
+    );
+    let object = Object::parse(&bytes).unwrap();
+    let callee = object.closure_hash("flip").unwrap();
+    for (root, other, class) in [("root_a", "root_b", "A"), ("root_b", "root_a", "B")] {
+        let mut target: Value =
+            serde_json::from_slice(&std::fs::read("data/k83-target.json").unwrap()).unwrap();
+        target["classes"] = json!({"A":{"capacity":1,"qubit_second":1,"dirty_rate":1},"B":{"capacity":1,"qubit_second":1,"dirty_rate":1}});
+        target["topology"] = json!({"vertices":[{"class":"A"},{"class":"B"}],"edges":[]});
+        target["gates"] = json!([{"op":"x","classes":[class],"controls":{"min":0,"max":0},"epsilon":0,"cost":{"time":1}}]);
+        let mut r = Request::default();
+        r.set_object(&bytes).unwrap();
+        r.set_target(&canonical::to_vec(&target).unwrap()).unwrap();
+        r.set_region(object.closure_hash(root).unwrap(), "forward", 0)
+            .unwrap();
+        r.set_params(b"[]").unwrap();
+        r.budget = Some([0; 4]);
+        r.set_accuracy("0").unwrap();
+        let response = r.schedule().unwrap();
+        assert_eq!(response.outcome, Outcome::Ok, "{:?}", response.reason);
+        let c = canonical::require_jcs(&response.certificate).unwrap();
+        assert_eq!(
+            c["bindings"]["closure_hash"],
+            object.closure_hash(root).unwrap()
+        );
+        assert_eq!(c["bindings"]["object_hash"], object.object_hash);
+        assert_eq!(c["regions"].as_object().unwrap().len(), 2);
+        assert!(
+            c["regions"]
+                .get(object.closure_hash(other).unwrap())
+                .is_none()
+        );
+        assert_eq!(
+            c["regions"][callee]["frame"]["slots"],
+            json!([{"id":"mut:0","role":"mut","class":class,"width":1}])
+        );
+        let root_record = &c["regions"][object.closure_hash(root).unwrap()];
+        assert!(root_record["frame"].is_object());
+        if let Some(contexts) = root_record.get("resource_contexts") {
+            assert_eq!(contexts.as_array().unwrap().len(), 1);
+            assert_eq!(contexts[0]["context_key"], json!([]));
+        }
+    }
+}

@@ -1,0 +1,30 @@
+# Hang guards are UNKNOWN (exit 124), never a failed semantic assertion.
+# Calibration: Spiral, 2026-11-08; main gate receipt
+# .tmp/gate/records/3fc4d7bdc399a5c6e3df4cd51ce01c4a040eb2fc.json.
+# Full default checkpoint 87.6s, exhaustive simulations 132.3s, fmt 0.5s.
+# Every finite guard exceeds 10x the corresponding measured wall time.
+[machine]
+name = "Spiral"
+factor = 1
+reserved_threads = 16
+reserved_memory_gib = 16
+memory_per_build_job_gib = 4
+maximum_build_jobs = 8
+
+[classes.short]
+seconds = 30
+measured_seconds = 0.5
+use = "format, inventory and pin checks"
+
+[classes.moderate]
+seconds = 1800
+measured_seconds = 87.6
+use = "focused Rust tests and warm builds"
+
+[classes.long]
+seconds = 3600
+measured_seconds = 132.3
+use = "cold compilation and exhaustive focused simulations"
+
+[classes.eternal]
+use = "interactive investigation only; no elapsed-time bound"

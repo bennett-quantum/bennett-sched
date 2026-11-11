@@ -1,4 +1,4 @@
-//! Syntactic §5.6 translation-lemma proofs over resolved source operations.
+//! §5.6 translation-lemma and complete selected-frame producer proofs.
 use crate::{
     Error, Result, Status,
     expansion::Operation,
@@ -9,11 +9,17 @@ use crate::{
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
+mod entry;
+mod exhaustive;
+#[derive(Clone, Debug)]
+pub enum Evidence {
+    Translation { witness: Value, adjoint: bool },
+    Exhaustive { domain: Value, frame: Value },
+}
 #[derive(Clone, Debug)]
 pub struct Proof {
     pub owner: usize,
-    pub witness: Value,
-    pub adjoint: bool,
+    pub evidence: Evidence,
 }
 
 fn flip(g: &Gate) -> Option<(String, BTreeSet<String>)> {
@@ -153,11 +159,11 @@ pub fn prove(object: &Object, trace: &Trace) -> Result<Vec<Proof>> {
                     .or_insert((i, i));
             }
         }
-        for (key, (first, last)) in groups {
+        for (key, &(first, last)) in &groups {
             let events = trace.events[first..=last].iter().collect::<Vec<_>>();
             if events
                 .iter()
-                .any(|e| group(e, &maps).ok().as_ref() != Some(&key))
+                .any(|e| group(e, &maps).ok().as_ref() != Some(key))
             {
                 return Err(Error::new(
                     Status::GateUnsupported,
@@ -171,16 +177,35 @@ pub fn prove(object: &Object, trace: &Trace) -> Result<Vec<Proof>> {
             } else {
                 events
             };
-            let witness = translation(&forward, &borrowed).ok_or_else(|| {
-                Error::new(
-                    Status::GateUnsupported,
-                    "§5.6: non-translation borrow-frame T3 proof is postponed",
-                )
-            })?;
+            let evidence = if let Some(witness) = translation(&forward, &borrowed) {
+                Evidence::Translation { witness, adjoint }
+            } else {
+                let family = |e: &Event| {
+                    let mut e = e.clone();
+                    e.location
+                        .path
+                        .last_mut()
+                        .expect("frame source point")
+                        .iteration
+                        .clear();
+                    group(&e, &maps)
+                };
+                let key = family(&trace.events[first])?;
+                let mut visits = groups
+                    .values()
+                    .copied()
+                    .filter(|(first, _)| {
+                        family(&trace.events[*first])
+                            .as_ref()
+                            .is_ok_and(|other| other == &key)
+                    })
+                    .collect::<Vec<_>>();
+                visits.sort_by_key(|(first, _)| *first);
+                exhaustive::prove(object, trace, event.owner, start, first, last, &visits)?
+            };
             proofs.push(Proof {
                 owner: event.owner,
-                witness,
-                adjoint,
+                evidence,
             });
         }
     }

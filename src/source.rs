@@ -350,6 +350,7 @@ impl Trace {
             None,
         )?;
         if f.kind=="perm_action"&&trace.events.iter().any(|e|matches!(&e.leaf.op,Operation::Gate(g)if !["x","cx","ccx","mcx","swap"].contains(&g.op.as_str()))){return Err(Error::arg("§5.3: permutation actions require permutation gates transitively"));}
+        crate::qinplace::complete(object, &mut trace)?;
         trace.borrow_proofs = crate::borrow::prove(object, &trace)?;
         for owner in 0..trace.invocations.len() {
             if object.functions[&trace.invocations[owner].name].kind == "oracle" {
@@ -1560,6 +1561,17 @@ impl Builder<'_> {
         } else {
             None
         };
+        if gate == "mcx" {
+            let [controls, target] = params.as_slice() else {
+                return Err(Error::arg(
+                    "§4.4: mcx requires one control list and one target",
+                ));
+            };
+            object::list(controls)?;
+            if wires(target, env)?.len() != 1 {
+                return Err(Error::arg("§4.4: mcx target must denote exactly one wire"));
+            }
+        }
         let mut w = Vec::new();
         for p in params {
             if p.starts_with('(') {
@@ -2106,7 +2118,7 @@ fn diagonal(g: &Gate) -> bool {
 fn permutation(g: &Gate) -> bool {
     g.op.starts_with("$perm/") || ["x", "cx", "ccx", "mcx", "swap"].contains(&g.op.as_str())
 }
-fn gate_adjoint(g: &Gate) -> Gate {
+pub(crate) fn gate_adjoint(g: &Gate) -> Gate {
     let mut n = g.adjoint();
     if let Some(s) = g.op.strip_prefix("$perm/call+/") {
         n.op = format!("$perm/call-/{s}");
@@ -2123,7 +2135,7 @@ fn gate_adjoint(g: &Gate) -> Gate {
     }
     n
 }
-fn normalized(g: &Gate) -> Gate {
+pub(crate) fn normalized(g: &Gate) -> Gate {
     let mut n = g.clone();
     if ["x", "cx", "ccx", "mcx"].contains(&g.op.as_str()) {
         n.op = "mcx".into();

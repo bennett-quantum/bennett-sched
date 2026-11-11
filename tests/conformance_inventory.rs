@@ -127,6 +127,19 @@ fn conformance_inventory_records_every_case_and_portable_manifest_without_stale_
                 assert_eq!(manifest["source_cases"], 5);
                 assert_eq!(manifest["basis_tuples"], 80);
             }
+            "k84.json" => {
+                assert_eq!(manifest["coverage"], "reference-metadata-admission");
+                assert_eq!(manifest["admitted"], 1);
+                assert_eq!(manifest["rejected"], 2);
+            }
+            "k91.json" => {
+                assert_eq!(
+                    manifest["coverage"],
+                    "reference-metadata-and-source-scheduling"
+                );
+                assert_eq!(manifest["metadata_cases"], 9);
+                assert_eq!(manifest["source_partitions"], 2);
+            }
             "k81.json" => {
                 assert_eq!(manifest["coverage"], "partial-equivalent-witness")
             }

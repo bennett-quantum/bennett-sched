@@ -54,6 +54,24 @@ unsafe fn string<'a>(s: *const c_char) -> Result<&'a str> {
         .map_err(|_| Error::arg("C string must be UTF-8"))
 }
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn bennett_sched_features(
+    jcs_out: *mut *const u8,
+    len_out: *mut usize,
+) -> Status {
+    // K91: validate both pointers before writing either output. Static bytes
+    // remain immutable and live until the provider is unloaded.
+    if jcs_out.is_null() || len_out.is_null() {
+        return Status::Arg;
+    }
+    const MANIFEST: &[u8] =
+        br#"{"abi":"sched/0.9","features":["token_aliases/1"],"schema":"bennett.abi-features/1"}"#;
+    unsafe {
+        *jcs_out = MANIFEST.as_ptr();
+        *len_out = MANIFEST.len();
+    }
+    Status::Ok
+}
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn bennett_sched_request_new(out: *mut *mut Request) -> Status {
     status(|| {
         if out.is_null() {

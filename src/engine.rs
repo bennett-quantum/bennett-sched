@@ -36,6 +36,7 @@ struct Search {
     epsilon_divisor: u64,
     required_divisor: u64,
     conflict_prefix: Option<usize>,
+    heterogeneous_interfaces: bool,
 }
 impl Search {
     fn choose(&mut self, count: usize) -> Result<usize> {
@@ -270,6 +271,26 @@ impl Allocator<'_> {
         self.order += 1;
         Ok(class)
     }
+    fn interface(&mut self, slot: &Slot, now: &Rational) -> Result<()> {
+        // Topology placements bind each bit's class independently (§9.4).
+        // Without placements keep the published homogeneous default; explicit
+        // class-vector launch bindings require their own request contract.
+        let parts = if self.target.value.get("topology").is_some()
+            && self.search.heterogeneous_interfaces
+        {
+            slot.wires
+                .iter()
+                .enumerate()
+                .map(|(i, w)| (format!("{}[{i}]", slot.id), vec![w.clone()]))
+                .collect::<Vec<_>>()
+        } else {
+            vec![(slot.id.clone(), slot.wires.clone())]
+        };
+        for (identity, wires) in parts {
+            self.allocate(identity, wires, "any", "interface", now, None, None)?;
+        }
+        Ok(())
+    }
     fn release(&mut self, identity: &str, now: &Rational) -> Result<()> {
         let i = self
             .active
@@ -351,7 +372,10 @@ fn selector_entry(event: &Event, kind: &str, decision: Value) -> Value {
             coordinate = entered;
         }
     }
-    let step = coordinate.step.map(integer_json).unwrap_or(json!("*"));
+    let step = coordinate
+        .step
+        .map(|n| canonical::unsigned_integer(&n.into()))
+        .unwrap_or(json!("*"));
     let phase = match coordinate.phase {
         Some(schedule::Phase::Fwd) => "fwd",
         Some(schedule::Phase::Rev) => "rev",
@@ -386,6 +410,23 @@ pub fn run(request: &Request) -> Result<Response> {
                     unsupported = Some(error.clone());
                 }
                 if !search.advance() {
+                    // Preserve the established homogeneous preference, then
+                    // search all per-bit class assignments permitted by K88.
+                    if !search.heterogeneous_interfaces
+                        && request
+                            .target
+                            .as_ref()
+                            .expect("prepared target")
+                            .value
+                            .get("topology")
+                            .is_some()
+                    {
+                        search = Search {
+                            heterogeneous_interfaces: true,
+                            ..Search::default()
+                        };
+                        continue;
+                    }
                     return Err(unsupported.unwrap_or(error));
                 }
                 search.epsilon_divisor = 1;
@@ -578,15 +619,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
         )?;
     }
     for slot in &trace.slots {
-        allocator.allocate(
-            slot.id.clone(),
-            slot.wires.clone(),
-            "any",
-            "interface",
-            &now,
-            None,
-            None,
-        )?;
+        allocator.interface(slot, &now)?;
     }
     let root_placements = if target.value.get("topology").is_some() {
         Some(
@@ -785,7 +818,7 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
             merged.push(entry);
         }
     }
-    let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|integer_json(*n)).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":merged});
+    let mut schedule = json!({"bindings":{"closure_hash":hash,"target_hash":target.hash,"region":f.name,"variant":variant,"inherited_controls":request.inherited_controls,"budget":budget.iter().map(|n|canonical::unsigned_integer(&(*n).into())).collect::<Vec<_>>(),"params_hash":canonical::hash(&canonical::to_vec(params)?),"epsilon":d::exact(&epsilon)?,"expansion":schedule::expansion_binding(),"scheduler":{"name":"bennett-sched","version":env!("CARGO_PKG_VERSION")}},"entries":merged});
     schedule["bindings"]["token_aliases"] = json!(crate::token_aliases::partition(
         &trace.invocations[0].token_ids
     ));
@@ -841,21 +874,28 @@ fn candidate(request: &Request, search: &mut Search, trace: &Trace) -> Result<Re
         certificate: canonical::to_vec(&certificate)?,
     })
 }
-fn integer_json(n: u64) -> Value {
-    if n >= 1 << 53 {
-        json!(n.to_string())
-    } else {
-        json!(n)
-    }
-}
 fn slot_record(slot: &Slot, allocator: &Allocator<'_>) -> Result<Value> {
-    let class = allocator
-        .allocations
-        .iter()
-        .find(|a| slot.wires.first().is_some_and(|w| a.wires.contains(w)))
-        .map(|a| a.class.as_str())
-        .ok_or_else(|| Error::infeasible("interface slot has no recorded class"))?;
-    Ok(json!({"id":slot.id,"role":slot.role,"class":class,"width":slot.wires.len()}))
+    let mut fragments: Vec<Value> = Vec::new();
+    for (offset, wire) in slot.wires.iter().enumerate() {
+        let class = allocator
+            .allocations
+            .iter()
+            .find(|a| a.wires.contains(wire))
+            .map(|a| a.class.as_str())
+            .ok_or_else(|| Error::infeasible("interface slot bit has no recorded class"))?;
+        if let Some(previous) = fragments.last_mut().filter(|f| f["class"] == class) {
+            previous["width"] = json!(previous["width"].as_u64().expect("fragment width") + 1);
+        } else {
+            fragments.push(json!({"offset":offset,"width":1,"class":class}));
+        }
+    }
+    let mut record = json!({"id":slot.id,"role":slot.role,"width":slot.wires.len()});
+    match fragments.as_slice() {
+        [] => return Err(Error::infeasible("interface slot must have positive width")),
+        [one] => record["class"] = one["class"].clone(),
+        _ => record["fragments"] = json!(fragments),
+    }
+    Ok(record)
 }
 fn oracle_history(identity: &str) -> bool {
     let index = identity.strip_prefix("oracle-state/history-").or_else(|| {
@@ -899,6 +939,32 @@ fn frame_record(trace: &Trace, owner: usize, allocator: &Allocator<'_>) -> Resul
     Ok(
         json!({"slots":slots,"scratch":scratch,"history":history,"borrow":borrow,"ancillae":ancillae}),
     )
+}
+fn borrow_claim(
+    record: &mut Value,
+    proof: &crate::borrow::Proof,
+    inv: &crate::source::Invocation,
+    variant: &str,
+    schedule_hash: &str,
+) {
+    let claims = record["claims"].as_array_mut().expect("region claims");
+    let mut index = claims.len();
+    match &proof.evidence {
+        crate::borrow::Evidence::Translation { witness, adjoint } => {
+            claims.push(json!({"kind":"structural","rule":"translation_lemma","invocation":invocation_binding(inv),"subclaims":[],"witness":witness}));
+            if *adjoint {
+                claims.push(json!({"kind":"structural","rule":"adjoint_table","invocation":invocation_binding(inv),"subclaims":[index],"witness":{}}));
+                index += 1;
+            }
+        }
+        crate::borrow::Evidence::Exhaustive { domain, frame } => {
+            claims.push(json!({"kind":"exhaustive","subject":{"closure_hash":inv.hash,"variant":variant,"inherited_controls":inv.controls.len(),"schedule_hash":schedule_hash},"invocation":invocation_binding(inv),"expected":"borrow_frame","borrow_frame":frame,"domain":domain}));
+        }
+    }
+    record["verification"]["borrow_frames"]
+        .as_array_mut()
+        .expect("borrow claim indices")
+        .push(json!(index));
 }
 #[allow(clippy::too_many_arguments)]
 fn certificate(
@@ -982,7 +1048,7 @@ fn certificate(
                         Error::new(crate::Status::NoMem, "domain width exceeds host size")
                     })?)
                     - num_bigint::BigUint::from(1u8);
-                bundles.push(json!({"name":p.name,"width":width,"lo":0,"hi":high.to_string()}));
+                bundles.push(json!({"name":p.name,"width":width,"lo":0,"hi":canonical::unsigned_integer(&high)}));
             }
             let interface_regions = f.groups[3]
                 .iter()
@@ -1043,18 +1109,7 @@ fn certificate(
             record["verification"]["fault_rate"] = json!({"domain":{"bundles":controls,"borrowed":[],"regions":[]},"faults_by_code":faults,"undefined_excluded":0,"layout_dependent_excluded":0});
         }
         for proof in trace.borrow_proofs.iter().filter(|p| p.owner == i) {
-            let mut index = record["claims"].as_array().unwrap().len();
-            record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"translation_lemma","invocation":invocation,"subclaims":[],"witness":proof.witness}));
-            if proof.adjoint {
-                // §16.3 example 3: the inverse frame need not have the lemma's
-                // syntax. Its forward proof and the adjoint table establish it.
-                record["claims"].as_array_mut().unwrap().push(json!({"kind":"structural","rule":"adjoint_table","invocation":invocation,"subclaims":[index],"witness":{}}));
-                index += 1;
-            }
-            record["verification"]["borrow_frames"]
-                .as_array_mut()
-                .unwrap()
-                .push(json!(index));
+            borrow_claim(record, proof, inv, variant, schedule_hash);
         }
         for proof in trace.qinplaces.iter().filter(|p| p.owner == i) {
             let index = record["claims"].as_array().unwrap().len();

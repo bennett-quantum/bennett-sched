@@ -252,11 +252,17 @@ impl Definition {
             }
         }
         for proof in &mut trace.qinplaces {
-            proof.target_id = map(&proof.target_id);
-            proof.fault_id = map(&proof.fault_id);
-            for wires in [&mut proof.target, &mut proof.inputs, &mut proof.controls] {
-                for w in wires {
-                    *w = map(w);
+            if let Some(execution) = &mut proof.execution {
+                execution.target_id = map(&execution.target_id);
+                execution.fault_id = map(&execution.fault_id);
+                for wires in [
+                    &mut execution.target,
+                    &mut execution.inputs,
+                    &mut execution.controls,
+                ] {
+                    for w in wires {
+                        *w = map(w);
+                    }
                 }
             }
         }
@@ -266,7 +272,9 @@ impl Definition {
             }
         }
         for proof in &mut trace.borrow_proofs {
-            map_strings(&mut proof.witness, &names);
+            if let crate::borrow::Evidence::Translation { witness, .. } = &mut proof.evidence {
+                map_strings(witness, &names);
+            }
         }
         Ok(Arc::new(trace))
     }
