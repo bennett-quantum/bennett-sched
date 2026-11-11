@@ -35,10 +35,15 @@ class Hook(unittest.TestCase):
             tool.parent.mkdir(parents=True)
             for status in (0, 7):
                 tool.write_text("import json,sys\nprint(json.dumps(sys.argv[1:]))\nraise SystemExit(" + str(status) + ")\n")
-                result = subprocess.run([str(hook), "origin", "destination"], env=env,
+                result = subprocess.run([str(hook), "--tier", "full"], env=env,
                                         capture_output=True, text=True, timeout=15)
                 self.assertEqual(result.returncode, status, result.stderr)
-                self.assertEqual(json.loads(result.stdout), ["run", "--repo", str(root), "--tool-sha", sha, "origin", "destination"])
+                self.assertEqual(json.loads(result.stdout), ["run", "--repo", str(root), "--tool-sha", sha, "--tier", "full"])
+            # As git's hook (remote, url) the push goes immediately: the tool is not run in line.
+            result = subprocess.run([str(hook), "origin", "destination"], env=env, input="",
+                                    capture_output=True, text=True, timeout=15)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "")
 
 
 if __name__ == "__main__":
