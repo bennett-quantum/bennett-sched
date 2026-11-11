@@ -51,12 +51,12 @@ fn clean_workspace_frame_and_causal_x_family_prefix_emit_bound_exhaustive_relati
             assert_eq!(claim["expected"], "borrow_frame");
             assert_eq!(claim["borrow_frame"]["lifetime"], 0);
             assert_eq!(claim["borrow_frame"]["context_key"], json!([]));
-            let occurrence = |p| json!([{"symbol":object.symbols["a"].interface_hash,"point":format!("entry:{p}"),"iteration":[],"instance":[]}]);
+            let occurrence = |p| json!({"context_key":[],"symbol":object.symbols["a"].interface_hash,"point":format!("entry:{p}"),"iteration":[],"instance":[]});
             assert_eq!(claim["borrow_frame"]["first"], occurrence(point));
             assert_eq!(claim["borrow_frame"]["last"], occurrence(point));
             assert_eq!(
                 claim["domain"]["workspace"],
-                json!([{"allocation":occurrence(0),"offset":0,"width":1,"lo":0,"hi":0}])
+                json!([{"allocation":{"source":occurrence(0),"allocation_ordinal":0},"offset":0,"width":1,"lo":0,"hi":0}])
             );
             assert_eq!(
                 claim["domain"]["borrowed"],
@@ -246,4 +246,99 @@ fn callee_borrow_lifetimes_precede_parent_lifetimes_in_the_complete_tuple() {
         claim["domain"]["borrowed"],
         json!([{"name":"borrowed:0","width":1,"lo":0,"hi":1},{"name":"borrowed:1","width":2,"lo":0,"hi":3}])
     );
+}
+
+#[test]
+fn generated_workspace_allocations_use_acquisition_ordinals_at_one_closed_source_occurrence() {
+    let bytes = source("qregion r 0 1\nqregion s 0 1\n", "cx c b");
+    let object = Object::parse(&bytes).unwrap();
+    let record = schedule(&bytes, 0);
+    let claim =
+        &record["claims"][record["verification"]["borrow_frames"][0].as_u64().unwrap() as usize];
+    let workspace = claim["domain"]["workspace"].as_array().unwrap();
+    assert_eq!(workspace.len(), 3);
+    let source = json!({"context_key":[],"symbol":object.symbols["a"].interface_hash,"point":"$construct","iteration":[],"instance":[]});
+    for ordinal in 0..2 {
+        assert_eq!(
+            workspace[ordinal]["allocation"],
+            json!({"source":source,"allocation_ordinal":ordinal})
+        );
+        assert_eq!(workspace[ordinal]["lo"], 0);
+        assert_eq!(workspace[ordinal]["hi"], 0);
+    }
+    assert_eq!(workspace[2]["allocation"]["source"]["point"], "entry:0");
+    assert_eq!(workspace[2]["allocation"]["allocation_ordinal"], 0);
+}
+
+#[test]
+fn nested_frame_occurrences_bind_the_complete_call_context_without_terminal_call_indices() {
+    let bytes = common::caller(
+        &source("", "cx c b"),
+        "perm_action",
+        "outer",
+        json!({"abi":"0.9","tier":"q","kind":"perm_action","mut":[1],"in":[1,1],"mem":[],"args":[],"bounds":[]}),
+        "perm_action @outer (t:wire mut) (x:wire in, y:wire in) () () ()",
+        "action_call @a (t) (x, y) () ()\naction_call @a (t) (x, y) () ()",
+    );
+    let object = Object::parse(&bytes).unwrap();
+    let trace = Trace::build(&object, "outer", 0, &json!([]), [0; 4]).unwrap();
+    assert_eq!(trace.borrow_proofs.len(), 2);
+    for proof in &trace.borrow_proofs {
+        let bennett_sched::borrow::Evidence::Exhaustive { domain, frame } = &proof.evidence else {
+            panic!("finite frame")
+        };
+        let context = trace.invocations[proof.owner].context_key();
+        assert_eq!(context.as_array().unwrap().len(), 1);
+        assert!(context[0]["call_index"].is_u64());
+        assert_eq!(frame["first"]["context_key"], context);
+        assert_eq!(frame["context_key"], context);
+        assert_eq!(frame["first"]["symbol"], object.symbols["a"].interface_hash);
+        assert_eq!(frame["first"]["point"], "entry:2");
+        assert!(frame["first"].get("call_index").is_none());
+        assert_eq!(
+            domain["workspace"][0]["allocation"]["source"]["context_key"],
+            context
+        );
+    }
+}
+
+#[test]
+fn raw_inverse_frame_workspace_retains_forward_acquisition_coordinates() {
+    let bytes = common::caller(
+        &source("qregion r 0 1\nqregion s 0 1\n", "cx c b"),
+        "oracle",
+        "outer",
+        json!({"abi":"0.9","tier":"q","kind":"oracle","in":[1,1],"tgt":1,"fault":4,"mem":[],"args":[]}),
+        "oracle @outer (x:wire in, y:wire in) (t:wire) (f:wire[4]) () ()\nregs { r:reg[1] }",
+        "lift.perm_call @a (r) (x, y) () ()\nlift.retval r",
+    );
+    let object = Object::parse(&bytes).unwrap();
+    let trace = Trace::build(&object, "outer", 0, &json!([]), [1, 0, 0, 0]).unwrap();
+    assert_eq!(trace.borrow_proofs.len(), 2);
+    assert!(trace.invocations.iter().any(|inv| inv.raw_inverse));
+    for proof in &trace.borrow_proofs {
+        let bennett_sched::borrow::Evidence::Exhaustive { domain, frame } = &proof.evidence else {
+            panic!("finite frame")
+        };
+        let workspace = domain["workspace"].as_array().unwrap();
+        assert_eq!(workspace.len(), 3);
+        let allocation = &workspace
+            .iter()
+            .find(|item| item["allocation"]["source"]["point"] == "entry:0")
+            .unwrap()["allocation"];
+        assert_eq!(allocation["source"]["point"], "entry:0");
+        assert_eq!(allocation["allocation_ordinal"], 0);
+        assert_eq!(
+            allocation["source"]["context_key"],
+            trace.invocations[proof.owner].context_key()
+        );
+        assert_eq!(frame["first"]["point"], "entry:4");
+        let mut support_ordinals = workspace
+            .iter()
+            .filter(|item| item["allocation"]["source"]["point"] == "$construct")
+            .map(|item| item["allocation"]["allocation_ordinal"].as_u64().unwrap())
+            .collect::<Vec<_>>();
+        support_ordinals.sort();
+        assert_eq!(support_ordinals, vec![0, 1]);
+    }
 }

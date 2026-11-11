@@ -8,31 +8,82 @@ use num_bigint::BigUint;
 const MAX_REPLAY_LEAVES: u128 = 100_000_000;
 
 pub(super) fn occurrence(event: &Event) -> Value {
-    json!(
-        event
-            .location
-            .path
-            .iter()
-            .enumerate()
-            .map(|(i, p)| {
-                let mut value = p.json();
-                let coordinate = if i == 0 {
-                    event.location.root
-                } else {
-                    event.location.path[i - 1]
-                        .entered_oracle
-                        .unwrap_or_default()
-                };
-                if let Some(step) = coordinate.step {
-                    value["step"] = json!(step);
-                    value["phase"] = json!(match coordinate.phase.expect("oracle phase") {
-                        Phase::Fwd => "fwd",
-                        Phase::Rev => "rev",
-                    });
-                }
-                value
-            })
-            .collect::<Vec<_>>()
+    let mut path = event
+        .location
+        .path
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            let mut value = p.json();
+            let coordinate = if i == 0 {
+                event.location.root
+            } else {
+                event.location.path[i - 1]
+                    .entered_oracle
+                    .unwrap_or_default()
+            };
+            if let Some(step) = coordinate.step {
+                value["step"] = crate::canonical::unsigned_integer(&step.into());
+                value["phase"] = json!(match coordinate.phase.expect("oracle phase") {
+                    Phase::Fwd => "fwd",
+                    Phase::Rev => "rev",
+                });
+            }
+            for key in ["iteration", "instance"] {
+                value[key] = json!(
+                    value[key]
+                        .as_array()
+                        .expect("source coordinate vector")
+                        .iter()
+                        .map(|n| crate::canonical::unsigned_integer(
+                            &n.as_u64().expect("source coordinate integer").into()
+                        ))
+                        .collect::<Vec<_>>()
+                );
+            }
+            if let Some(index) = p.call_index {
+                value["call_index"] = crate::canonical::unsigned_integer(&index.into());
+            }
+            value
+        })
+        .collect::<Vec<_>>();
+    let mut source = path.pop().expect("source occurrence has a terminal point");
+    source
+        .as_object_mut()
+        .expect("source point")
+        .remove("call_index");
+    source["context_key"] = json!(path);
+    source
+}
+fn allocation_occurrence(trace: &Trace, allocation: &entry::Allocation) -> Result<Value> {
+    let mut event = &allocation.event;
+    let mut index = allocation.order;
+    let backwards = trace.invocations[event.owner].raw_inverse;
+    if backwards {
+        let Operation::Alloc { identity, .. } = &event.leaf.op else {
+            unreachable!("live allocation")
+        };
+        (index, event) = trace.events.iter().enumerate().skip(index + 1).find(|(_, e)| matches!(&e.leaf.op,Operation::Release{identity:other,..} if other==identity))
+            .ok_or_else(|| Error::arg("raw inverse allocation has no paired forward acquisition"))?;
+    }
+    let source = occurrence(event);
+    // In raw reversal the paired release is the original forward acquisition.
+    // Count acquisitions at this source point, never gate/generated ordinals.
+    let ordinal = trace
+        .events
+        .iter()
+        .enumerate()
+        .filter(|(i, e)| {
+            let acquisition = if backwards {
+                matches!(e.leaf.op, Operation::Release { .. }) && *i > index
+            } else {
+                matches!(e.leaf.op, Operation::Alloc { .. }) && *i < index
+            };
+            acquisition && occurrence(e) == source
+        })
+        .count();
+    Ok(
+        json!({"source":source,"allocation_ordinal":crate::canonical::unsigned_integer(&ordinal.into())}),
     )
 }
 fn full(name: &str, width: usize) -> Value {
@@ -75,15 +126,10 @@ fn domain(object: &Object, trace: &Trace, owner: usize, state: &entry::State) ->
         if a.borrowed {
             continue;
         }
-        if a.event.location.generated != 0 {
-            return Err(Error::new(
-                Status::GateUnsupported,
-                "§5.6: generated workspace allocation selectors for borrow frames are postponed",
-            ));
-        }
+        let allocation = allocation_occurrence(trace, a)?;
         for (offset, wire) in a.wires.iter().enumerate() {
             let value = state.values[wire];
-            workspace.push(json!({"allocation":occurrence(&a.event),"offset":offset,"width":1,"lo":u8::from(value==Some(true)),"hi":u8::from(value!=Some(false))}));
+            workspace.push(json!({"allocation":allocation,"offset":offset,"width":1,"lo":u8::from(value==Some(true)),"hi":u8::from(value!=Some(false))}));
         }
     }
     Ok(json!({"bundles":bundles,"borrowed":borrowed,"regions":regions,"workspace":workspace}))

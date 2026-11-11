@@ -1,7 +1,7 @@
 # Scheduler quality evidence
 
 Evidence for the current additions uses the ISA revision in `gate.toml`
-(`dbc884525331fe5c5748c50662ae401ac5e7c79b`). Older measurements below retain
+(`52836976829e05770090dd49c50909541c1207ba`). Older measurements below retain
 their explicitly named prior revisions. This is a remediation record,
 not a claim that all published capabilities or quality targets are complete.
 
@@ -274,6 +274,33 @@ placement fallback: engine complexity mass 329 to 336; ffi mass 35 to 37.
 Measurement and regression rules are unchanged. No test or quality check is
 removed; all other per-file complexity allowances remain unchanged.
 
+## Closed K89 occurrence adoption
+
+The 5283697 pin publishes ni9's closed source/allocation occurrences. The
+producer now uses those objects, complete invocation contexts and acquisition
+ordinals independent of generated gate ordinals. Generated local-region
+workspace and paired forward acquisition names through raw reversal are
+covered. Oracle source-call attachment reconstructs borrow proofs after
+binding their invocation paths; the raw-inverse test exposed an otherwise
+stale callee-root context before this repair.
+
+The root occurrence test first failed on the earlier path array; the generated
+allocation test first failed on the explicit unsupported selector path. A new
+nested-call fixture initially omitted the required space in its comma-separated
+operand list; it was corrected before interpreting its result. Ten focused
+borrow-frame semantic tests pass, including generated allocations, source call
+contexts and raw inverse lifetimes. The original reference-admission assertion
+is retained unchanged. Its current-pin result and the fast tier are recorded
+separately after the pinned reader rebuild.
+
+This new encoding and acquisition counting increases exhaustive.rs complexity
+mass from 58 to 73 and the number of functions over 30 lines from 145 to 147.
+The measurement/check implementation is unchanged; maximum function length,
+over-300 count, wrapper count, identifiers and other file masses are unchanged.
+These focused results do not attest to independent frame proof replay or full
+conformance. The producer explicitly selects the original catalog hash; the
+new published r1 default cannot rewrite that explicit selection.
+
 <!-- quality-baseline -->
 ```json
 {
@@ -284,7 +311,7 @@ removed; all other per-file complexity allowances remain unchanged.
     "src/admission.rs": 218,
     "src/borrow.rs": 59,
     "src/borrow/entry.rs": 75,
-    "src/borrow/exhaustive.rs": 58,
+    "src/borrow/exhaustive.rs": 73,
     "src/canonical.rs": 210,
     "src/cleanup.rs": 184,
     "src/cleanup/raw.rs": 51,
@@ -322,10 +349,10 @@ removed; all other per-file complexity allowances remain unchanged.
     "src/token_aliases.rs": 28
   },
   "function_lengths": {
-    "count": 446,
+    "count": 447,
     "maximum": 298,
     "over_100": 43,
-    "over_30": 145,
+    "over_30": 147,
     "over_300": 0
   },
   "litter": [

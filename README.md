@@ -36,12 +36,14 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
   cargo test --offline -j3 -- --test-threads=4
 ```
 
-The controlled-action metadata-admission differential passes at the current pin.
-The selected borrow-frame admission regression remains red: that published
-reference does not yet admit K89's required `domain.workspace`. The producer
-retains the field and the conformance assertion; see
-[accepted ISA additions](docs/isa-additions.md). Ten slow exhaustive simulations run with `cargo test --offline
--j3 -- --ignored --test-threads=4` and are mandatory in the push gate.
+The controlled-action and selected borrow-frame regressions check emitted
+schedule/certificate metadata admission against the pin. Borrow frames use the
+published closed source/allocation occurrence objects and forward acquisition
+ordinals; see [accepted ISA additions](docs/isa-additions.md). The scheduler
+explicitly binds the immutable original catalog hash, which the published
+contract preserves alongside the new r1 default. Ten slow exhaustive simulations
+run with `cargo test --offline -j3 -- --ignored --test-threads=4` in the full tier
+after landing.
 
 `python3 -B scripts/conformance.py --write --require-complete` inventories every
 published case and separates direct tests, equivalent witnesses and unexercised

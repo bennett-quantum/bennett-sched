@@ -1,7 +1,7 @@
 # ISA 0.9 scheduler implementation and evidence
 
 Contract: `bennett-isa-spec/spec/Bennett-ISA-Spec-0.9.md`, §11 and its
-dependencies. The published ISA pin is `dbc884525331fe5c5748c50662ae401ac5e7c79b`, including accepted K84–K94, closed native-model/fixed-image encodings and the K91 per-role feature negotiation ABI. gate.toml and SPEC_VERSIONS.toml record that commit and its verified committed spec digest. The catalog bytes/hash remain unchanged. New contract adoption is tracked by vt8; no complete conformance is claimed.
+dependencies. The published ISA pin is `52836976829e05770090dd49c50909541c1207ba`, including accepted K84–K94, closed native-model/fixed-image encodings and the K91 per-role feature negotiation ABI. gate.toml and SPEC_VERSIONS.toml record that commit and its verified committed spec digest. The original catalog bytes/hash remain unchanged and are selected explicitly; the published r1 default never replaces that explicit selection. New contract adoption is tracked by vt8; no complete conformance is claimed.
 The published `ref` JSON is specification data, vendored in `data/`; no sibling
 implementation code is linked or copied. Beads issue `bennett-sched-akl` owns
 implementation tracking. This document maps requirements and records evidence;
@@ -81,7 +81,7 @@ free-wire diagnostic is no longer an expansion blocker.
 The live ISA now settles the earlier schema requests: K90 defines exclusive
 uniform frame or complete canonical frame_contexts, K87 defines complete
 resource_contexts and first-context projections, and K89 defines selected
-borrow_frame/workspace entry proofs. K87/K90 producer algorithms now replace the earlier diagnostics (1na/lzv closed). K89 finite selected-frame production is implemented; general entry/lifetime mechanics remain vt8.2 and pinned-reference admission is blocked on its workspace reader. The earlier proposals
+borrow_frame/workspace entry proofs. K87/K90 producer algorithms now replace the earlier diagnostics (1na/lzv closed). K89 finite selected-frame production is implemented; general entry/lifetime mechanics remain vt8.2 and the pinned reader now admits the published closed occurrence grammar. Independent general frame replay remains required upstream. The earlier proposals
 remain in the local cross-repo queue as historical context.
 
 ## Postponed mechanics and conformance limits
@@ -525,7 +525,7 @@ mechanics and contract/reader blockers; this is not complete conformance.
 | K86 | Exact evaluated native-model binding, phase/control reconstruction and target identity | Model bytes, explicit syntax, rational unitarity, resolved arity and zero-epsilon phase checks implemented (native_models); general reconstruction/accuracy remains vt8.1 |
 | K87 | Canonical complete resource_contexts, first projection, native leaf counts and child-local exact accounting | Implemented complete canonical resource contexts, exact child-local views and first projections; 1/3 witness and both controlled-call orders pass (1na closed) |
 | K88 | Per-wire class vectors and canonical frame slot fragments without splitting source slots | Topology-bound per-wire allocation and canonical merged slot fragments inherited by callees pass slot_fragments; explicit no-topology class bindings remain 4tj |
-| K89 | Selected maximal borrow_frame relations and workspace entry components/products | Finite selected-frame claims, K76/K78 entry constants, full B fibers and visit-ordered entry_products pass seven semantic tests; pinned reader regression is red; remaining mechanics vt8.2 |
+| K89 | Selected maximal borrow_frame relations and workspace entry components/products | Finite selected-frame claims, K76/K78 entry constants, full B fibers and visit-ordered entry_products pass seven semantic tests; pinned reader regression checks the ni9 closed occurrence objects; closed ni9 source/allocation objects, generated allocation ordinals and raw-inverse context binding implemented; remaining mechanics vt8.2 |
 | K90 | Exclusive all-context-valid frame or canonical complete frame_contexts | Implemented complete canonical frame contexts with per-invocation workspace and slots; A/B and B2/B3 histories pass (lzv closed) |
 | K91 | token_aliases equality partitions, captured source identities and negotiated /1 estimation ABI | Setter, canonical partitions, global identities and all producer bindings implemented; nine published fixture admission polarities and both source partitions pass. Published sched/0.9 token_aliases/1 negotiation is implemented and tested through Rust and C |
 | K92 | Complete owner-local qinplace pair coverage over all reached contexts | Owner-local transitive entries, forwarded budgets, adjoints and zero-trip static inventory implemented; static theorems preserve root bindings and alias consistency. Pair coverage 3 and qinplace 10 pass; scaling/library proof remains a0v |

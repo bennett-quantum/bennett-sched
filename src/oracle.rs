@@ -1086,7 +1086,7 @@ fn project_expansion(
         containing: Coordinate::default(),
     }];
     invocations.extend(projection.invocations);
-    Ok(Trace {
+    let mut trace = Trace {
         object: std::sync::Arc::new(object.clone()),
         events,
         invocations,
@@ -1096,7 +1096,11 @@ fn project_expansion(
         cleanups: projection.cleanups,
         qinplaces: projection.qinplaces,
         replaced_invocations: Default::default(),
-    })
+    };
+    // Source-call proofs were built in callee-local coordinates. Reconstruct
+    // them after attaching all invocation paths and raw inverse lifetimes.
+    trace.borrow_proofs = crate::borrow::prove(object, &trace)?;
+    Ok(trace)
 }
 
 const HOST_STATE_BYTES: u64 = 64 * 1024 * 1024;

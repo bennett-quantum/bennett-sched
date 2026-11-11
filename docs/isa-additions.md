@@ -1,14 +1,16 @@
 # Accepted ISA 0.9 additions
 
 Contract: gate.toml selects published ISA commit
-`dbc884525331fe5c5748c50662ae401ac5e7c79b`, spec SHA-256
-`a86aec98d41f5c042425253b10ff632099c02fa427b220203913a861722b3d83`.
+`52836976829e05770090dd49c50909541c1207ba`, spec SHA-256
+`1c859d6b3a0c5c117634dd7a12fb132cbfc742957a59a0843b8d134fd395b6fb`.
 Quotes below come from that committed specification. Producer tests establish
 scheduler behavior; they do not establish an independent checker verdict.
 The mixed fat-object inventory remains the selected device root and its
 transitive ISA closure (§12.3); native host entry/libc and general host-memory
 launch contracts remain the explicit `bennett-4ht` boundary. The immutable
-`ref@0.9` catalog is unchanged.
+`ref@0.9` original catalog is unchanged. The producer explicitly binds its
+original envelope hash; the published r1 default does not replace an explicit
+original-hash selection.
 
 ## K93 — bundle controls
 
@@ -88,15 +90,24 @@ spectators; active non-B borrowed systems remain part of the fiber output check.
 Sequential one-/two-bit and preceding-callee regressions both failed before
 correcting domain coverage and the selected lifetime ordinal.
 
-Seven semantic tests pass in `borrow_frames`. The initial three tests failed on
-the old non-translation Unsupported; the 16-visit test additionally failed on
-lexical iteration ordering before the visit-order repair. The independent
-metadata-admission regression still requires successful admission
-and is currently **RED**: pinned reference dbc8845 rejects domain.workspace as
-an unknown field despite accepted K89. The producer retains the specified field;
-this is not independent checker acceptance. The reader blocker is
-`bennett-sched-vt8.4`; the exact upstream repair request is recorded in that bead. Remaining producer mechanics are
-`bennett-sched-vt8.2`; awo is closed as the now-answered schema request.
+The published ni9 production now fixes the byte encoding: first/last are
+SourceOccurrence objects with a complete context_key and required iteration
+and instance vectors. Workspace allocations are AllocationOccurrence objects
+containing source and forward acquisition ordinal. Generated gate ordinals do
+not name allocation lifetimes. The producer emits these closed objects and
+counts acquisitions at the exact resolved source occurrence; the earlier
+path-array representation is removed. Generated local-region allocations are
+now supported on the finite path. Raw reversal names the paired forward
+acquisition, including multiple acquisitions at one support source point.
+
+Lifted source-call attachment rebuilds borrow proofs after fixing the complete
+invocation paths and raw inverse lifetimes. The new regression caught a stale
+callee-root context before that repair. Ten focused semantic tests check root,
+nested, repeated-visit, generated-allocation, lifetime and raw-inverse bindings.
+The unchanged pinned-reference regression still requires successful metadata
+admission; this never establishes independent maximal-frame or fiber replay.
+Remaining producer mechanics are `bennett-sched-vt8.2`; general independent
+reference proof replay remains the separate upstream `b-isa-spec-t9l` work.
 
 ## K84 — diagnostic codes
 
